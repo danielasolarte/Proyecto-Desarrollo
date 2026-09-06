@@ -1,0 +1,304 @@
+openapi: 3.1.0
+info:
+  title: Plataforma MOOC — Cursos, Autoría y Catálogo
+  description: >
+    Endpoints del módulo de cursos, autoría y catálogo (Persona 1 / Persona B).
+    Documenta solo esta parte de la API; los demás módulos (identidad,
+    multimedia, quizzes, progreso) agregan sus propios paths a este mismo
+    documento cuando se integren.
+  version: "0.1.0"
+servers:
+  - url: /api/v1
+security:
+  - sessionAuth: []
+paths:
+  /courses:
+    post:
+      summary: Crear un curso nuevo (crea también su primera versión en borrador)
+      tags: [autoria]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                summary: { type: string }
+                category: { type: string }
+      responses:
+        "201":
+          description: Curso y primera versión creados
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /courses/{courseID}:
+    get:
+      summary: Obtener metadatos de un curso
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/CourseID"
+      responses:
+        "200": { description: Curso encontrado }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /courses/{courseID}/preview:
+    get:
+      summary: Previsualizar el árbol de la versión draft (o publicada si no hay draft)
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/CourseID"
+      responses:
+        "200":
+          description: Árbol completo más la lista de problemas de publicación (vacía si ya se puede publicar)
+
+  /courses/{courseID}/draft:
+    post:
+      summary: >
+        Crear un borrador de actualización a partir de la versión publicada
+        (opcional: borradores de actualización con clasificación de cambios)
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/CourseID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [change_type]
+              properties:
+                change_type: { type: string, enum: [minor, major] }
+      responses:
+        "201": { description: Nueva versión draft creada, copiando la estructura publicada }
+        "409": { description: El curso ya tiene un borrador en curso }
+
+  /courses/{courseID}/publish:
+    post:
+      summary: Publicar la versión draft del curso (queda inmutable)
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/CourseID"
+      responses:
+        "200": { description: Versión publicada }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /versions/{versionID}:
+    patch:
+      summary: Editar metadatos de una versión en borrador (título, resumen, categoría)
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/VersionID"
+      responses:
+        "200": { description: Versión actualizada }
+        "423": { description: La versión ya fue publicada y es inmutable }
+
+  /versions/{versionID}/modules:
+    post:
+      summary: Crear un módulo dentro de una versión en borrador
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/VersionID"
+      responses:
+        "201": { description: Módulo creado }
+
+  /modules/{moduleID}:
+    patch:
+      summary: Editar un módulo (título, posición)
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/ModuleID"
+      responses:
+        "200": { description: Módulo actualizado }
+    delete:
+      summary: Eliminar un módulo
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/ModuleID"
+      responses:
+        "204": { description: Eliminado }
+
+  /modules/{moduleID}/units:
+    post:
+      summary: Crear una unidad dentro de un módulo
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/ModuleID"
+      responses:
+        "201": { description: Unidad creada }
+
+  /units/{unitID}:
+    patch:
+      summary: Editar una unidad (título, posición)
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/UnitID"
+      responses:
+        "200": { description: Unidad actualizada }
+    delete:
+      summary: Eliminar una unidad
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/UnitID"
+      responses:
+        "204": { description: Eliminada }
+
+  /units/{unitID}/resources:
+    post:
+      summary: Crear un recurso dentro de una unidad
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/UnitID"
+      responses:
+        "201": { description: Recurso creado }
+
+  /resources/{resourceID}:
+    patch:
+      summary: Editar metadatos de un recurso (título, visibilidad, obligatoriedad, posición)
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/ResourceID"
+      responses:
+        "200": { description: Recurso actualizado }
+    delete:
+      summary: Eliminar un recurso
+      tags: [autoria]
+      parameters:
+        - $ref: "#/components/parameters/ResourceID"
+      responses:
+        "204": { description: Eliminado }
+
+  /resources/{resourceID}/content/draft:
+    put:
+      summary: Autosave del contenido Markdown de un recurso rich_text
+      tags: [editor]
+      parameters:
+        - $ref: "#/components/parameters/ResourceID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                markdown: { type: string }
+      responses:
+        "200": { description: Borrador guardado }
+    get:
+      summary: Recuperar el último borrador autosaved
+      tags: [editor]
+      parameters:
+        - $ref: "#/components/parameters/ResourceID"
+      responses:
+        "200": { description: Contenido del borrador }
+
+  /resources/{resourceID}/content/publish:
+    post:
+      summary: Mover el borrador autosaved a contenido oficial dentro de la versión en edición
+      tags: [editor]
+      parameters:
+        - $ref: "#/components/parameters/ResourceID"
+      responses:
+        "200": { description: Contenido publicado dentro del borrador }
+
+  /catalog:
+    get:
+      summary: Buscar cursos publicados, con filtros y paginación por cursor
+      tags: [catalogo]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        "200": { description: Lista de cursos publicados más el cursor de la siguiente página }
+
+  /courses/{courseID}/enrollments:
+    post:
+      summary: Inscribirse a un curso publicado (o reactivar una inscripción retirada)
+      tags: [catalogo]
+      parameters:
+        - $ref: "#/components/parameters/CourseID"
+      responses:
+        "201": { description: Inscripción activa }
+        "409": { description: Ya estaba inscrito }
+    delete:
+      summary: Retirarse de un curso (conserva el historial de la inscripción)
+      tags: [catalogo]
+      parameters:
+        - $ref: "#/components/parameters/CourseID"
+      responses:
+        "204": { description: Retirado }
+
+  /me/enrollments:
+    get:
+      summary: Listar mis inscripciones (estudiante autenticado)
+      tags: [catalogo]
+      responses:
+        "200": { description: Lista de inscripciones }
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: header
+      name: X-Session-Token
+      description: >
+        Provisional: mientras internal/auth no existe, el entorno de
+        desarrollo usa los headers X-User-Id y X-User-Role en su lugar
+        (ver internal/platform/authctx).
+  parameters:
+    CourseID:
+      name: courseID
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    VersionID:
+      name: versionID
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ModuleID:
+      name: moduleID
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    UnitID:
+      name: unitID
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ResourceID:
+      name: resourceID
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ValidationError:
+      description: Error de validación
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
