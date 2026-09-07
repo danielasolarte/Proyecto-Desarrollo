@@ -128,6 +128,18 @@ paths:
       responses:
         "200": { description: Usuarios activos/no eliminados }
 
+  /admin/users/admins:
+    post:
+      summary: Crear administrador desde administracion
+      tags: [administracion]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201": { description: Administrador activo creado }
+
   /admin/users/teachers:
     post:
       summary: Crear profesor desde administracion
@@ -141,6 +153,14 @@ paths:
         "201": { description: Profesor activo creado }
 
   /admin/users/{userID}:
+    get:
+      summary: Obtener un usuario por ID
+      tags: [administracion]
+      parameters:
+        - $ref: "#/components/parameters/UserID"
+      responses:
+        "200": { description: Usuario encontrado }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       summary: Cambiar nombre, rol o estado de un usuario
       tags: [administracion]
@@ -175,6 +195,13 @@ paths:
         - $ref: "#/components/parameters/UserID"
       responses:
         "200": { description: Sesiones del usuario }
+    delete:
+      summary: Revocar todas las sesiones de un usuario
+      tags: [administracion]
+      parameters:
+        - $ref: "#/components/parameters/UserID"
+      responses:
+        "204": { description: Sesiones revocadas }
 
   /admin/sessions/{sessionID}:
     delete:
@@ -496,6 +523,43 @@ components:
       properties:
         email: { type: string, format: email }
         password: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        full_name: { type: string }
+        role: { type: string, enum: [student, teacher, admin] }
+        status: { type: string, enum: [pending_verification, active, suspended, deleted] }
+        email_verified_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Session:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        revoked_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    AuditLog:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        actor_id: { type: string, format: uuid }
+        action: { type: string }
+        entity_type: { type: string }
+        entity_id: { type: string, format: uuid }
+        metadata: { type: string }
+        created_at: { type: string, format: date-time }
+    AuthResult:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        session: { $ref: "#/components/schemas/Session" }
+        token: { type: string }
+        expires_at: { type: string, format: date-time }
     Error:
       type: object
       properties:

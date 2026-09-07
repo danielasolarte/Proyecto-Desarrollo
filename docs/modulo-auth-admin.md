@@ -13,9 +13,10 @@ de usuarios para la entrega 1.
 - Middleware real de autenticacion que acepta `Authorization: Bearer <token>` o `X-Session-Token`.
 - Recuperacion de clave con token temporal enviado a Mailpit.
 - Bootstrap del primer admin con `POST /api/v1/auth/bootstrap-admin`, bloqueado si ya existe un admin activo.
-- CRUD administrativo basico: listar usuarios, crear profesores, actualizar rol/estado/nombre y eliminar logicamente.
-- Revocacion de sesiones desde usuario actual o desde administracion.
+- CRUD administrativo basico: listar usuarios, consultar usuario por ID, crear profesores/admins, actualizar rol/estado/nombre y eliminar logicamente.
+- Revocacion de sesiones desde usuario actual, revocacion individual desde administracion y revocacion masiva por usuario.
 - Auditoria en `audit_log` para registro, login, verificacion, recuperacion y operaciones admin.
+- Auditoria append-only mediante triggers que impiden UPDATE y DELETE sobre `audit_log`.
 - Proteccion del ultimo administrador activo y bloqueo de autodegradacion/suspension del admin actual.
 - OpenAPI de los endpoints de identidad y administracion.
 - Pruebas de casos de uso en `internal/auth/usecase`.
@@ -63,6 +64,22 @@ curl -X POST localhost:8080/api/v1/admin/users/teachers \
   -d '{"email":"profe@example.com","password":"claveSegura123","full_name":"Profe Uno"}'
 ```
 
+Crear otro administrador desde admin:
+
+```bash
+curl -X POST localhost:8080/api/v1/admin/users/admins \
+  -H "Authorization: Bearer TOKEN_ADMIN" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin2@example.com","password":"claveSegura123","full_name":"Admin Dos"}'
+```
+
+Revocar todas las sesiones de un usuario:
+
+```bash
+curl -X DELETE localhost:8080/api/v1/admin/users/USER_ID/sessions \
+  -H "Authorization: Bearer TOKEN_ADMIN"
+```
+
 ## Variables de entorno
 
 - `DATABASE_URL`: conexion PostgreSQL. Por defecto usa `postgres://mooc:mooc@localhost:5432/mooc?sslmode=disable`.
@@ -73,5 +90,6 @@ curl -X POST localhost:8080/api/v1/admin/users/teachers \
 ## Simplificaciones de entrega 1
 
 - Los tokens de verificacion se devuelven tambien como `verification_token_dev` para facilitar pruebas con curl/Postman; en demo se puede comprobar igualmente el correo en Mailpit.
-- La auditoria guarda metadata JSON basica y expone los ultimos 200 eventos.
+- La auditoria guarda metadata JSON basica, expone los ultimos 200 eventos y queda protegida contra UPDATE/DELETE.
 - Las sesiones se validan contra Redis como cache y contra Postgres como fuente persistente.
+- Al suspender o eliminar logicamente un usuario activo, sus sesiones se revocan y se eliminan de Redis.

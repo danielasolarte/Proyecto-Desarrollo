@@ -221,7 +221,15 @@ func Logout(repo domain.UserRepository, store domain.SessionStore, token string)
 	tokenHash := HashToken(token)
 	now := time.Now()
 	_ = store.Delete(tokenHash)
-	return repo.RevokeSessionByTokenHash(tokenHash, now)
+	session, err := repo.FindSessionByTokenHash(tokenHash)
+	if err != nil {
+		return err
+	}
+	if err := repo.RevokeSessionByTokenHash(tokenHash, now); err != nil {
+		return err
+	}
+	_ = repo.CreateAuditLog(&domain.AuditLog{ActorID: &session.UserID, Action: "auth.logout", EntityType: "session", EntityID: &session.ID, Metadata: "{}"})
+	return nil
 }
 
 func ForgotPassword(repo domain.UserRepository, mailer domain.Mailer, email string) error {

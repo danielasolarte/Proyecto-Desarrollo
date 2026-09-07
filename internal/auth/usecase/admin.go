@@ -28,6 +28,14 @@ func validStatus(s domain.Status) bool {
 }
 
 func CreateTeacher(repo domain.UserRepository, actorID string, in RegisterInput) (*domain.User, error) {
+	return createStaffUser(repo, actorID, in, domain.RoleTeacher, "admin.create_teacher")
+}
+
+func CreateAdmin(repo domain.UserRepository, actorID string, in RegisterInput) (*domain.User, error) {
+	return createStaffUser(repo, actorID, in, domain.RoleAdmin, "admin.create_admin")
+}
+
+func createStaffUser(repo domain.UserRepository, actorID string, in RegisterInput, role domain.Role, action string) (*domain.User, error) {
 	in.Email = NormalizeEmail(in.Email)
 	if err := validateUserInput(in.Email, in.Password, in.FullName); err != nil {
 		return nil, err
@@ -46,22 +54,23 @@ func CreateTeacher(repo domain.UserRepository, actorID string, in RegisterInput)
 		Email:           in.Email,
 		PasswordHash:    string(hash),
 		FullName:        strings.TrimSpace(in.FullName),
-		Role:            domain.RoleTeacher,
+		Role:            role,
 		Status:          domain.StatusActive,
 		EmailVerifiedAt: &now,
 	}
 	if err := repo.CreateUser(u); err != nil {
 		return nil, err
 	}
-	_ = audit(repo, &actorID, "admin.create_teacher", "user", &u.ID, map[string]any{"email": u.Email})
+	_ = audit(repo, &actorID, action, "user", &u.ID, map[string]any{"email": u.Email, "role": u.Role})
 	return u, nil
 }
 
-func UpdateUser(repo domain.UserRepository, in UpdateUserInput) (*domain.User, error) {
+func UpdateUser(repo domain.UserRepository, store domain.SessionStore, in UpdateUserInput) (*domain.User, error) {
 	u, err := repo.FindUserByID(in.UserID)
 	if err != nil {
 		return nil, err
 	}
+	previousStatus := u.Status
 	if in.FullName != nil && strings.TrimSpace(*in.FullName) != "" {
 		u.FullName = strings.TrimSpace(*in.FullName)
 	}
@@ -86,13 +95,16 @@ func UpdateUser(repo domain.UserRepository, in UpdateUserInput) (*domain.User, e
 	if err := repo.UpdateUser(u); err != nil {
 		return nil, err
 	}
+	if previousStatus == domain.StatusActive && (u.Status == domain.StatusSuspended || u.Status == domain.StatusDeleted) {
+		_ = revokeAllSessionsForUser(repo, store, u.ID)
+	}
 	_ = audit(repo, &in.ActorID, "admin.update_user", "user", &u.ID, map[string]any{"role": u.Role, "status": u.Status})
 	return u, nil
 }
 
-func DeleteUser(repo domain.UserRepository, actorID, userID string) error {
+func DeleteUser(repo domain.UserRepository, store domain.SessionStore, actorID, userID string) error {
 	status := domain.StatusDeleted
-	_, err := UpdateUser(repo, UpdateUserInput{ActorID: actorID, UserID: userID, Status: &status})
+	_, err := UpdateUser(repo, store, UpdateUserInput{ActorID: actorID, UserID: userID, Status: &status})
 	return err
 }
 
@@ -107,6 +119,29 @@ func RevokeSession(repo domain.UserRepository, store domain.SessionStore, actorI
 	}
 	_ = store.Delete(session.TokenHash)
 	_ = audit(repo, &actorID, "admin.revoke_session", "session", &sessionID, nil)
+	return nil
+}
+
+func RevokeAllSessions(repo domain.UserRepository, store domain.SessionStore, actorID, userID string) error {
+	if err := revokeAllSessionsForUser(repo, store, userID); err != nil {
+		return err
+	}
+	_ = audit(repo, &actorID, "admin.revoke_user_sessions", "user", &userID, nil)
+	return nil
+}
+
+func revokeAllSessionsForUser(repo domain.UserRepository, store domain.SessionStore, userID string) error {
+	sessions, err := repo.ListSessionsByUser(userID)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	if err := repo.RevokeSessionsByUser(userID, now); err != nil {
+		return err
+	}
+	for _, session := range sessions {
+		_ = store.Delete(session.TokenHash)
+	}
 	return nil
 }
 

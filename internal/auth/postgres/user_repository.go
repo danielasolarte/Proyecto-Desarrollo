@@ -235,6 +235,14 @@ func (r *UserRepository) RevokeSession(sessionID string, revokedAt time.Time) er
 	return err
 }
 
+func (r *UserRepository) RevokeSessionsByUser(userID string, revokedAt time.Time) error {
+	_, err := r.db.Exec(context.Background(), `
+		UPDATE sessions SET revoked_at = $1, updated_at = now()
+		WHERE user_id = $2 AND revoked_at IS NULL
+	`, revokedAt, userID)
+	return err
+}
+
 func (r *UserRepository) RevokeSessionByTokenHash(tokenHash string, revokedAt time.Time) error {
 	_, err := r.db.Exec(context.Background(), `
 		UPDATE sessions SET revoked_at = $1, updated_at = now() WHERE token_hash = $2

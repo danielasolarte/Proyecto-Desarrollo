@@ -93,6 +93,7 @@ type UserRepository interface {
 	FindSessionByTokenHash(tokenHash string) (*Session, error)
 	ListSessionsByUser(userID string) ([]Session, error)
 	RevokeSession(sessionID string, revokedAt time.Time) error
+	RevokeSessionsByUser(userID string, revokedAt time.Time) error
 	RevokeSessionByTokenHash(tokenHash string, revokedAt time.Time) error
 
 	CreateAuditLog(a *AuditLog) error

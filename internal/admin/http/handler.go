@@ -41,6 +41,14 @@ func (h *Handler) ListUsers(c echo.Context) error {
 	return c.JSON(http.StatusOK, users)
 }
 
+func (h *Handler) GetUser(c echo.Context) error {
+	user, err := h.repo.FindUserByID(c.Param("userID"))
+	if err != nil {
+		return authhttpError(c, err)
+	}
+	return c.JSON(http.StatusOK, user)
+}
+
 func (h *Handler) CreateTeacher(c echo.Context) error {
 	actor, _ := authctx.UserFromContext(c)
 	var req createTeacherRequest
@@ -54,13 +62,26 @@ func (h *Handler) CreateTeacher(c echo.Context) error {
 	return c.JSON(http.StatusCreated, u)
 }
 
+func (h *Handler) CreateAdmin(c echo.Context) error {
+	actor, _ := authctx.UserFromContext(c)
+	var req createTeacherRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, apierror.New(apierror.CodeValidation, "cuerpo invalido"))
+	}
+	u, err := usecase.CreateAdmin(h.repo, actor.ID, usecase.RegisterInput(req))
+	if err != nil {
+		return authhttpError(c, err)
+	}
+	return c.JSON(http.StatusCreated, u)
+}
+
 func (h *Handler) UpdateUser(c echo.Context) error {
 	actor, _ := authctx.UserFromContext(c)
 	var req updateUserRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, apierror.New(apierror.CodeValidation, "cuerpo invalido"))
 	}
-	u, err := usecase.UpdateUser(h.repo, usecase.UpdateUserInput{
+	u, err := usecase.UpdateUser(h.repo, h.store, usecase.UpdateUserInput{
 		ActorID: actor.ID, UserID: c.Param("userID"), FullName: req.FullName, Role: req.Role, Status: req.Status,
 	})
 	if err != nil {
@@ -71,7 +92,7 @@ func (h *Handler) UpdateUser(c echo.Context) error {
 
 func (h *Handler) DeleteUser(c echo.Context) error {
 	actor, _ := authctx.UserFromContext(c)
-	if err := usecase.DeleteUser(h.repo, actor.ID, c.Param("userID")); err != nil {
+	if err := usecase.DeleteUser(h.repo, h.store, actor.ID, c.Param("userID")); err != nil {
 		return authhttpError(c, err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -93,6 +114,14 @@ func (h *Handler) RevokeSession(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func (h *Handler) RevokeUserSessions(c echo.Context) error {
+	actor, _ := authctx.UserFromContext(c)
+	if err := usecase.RevokeAllSessions(h.repo, h.store, actor.ID, c.Param("userID")); err != nil {
+		return authhttpError(c, err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func (h *Handler) ListAuditLog(c echo.Context) error {
 	logs, err := h.repo.ListAuditLog()
 	if err != nil {
@@ -104,10 +133,13 @@ func (h *Handler) ListAuditLog(c echo.Context) error {
 func RegisterRoutes(e *echo.Echo, h *Handler) {
 	g := e.Group("/api/v1/admin", authctx.RequireRole(authctx.RoleAdmin))
 	g.GET("/users", h.ListUsers)
+	g.GET("/users/:userID", h.GetUser)
 	g.POST("/users/teachers", h.CreateTeacher)
+	g.POST("/users/admins", h.CreateAdmin)
 	g.PATCH("/users/:userID", h.UpdateUser)
 	g.DELETE("/users/:userID", h.DeleteUser)
 	g.GET("/users/:userID/sessions", h.ListUserSessions)
+	g.DELETE("/users/:userID/sessions", h.RevokeUserSessions)
 	g.DELETE("/sessions/:sessionID", h.RevokeSession)
 	g.GET("/audit-log", h.ListAuditLog)
 }

@@ -46,3 +46,18 @@ CREATE TABLE audit_log (
 CREATE INDEX idx_audit_log_actor_id ON audit_log (actor_id);
 CREATE INDEX idx_audit_log_entity ON audit_log (entity_type, entity_id);
 CREATE INDEX idx_audit_log_created_at ON audit_log (created_at DESC);
+
+CREATE OR REPLACE FUNCTION prevent_audit_log_mutation()
+RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'audit_log is append-only';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_prevent_audit_log_update
+BEFORE UPDATE ON audit_log
+FOR EACH ROW EXECUTE FUNCTION prevent_audit_log_mutation();
+
+CREATE TRIGGER trg_prevent_audit_log_delete
+BEFORE DELETE ON audit_log
+FOR EACH ROW EXECUTE FUNCTION prevent_audit_log_mutation();

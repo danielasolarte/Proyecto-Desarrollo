@@ -66,9 +66,10 @@ Cubre:
 - Recuperacion de contrasena por token.
 - Bootstrap del primer administrador.
 - Creacion de profesores desde administracion.
+- Creacion de administradores desde administracion.
 - CRUD administrativo basico de usuarios, roles y estados.
-- Revocacion de sesiones.
-- Auditoria basica.
+- Revocacion individual y masiva de sesiones.
+- Auditoria basica append-only.
 - Proteccion del ultimo administrador activo.
 - Pruebas de casos de uso de Auth/Admin.
 
@@ -210,6 +211,62 @@ curl -X POST localhost:8080/api/v1/admin/users/teachers \
   -d "{\"email\":\"profe@example.com\",\"password\":\"claveSegura123\",\"full_name\":\"Profe Uno\"}"
 ```
 
+Crear otro administrador desde administracion:
+
+```bash
+curl -X POST localhost:8080/api/v1/admin/users/admins \
+  -H "Authorization: Bearer TOKEN_ADMIN" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"admin2@example.com\",\"password\":\"claveSegura123\",\"full_name\":\"Admin Dos\"}"
+```
+
+Consultar un usuario por ID:
+
+```bash
+curl localhost:8080/api/v1/admin/users/USER_ID \
+  -H "Authorization: Bearer TOKEN_ADMIN"
+```
+
+Actualizar rol, estado o nombre de un usuario:
+
+```bash
+curl -X PATCH localhost:8080/api/v1/admin/users/USER_ID \
+  -H "Authorization: Bearer TOKEN_ADMIN" \
+  -H "Content-Type: application/json" \
+  -d "{\"status\":\"suspended\"}"
+```
+
+Cuando un usuario activo queda `suspended` o `deleted`, sus sesiones se revocan
+en PostgreSQL y se eliminan de Redis.
+
+Listar sesiones de un usuario:
+
+```bash
+curl localhost:8080/api/v1/admin/users/USER_ID/sessions \
+  -H "Authorization: Bearer TOKEN_ADMIN"
+```
+
+Revocar todas las sesiones de un usuario:
+
+```bash
+curl -X DELETE localhost:8080/api/v1/admin/users/USER_ID/sessions \
+  -H "Authorization: Bearer TOKEN_ADMIN"
+```
+
+Revocar una sesion individual:
+
+```bash
+curl -X DELETE localhost:8080/api/v1/admin/sessions/SESSION_ID \
+  -H "Authorization: Bearer TOKEN_ADMIN"
+```
+
+Consultar auditoria reciente:
+
+```bash
+curl localhost:8080/api/v1/admin/audit-log \
+  -H "Authorization: Bearer TOKEN_ADMIN"
+```
+
 Registrar estudiante:
 
 ```bash
@@ -275,12 +332,22 @@ Ejecutar toda la suite:
 go test ./...
 ```
 
-Actualmente hay pruebas automaticas para casos de uso de Auth/Admin:
+En Windows, si Go no puede escribir en `AppData\Local\go-build`, usar una cache
+local dentro del repo:
+
+```powershell
+$env:GOCACHE = (Resolve-Path .).Path + '\.gocache'
+go test ./...
+```
+
+Actualmente hay pruebas automaticas para Auth/Admin:
 
 - registro de estudiante y token de verificacion;
 - verificacion de correo y login;
 - creacion del primer admin;
 - proteccion del ultimo admin activo.
+- endpoint HTTP de registro;
+- middleware HTTP con ruta sin token, token de estudiante y token de admin.
 
 ## OpenAPI
 
@@ -307,4 +374,5 @@ Incluye endpoints de:
 - La verificacion de correo usa Mailpit local; en produccion se cambiaria por
   un proveedor SMTP real.
 - Las sesiones se revocan en Postgres y se eliminan de Redis cuando aplica.
-- La auditoria es minima pero persistente y consultable por admin.
+- La auditoria es minima, persistente, consultable por admin y append-only a
+  nivel de base de datos mediante triggers.

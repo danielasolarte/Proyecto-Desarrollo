@@ -90,7 +90,7 @@ func TestProtectsLastActiveAdmin(t *testing.T) {
 		t.Fatalf("BootstrapAdmin() error = %v", err)
 	}
 	status := domain.StatusSuspended
-	_, err = UpdateUser(repo, UpdateUserInput{ActorID: "another-admin", UserID: admin.ID, Status: &status})
+	_, err = UpdateUser(repo, newMemoryStore(), UpdateUserInput{ActorID: "another-admin", UserID: admin.ID, Status: &status})
 	if !errors.Is(err, domain.ErrLastActiveAdmin) {
 		t.Fatalf("UpdateUser() error = %v, want ErrLastActiveAdmin", err)
 	}
@@ -283,6 +283,15 @@ func (r *memoryRepo) RevokeSession(sessionID string, revokedAt time.Time) error 
 		}
 	}
 	return domain.ErrNotFound
+}
+
+func (r *memoryRepo) RevokeSessionsByUser(userID string, revokedAt time.Time) error {
+	for _, s := range r.sessions {
+		if s.UserID == userID {
+			s.RevokedAt = &revokedAt
+		}
+	}
+	return nil
 }
 
 func (r *memoryRepo) RevokeSessionByTokenHash(tokenHash string, revokedAt time.Time) error {
