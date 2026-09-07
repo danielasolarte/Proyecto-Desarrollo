@@ -9,12 +9,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/redis/go-redis/v9"
 
+	adminHTTP "github.com/equipo-mooc/plataforma-mooc/internal/admin/http"
+	authHTTP "github.com/equipo-mooc/plataforma-mooc/internal/auth/http"
+	authPG "github.com/equipo-mooc/plataforma-mooc/internal/auth/postgres"
 	catalogHTTP "github.com/equipo-mooc/plataforma-mooc/internal/catalog/http"
 	catalogPG "github.com/equipo-mooc/plataforma-mooc/internal/catalog/postgres"
 	coursesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/courses/http"
 	coursesPG "github.com/equipo-mooc/plataforma-mooc/internal/courses/postgres"
-	"github.com/equipo-mooc/plataforma-mooc/internal/platform/authctx"
+	"github.com/equipo-mooc/plataforma-mooc/internal/platform/mailer"
 )
 
 func main() {
@@ -29,12 +33,30 @@ func main() {
 	}
 	defer db.Close()
 
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+	redisClient := redis.NewClient(&redis.Options{Addr: redisAddr})
+	defer redisClient.Close()
+
+	smtpAddr := os.Getenv("SMTP_ADDR")
+	if smtpAddr == "" {
+		smtpAddr = "localhost:1025"
+	}
+	mailFrom := os.Getenv("MAIL_FROM")
+	if mailFrom == "" {
+		mailFrom = "no-reply@mooc.local"
+	}
+
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	// TODO(persona-a): reemplazar este middleware por el real de sesiones
-	// cuando internal/auth exista. Ver internal/platform/authctx/authctx.go.
-	e.Use(authctx.FakeAuthMiddleware())
+
+	userRepo := authPG.NewUserRepository(db)
+	sessionStore := authPG.NewRedisSessionStore(redisClient)
+	mailerClient := mailer.NewSMTPMailer(smtpAddr, mailFrom)
+	e.Use(authHTTP.AuthMiddleware(userRepo, sessionStore))
 
 	e.GET("/healthz", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
@@ -43,6 +65,12 @@ func main() {
 	courseRepo := coursesPG.NewCourseRepository(db)
 	courseHandler := coursesHTTP.NewHandler(courseRepo)
 	coursesHTTP.RegisterRoutes(e, courseHandler)
+
+	authHandler := authHTTP.NewHandler(userRepo, sessionStore, mailerClient)
+	authHTTP.RegisterRoutes(e, authHandler)
+
+	adminHandler := adminHTTP.NewHandler(userRepo, sessionStore)
+	adminHTTP.RegisterRoutes(e, adminHandler)
 
 	catalogRepo := catalogPG.NewCatalogRepository(db)
 	catalogHandler := catalogHTTP.NewHandler(catalogRepo)

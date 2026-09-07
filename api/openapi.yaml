@@ -12,6 +12,186 @@ servers:
 security:
   - sessionAuth: []
 paths:
+  /auth/register:
+    post:
+      summary: Registro publico de estudiantes con envio de verificacion por Mailpit
+      tags: [identidad]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201": { description: Estudiante creado en pending_verification }
+        "409": { description: Email ya registrado }
+
+  /auth/bootstrap-admin:
+    post:
+      summary: Crear el primer administrador solo si no existe ningun admin activo
+      tags: [identidad]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201": { description: Administrador inicial creado }
+        "409": { description: Ya existe un administrador activo }
+
+  /auth/verify-email:
+    post:
+      summary: Verificar correo con token enviado a Mailpit
+      tags: [identidad]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200": { description: Usuario activado }
+        "400": { description: Token invalido o expirado }
+
+  /auth/login:
+    post:
+      summary: Login con sesion opaca revocable guardada en Redis y Postgres
+      tags: [identidad]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200": { description: Token de sesion y datos del usuario }
+        "401": { description: Credenciales invalidas }
+
+  /auth/logout:
+    post:
+      summary: Revocar la sesion actual
+      tags: [identidad]
+      responses:
+        "204": { description: Sesion revocada }
+
+  /auth/password/forgot:
+    post:
+      summary: Solicitar token de recuperacion de clave por Mailpit
+      tags: [identidad]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "202": { description: Solicitud aceptada sin revelar si el email existe }
+
+  /auth/password/reset:
+    post:
+      summary: Cambiar clave usando token de recuperacion
+      tags: [identidad]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token: { type: string }
+                new_password: { type: string, minLength: 8 }
+      responses:
+        "204": { description: Clave cambiada }
+
+  /me:
+    get:
+      summary: Obtener el usuario autenticado
+      tags: [identidad]
+      responses:
+        "200": { description: Usuario actual }
+
+  /admin/users:
+    get:
+      summary: Listar usuarios
+      tags: [administracion]
+      responses:
+        "200": { description: Usuarios activos/no eliminados }
+
+  /admin/users/teachers:
+    post:
+      summary: Crear profesor desde administracion
+      tags: [administracion]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201": { description: Profesor activo creado }
+
+  /admin/users/{userID}:
+    patch:
+      summary: Cambiar nombre, rol o estado de un usuario
+      tags: [administracion]
+      parameters:
+        - $ref: "#/components/parameters/UserID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name: { type: string }
+                role: { type: string, enum: [student, teacher, admin] }
+                status: { type: string, enum: [pending_verification, active, suspended, deleted] }
+      responses:
+        "200": { description: Usuario actualizado }
+        "409": { description: Proteccion del ultimo administrador activo }
+    delete:
+      summary: Marcar usuario como deleted
+      tags: [administracion]
+      parameters:
+        - $ref: "#/components/parameters/UserID"
+      responses:
+        "204": { description: Usuario eliminado logicamente }
+
+  /admin/users/{userID}/sessions:
+    get:
+      summary: Listar sesiones de un usuario
+      tags: [administracion]
+      parameters:
+        - $ref: "#/components/parameters/UserID"
+      responses:
+        "200": { description: Sesiones del usuario }
+
+  /admin/sessions/{sessionID}:
+    delete:
+      summary: Revocar una sesion desde administracion
+      tags: [administracion]
+      parameters:
+        - $ref: "#/components/parameters/SessionID"
+      responses:
+        "204": { description: Sesion revocada }
+
+  /admin/audit-log:
+    get:
+      summary: Consultar auditoria reciente
+      tags: [administracion]
+      responses:
+        "200": { description: Eventos de auditoria }
+
   /courses:
     post:
       summary: Crear un curso nuevo (crea también su primera versión en borrador)
@@ -253,9 +433,8 @@ components:
       in: header
       name: X-Session-Token
       description: >
-        Provisional: mientras internal/auth no existe, el entorno de
-        desarrollo usa los headers X-User-Id y X-User-Role en su lugar
-        (ver internal/platform/authctx).
+        Token opaco de sesion emitido por /auth/login. Tambien se acepta
+        Authorization: Bearer <token>.
   parameters:
     CourseID:
       name: courseID
@@ -282,6 +461,16 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    UserID:
+      name: userID
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SessionID:
+      name: sessionID
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
   responses:
     NotFound:
       description: Recurso no encontrado
@@ -294,6 +483,19 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
   schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password, full_name]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        full_name: { type: string }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
     Error:
       type: object
       properties:
