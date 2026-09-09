@@ -19,16 +19,28 @@ const (
 type Service struct {
 	repo       domain.Repository
 	courseRepo coursesDomain.CourseRepository
+	badgeIssuer BadgeIssuer
 }
 
 func NewService(
 	repo domain.Repository,
 	courseRepo coursesDomain.CourseRepository,
+	badgeIssuer BadgeIssuer,
 ) *Service {
 	return &Service{
-		repo:       repo,
-		courseRepo: courseRepo,
+		repo:        repo,
+		courseRepo:  courseRepo,
+		badgeIssuer: badgeIssuer,
 	}
+}
+
+type BadgeIssuer interface {
+	EnsureBadgeIssued(
+		ctx context.Context,
+		studentID uuid.UUID,
+		enrollmentID uuid.UUID,
+		courseID uuid.UUID,
+	) error
 }
 
 func (s *Service) OpenResource(
@@ -470,9 +482,23 @@ func (s *Service) RecalculateCourseProgress(
 			progress.Status = domain.CourseStatusCompleted
 		}
 	}
-
 	if err := s.repo.UpsertCourseProgress(ctx, progress); err != nil {
 		return nil, err
+	}
+
+	if progress.Status == domain.CourseStatusApproved &&
+		s.badgeIssuer != nil {
+
+		err := s.badgeIssuer.EnsureBadgeIssued(
+			ctx,
+			studentID,
+			enrollmentID,
+			courseID,
+		)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return progress, nil
