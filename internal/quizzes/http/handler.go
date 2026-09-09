@@ -13,6 +13,7 @@ import (
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/apierror"
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/authctx"
 	quizDomain "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/domain"
+	progressUC "github.com/equipo-mooc/plataforma-mooc/internal/progress/usecase"
 	"github.com/equipo-mooc/plataforma-mooc/internal/quizzes/usecase"
 )
 
@@ -21,6 +22,7 @@ type Handler struct {
 	quizRepo    quizDomain.Repository
 	courseRepo  coursesDomain.CourseRepository
 	catalogRepo catalogDomain.CatalogRepository
+	progressService *progressUC.Service
 }
 
 func NewHandler(
@@ -28,12 +30,14 @@ func NewHandler(
 	quizRepo quizDomain.Repository,
 	courseRepo coursesDomain.CourseRepository,
 	catalogRepo catalogDomain.CatalogRepository,
+	progressService *progressUC.Service,
 ) *Handler {
 	return &Handler{
-		service:     service,
-		quizRepo:    quizRepo,
-		courseRepo:  courseRepo,
-		catalogRepo: catalogRepo,
+		service:         service,
+		quizRepo:        quizRepo,
+		courseRepo:      courseRepo,
+		catalogRepo:     catalogRepo,
+		progressService: progressService,
 	}
 }
 
@@ -635,6 +639,71 @@ func (h *Handler) SubmitAttempt(c echo.Context) error {
 		attemptID,
 		studentID,
 		idempotencyKey,
+	)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	quiz, err := h.quizRepo.GetQuizByID(
+		c.Request().Context(),
+		attempt.QuizID,
+	)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	course, resource, err := h.courseForResource(
+		quiz.ResourceID.String(),
+	)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	resourceStableID, err := uuid.Parse(resource.StableID)
+	if err != nil {
+		return c.JSON(
+			http.StatusInternalServerError,
+			apierror.New(
+				apierror.CodeInternal,
+				"resource stable_id invalido",
+			),
+		)
+	}
+
+	courseID, err := uuid.Parse(course.ID)
+	if err != nil {
+		return c.JSON(
+			http.StatusInternalServerError,
+			apierror.New(
+				apierror.CodeInternal,
+				"course_id invalido",
+			),
+		)
+	}
+
+	passed := false
+
+	if attempt.Passed != nil {
+		passed = *attempt.Passed
+	}
+
+	_, err = h.progressService.RecordQuizResult(
+		c.Request().Context(),
+		attempt.StudentID,
+		attempt.EnrollmentID,
+		quiz.ResourceID,
+		resourceStableID,
+		passed,
+	)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	_, err = h.progressService.RecalculateCourseProgress(
+		c.Request().Context(),
+		attempt.StudentID,
+		attempt.EnrollmentID,
+		courseID,
 	)
 	if err != nil {
 		return respondError(c, err)

@@ -21,6 +21,9 @@ import (
 	quizzesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/http"
 	quizzesPG "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/postgres"
 	quizzesUC "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/usecase"
+	progressHTTP "github.com/equipo-mooc/plataforma-mooc/internal/progress/http"
+	progressPG "github.com/equipo-mooc/plataforma-mooc/internal/progress/postgres"
+	progressUC "github.com/equipo-mooc/plataforma-mooc/internal/progress/usecase"
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/mailer"
 )
 
@@ -79,9 +82,17 @@ func main() {
 	catalogHandler := catalogHTTP.NewHandler(catalogRepo)
 	catalogHTTP.RegisterRoutes(e, catalogHandler)
 
+	progressRepo := progressPG.NewRepository(db)
+	progressService := progressUC.NewService(progressRepo, courseRepo)
+
+	progressHandler := progressHTTP.NewHandler(progressService, courseRepo, catalogRepo)
+
+	progressHTTP.RegisterRoutes(e, progressHandler)
+
 	quizRepo := quizzesPG.NewRepository(db)
 	quizService := quizzesUC.NewService(quizRepo)
-	quizHandler := quizzesHTTP.NewHandler(quizService, quizRepo, courseRepo, catalogRepo)
+
+	quizHandler := quizzesHTTP.NewHandler(quizService, quizRepo, courseRepo, catalogRepo, progressService)
 	quizzesHTTP.RegisterRoutes(e, quizHandler)
 
 	port := os.Getenv("PORT")
