@@ -18,6 +18,9 @@ import (
 	catalogPG "github.com/equipo-mooc/plataforma-mooc/internal/catalog/postgres"
 	coursesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/courses/http"
 	coursesPG "github.com/equipo-mooc/plataforma-mooc/internal/courses/postgres"
+	quizzesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/http"
+	quizzesPG "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/postgres"
+	quizzesUC "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/usecase"
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/mailer"
 )
 
@@ -58,7 +61,7 @@ func main() {
 	mailerClient := mailer.NewSMTPMailer(smtpAddr, mailFrom)
 	e.Use(authHTTP.AuthMiddleware(userRepo, sessionStore))
 
-	e.GET("/healthz", func(c echo.Context) error {
+	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 
@@ -75,6 +78,11 @@ func main() {
 	catalogRepo := catalogPG.NewCatalogRepository(db)
 	catalogHandler := catalogHTTP.NewHandler(catalogRepo)
 	catalogHTTP.RegisterRoutes(e, catalogHandler)
+
+	quizRepo := quizzesPG.NewRepository(db)
+	quizService := quizzesUC.NewService(quizRepo)
+	quizHandler := quizzesHTTP.NewHandler(quizService, quizRepo, courseRepo, catalogRepo)
+	quizzesHTTP.RegisterRoutes(e, quizHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {

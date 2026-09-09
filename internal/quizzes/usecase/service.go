@@ -305,6 +305,17 @@ func (s *Service) SaveAnswer(
 		return nil, domain.ErrInvalidAnswer
 	}
 
+	if selectedOptionID != nil {
+	option, err := s.repo.GetOptionByID(ctx, *selectedOptionID)
+	if err != nil {
+		return nil, err
+		}
+
+	if option.QuestionID != questionID {
+		return nil, domain.ErrInvalidAnswer
+		}
+	}
+
 	answer := &domain.AttemptAnswer{
 		AttemptID:        attemptID,
 		QuestionID:       questionID,
@@ -329,15 +340,22 @@ func (s *Service) SubmitAttempt(
 		return nil, domain.ErrInvalidQuiz
 	}
 
-	// Si esta key ya fue usada por el estudiante,
-	// devolvemos el resultado existente.
 	existing, err := s.repo.GetAttemptByIdempotencyKey(
 		ctx,
 		studentID,
 		idempotencyKey,
 	)
+
 	if err == nil {
+		if existing.ID != attemptID {
+			return nil, domain.ErrIdempotencyConflict
+		}
+
 		return existing, nil
+	}
+
+	if !errors.Is(err, domain.ErrAttemptNotFound) {
+		return nil, err
 	}
 
 	if !errors.Is(err, domain.ErrAttemptNotFound) {
@@ -434,4 +452,39 @@ func (s *Service) SubmitAttempt(
 	}
 
 	return attempt, nil
+}
+
+func (s *Service) GetAttemptForStudent(
+	ctx context.Context,
+	attemptID uuid.UUID,
+	studentID uuid.UUID,
+) (*domain.Attempt, []domain.AttemptAnswer, error) {
+
+	attempt, err := s.repo.GetAttemptByID(ctx, attemptID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if attempt.StudentID != studentID {
+		return nil, nil, domain.ErrForbidden
+	}
+
+	// Si ya venció, actualizamos su estado.
+	if attempt.Status == domain.AttemptStatusInProgress &&
+		attempt.ExpiresAt != nil &&
+		time.Now().After(*attempt.ExpiresAt) {
+
+		attempt.Status = domain.AttemptStatusExpired
+
+		if err := s.repo.UpdateAttempt(ctx, attempt); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	answers, err := s.repo.GetAnswersByAttemptID(ctx, attemptID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return attempt, answers, nil
 }

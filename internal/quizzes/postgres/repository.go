@@ -604,17 +604,6 @@ func (r *Repository) SaveAnswer(
 		answer.ID = uuid.New()
 	}
 
-	if selectedOptionID != nil {
-	option, err := s.repo.GetOptionByID(ctx, *selectedOptionID)
-	if err != nil {
-		return nil, err
-		}
-
-	if option.QuestionID != questionID {
-		return nil, domain.ErrInvalidAnswer
-		}
-	}
-
 	err := r.db.QueryRow(
 		ctx,
 		query,
@@ -845,6 +834,94 @@ func (r *Repository) GetAttemptByIdempotencyKey(
 	return &attempt, nil
 }
 
+func (r *Repository) GetQuizByResourceID(
+	ctx context.Context,
+	resourceID uuid.UUID,
+) (*domain.Quiz, error) {
+	query := `
+		SELECT
+			id,
+			resource_id,
+			passing_score,
+			max_attempts,
+			time_limit_seconds,
+			feedback_mode,
+			created_at,
+			updated_at
+		FROM quizzes
+		WHERE resource_id = $1
+	`
+
+	var quiz domain.Quiz
+
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		resourceID,
+	).Scan(
+		&quiz.ID,
+		&quiz.ResourceID,
+		&quiz.PassingScore,
+		&quiz.MaxAttempts,
+		&quiz.TimeLimitSeconds,
+		&quiz.FeedbackMode,
+		&quiz.CreatedAt,
+		&quiz.UpdatedAt,
+	)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.ErrQuizNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &quiz, nil
+}
+
+func (r *Repository) UpdateAttempt(
+	ctx context.Context,
+	attempt *domain.Attempt,
+) error {
+	query := `
+		UPDATE attempts
+		SET
+			status = $2,
+			score = $3,
+			percentage = $4,
+			passed = $5,
+			snapshot = $6,
+			idempotency_key = $7,
+			expires_at = $8,
+			submitted_at = $9,
+			updated_at = now()
+		WHERE id = $1
+		RETURNING updated_at
+	`
+
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		attempt.ID,
+		attempt.Status,
+		attempt.Score,
+		attempt.Percentage,
+		attempt.Passed,
+		attempt.Snapshot,
+		attempt.IdempotencyKey,
+		attempt.ExpiresAt,
+		attempt.SubmittedAt,
+	).Scan(
+		&attempt.UpdatedAt,
+	)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ErrAttemptNotFound
+	}
+
+	return err
+}
 
 
 

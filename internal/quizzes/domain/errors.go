@@ -14,4 +14,5 @@ var (
 	ErrInvalidAnswer         = errors.New("invalid answer")
 	ErrInvalidQuiz           = errors.New("invalid quiz")
 	ErrOptionNotFound = errors.New("option not found")
+	ErrIdempotencyConflict = errors.New("idempotency key already used for another attempt")
 )
