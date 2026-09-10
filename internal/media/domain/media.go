@@ -166,25 +166,49 @@ type MediaRepository interface {
 // SDK de AWS directamente, se puede testear usecase con un storage falso
 // en memoria, igual que se testea con un MediaRepository falso.
 
-type ObjectStorage interface {
-	// PresignUpload genera una URL temporal con permiso de escritura para
-	// que el frontend suba el archivo directo al bucket, sin pasar por la
-	// API (sección 4 del enunciado, regla de arquitectura).
-	PresignUpload(key string, contentType string, expiresIn time.Duration) (url string, err error)
+// UploadedPart representa una parte ya confirmada de un upload multipart
+// en curso. Viene directo del storage (no de lo que diga el cliente): por
+// eso "reanudar" es simple — se le pregunta a S3/MinIO qué partes ya
+// tiene, en vez de confiar en el estado que guardó el navegador.
+type UploadedPart struct {
+	PartNumber int
+	ETag       string
+	SizeBytes  int64
+}
 
+type ObjectStorage interface {
 	// PresignDownload genera una URL temporal con permiso de lectura,
 	// usada por el visor de PDF y el reproductor HLS.
 	PresignDownload(key string, expiresIn time.Duration) (url string, err error)
 
-	// StatObject confirma que el objeto ya llegó al bucket tras la carga y
-	// devuelve su tamaño y checksum real, para contrastarlos contra lo
-	// declarado en el upload_session (sección 6, "procesamiento asíncrono").
-	StatObject(key string) (sizeBytes int64, checksumSHA256 string, exists bool, err error)
+	// StatObject confirma que el objeto existe y devuelve su tamaño. El
+	// checksum real NO se verifica aquí (el ETag de S3/MinIO no es
+	// confiable para multipart) — se verifica en el worker con un hash
+	// calculado de verdad, ver worker/processor.go.
+	StatObject(key string) (sizeBytes int64, exists bool, err error)
 
-	// Las siguientes las usa el worker, no la API HTTP: el worker habla
-	// directo con MinIO usando credenciales de servidor (no URLs
-	// firmadas), para descargar el original, procesarlo localmente y
-	// subir los derivados (HLS, PDF convertido).
+	// ---- carga multipart reanudable (sección 5.1, punto 5) ----
+
+	// CreateMultipartUpload abre la carga y devuelve el upload_id que
+	// asigna S3/MinIO; se guarda en upload_sessions.storage_upload_id.
+	CreateMultipartUpload(key string, contentType string) (uploadID string, err error)
+
+	// PresignUploadPart firma la URL de escritura de UNA parte. El
+	// cliente sube cada parte con PUT directo a esta URL.
+	PresignUploadPart(key string, uploadID string, partNumber int, expiresIn time.Duration) (url string, err error)
+
+	// ListUploadedParts es la pieza clave de la reanudación: pregunta al
+	// storage qué partes ya llegaron completas, sin depender de que el
+	// navegador recuerde su propio progreso tras cerrarse o perder la
+	// conexión.
+	ListUploadedParts(key string, uploadID string) ([]UploadedPart, error)
+
+	CompleteMultipartUpload(key string, uploadID string, parts []UploadedPart) error
+	AbortMultipartUpload(key string, uploadID string) error
+
+	// Las siguientes las usa el worker, no la API HTTP: habla directo con
+	// MinIO usando credenciales de servidor para descargar el original,
+	// procesarlo localmente y subir los derivados (HLS, PDF convertido).
 	DownloadObject(key string, destPath string) error
 	UploadObject(sourcePath string, key string, contentType string) error
 	DeleteObject(key string) error

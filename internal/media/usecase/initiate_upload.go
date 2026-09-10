@@ -11,11 +11,14 @@ import (
 	"github.com/equipo-mooc/plataforma-mooc/internal/media/domain"
 )
 
-// uploadURLExpiry es cuánto vive la URL prefirmada de escritura. La sesión
-// en sí (upload_sessions.expires_at) vive 24 horas para permitir carga
-// reanudable (sección 5.1, punto 5); la URL firmada puede ser más corta y
-// renovarse, pero para el MVP usamos el mismo horizonte por simplicidad.
-const uploadURLExpiry = 24 * time.Hour
+// RecommendedPartSizeBytes es lo que le sugerimos al cliente usar como
+// tamaño de cada parte. S3/MinIO exige un mínimo de 5MB para cualquier
+// parte que no sea la última; 8MB da margen cómodo.
+const RecommendedPartSizeBytes = 8 * 1024 * 1024
+
+// sessionLifetime es cuánto puede tardar el profesor en terminar de subir
+// (sección 5.1, punto 5: "reanudable durante 24 horas").
+const sessionLifetime = 24 * time.Hour
 
 type InitiateUploadInput struct {
 	ResourceID             string
@@ -31,15 +34,17 @@ var validMediaKinds = map[domain.MediaKind]bool{
 	domain.MediaKindPDF: true, domain.MediaKindPresentation: true, domain.MediaKindFile: true,
 }
 
-// InitiateUpload crea el upload_session y devuelve la URL prefirmada a la
-// que el frontend debe subir el archivo directamente (nunca a través de la
-// API, ver sección 4 del enunciado).
-func InitiateUpload(repo domain.MediaRepository, storage domain.ObjectStorage, in InitiateUploadInput) (*domain.UploadSession, string, error) {
+// InitiateUpload abre una carga multipart y guarda el upload_id que
+// devuelve el storage. NO devuelve una URL de subida: el cliente pide la
+// URL de cada parte por separado con GetUploadPartURL, y puede volver a
+// pedirlas si se corta la conexión — eso es lo que hace la carga
+// reanudable en vez de un solo PUT gigante.
+func InitiateUpload(repo domain.MediaRepository, storage domain.ObjectStorage, in InitiateUploadInput) (*domain.UploadSession, error) {
 	if !validMediaKinds[in.ResourceKind] {
-		return nil, "", errors.Join(domain.ErrValidation, errors.New("tipo de recurso no admite carga multimedia"))
+		return nil, errors.Join(domain.ErrValidation, errors.New("tipo de recurso no admite carga multimedia"))
 	}
 	if strings.TrimSpace(in.InitiatedBy) == "" {
-		return nil, "", errors.Join(domain.ErrValidation, errors.New("falta el usuario que inicia la carga"))
+		return nil, errors.Join(domain.ErrValidation, errors.New("falta el usuario que inicia la carga"))
 	}
 
 	// Cada intento de carga usa una clave de objeto distinta (aunque sea
@@ -47,11 +52,17 @@ func InitiateUpload(repo domain.MediaRepository, storage domain.ObjectStorage, i
 	// profesor decide volver a subir el original.
 	storageKey := fmt.Sprintf("resources/%s/original/%s", in.ResourceID, uuid.NewString())
 
+	uploadID, err := storage.CreateMultipartUpload(storageKey, in.ExpectedMimeType)
+	if err != nil {
+		return nil, err
+	}
+
 	session := &domain.UploadSession{
-		ResourceID:  in.ResourceID,
-		InitiatedBy: in.InitiatedBy,
-		StorageKey:  storageKey,
-		Status:      domain.UploadInitiated,
+		ResourceID:      in.ResourceID,
+		InitiatedBy:      in.InitiatedBy,
+		StorageKey:      storageKey,
+		StorageUploadID: &uploadID,
+		Status:          domain.UploadUploading,
 	}
 	if in.ExpectedMimeType != "" {
 		session.ExpectedMimeType = &in.ExpectedMimeType
@@ -64,13 +75,31 @@ func InitiateUpload(repo domain.MediaRepository, storage domain.ObjectStorage, i
 	}
 
 	if err := repo.CreateUploadSession(session); err != nil {
-		return nil, "", err
+		// Si Postgres falla después de abrir el multipart en S3, no lo
+		// dejamos huérfano.
+		_ = storage.AbortMultipartUpload(storageKey, uploadID)
+		return nil, err
 	}
 
-	url, err := storage.PresignUpload(storageKey, in.ExpectedMimeType, uploadURLExpiry)
+	return session, nil
+}
+
+// sessionGuard centraliza las validaciones que se repiten en cada
+// operación sobre una sesión de carga en curso (usada por
+// GetUploadPartURL, ListUploadedParts y CompleteUpload).
+func sessionGuard(repo domain.MediaRepository, sessionID string, requestedBy string, isAdmin bool) (*domain.UploadSession, error) {
+	session, err := repo.FindUploadSessionByID(sessionID)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-
-	return session, url, nil
+	if session.InitiatedBy != requestedBy && !isAdmin {
+		return nil, domain.ErrForbidden
+	}
+	if session.Status != domain.UploadInitiated && session.Status != domain.UploadUploading {
+		return nil, domain.ErrUploadNotActive
+	}
+	if time.Now().After(session.ExpiresAt) {
+		return nil, domain.ErrUploadExpired
+	}
+	return session, nil
 }

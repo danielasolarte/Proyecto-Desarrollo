@@ -456,9 +456,10 @@ paths:
   /resources/{resourceID}/uploads/initiate:
     post:
       summary: >
-        Iniciar una carga multipart directa a almacenamiento de objetos.
-        Devuelve una URL prefirmada; el archivo se sube directo a
-        MinIO/S3, nunca a través de esta API (sección 4 del enunciado).
+        Abrir una carga multipart reanudable. NO devuelve una URL de
+        subida: el cliente pide la URL de cada parte por separado (ver
+        /uploads/{uploadSessionID}/parts/{partNumber}/url) para poder
+        reanudar tras una interrupción.
       tags: [multimedia]
       parameters:
         - $ref: "#/components/parameters/ResourceID"
@@ -469,13 +470,56 @@ paths:
             schema: { $ref: "#/components/schemas/InitiateUploadRequest" }
       responses:
         "201":
-          description: Sesión de carga creada, junto con la URL prefirmada de subida
+          description: Sesión de carga multipart abierta
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InitiateUploadResponse" }
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { description: No eres el profesor dueño del curso }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /uploads/{uploadSessionID}/parts/{partNumber}/url:
+    get:
+      summary: Obtener la URL prefirmada para subir una parte específica
+      tags: [multimedia]
+      parameters:
+        - $ref: "#/components/parameters/UploadSessionID"
+        - name: partNumber
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: URL prefirmada para esa parte
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string }
+        "403": { description: No eres quien inició esta carga }
+        "409": { description: La sesión ya no está activa o expiró }
+
+  /uploads/{uploadSessionID}/parts:
+    get:
+      summary: >
+        Listar las partes que ya llegaron completas al bucket. Es lo que
+        el cliente usa para reanudar: compara esta lista contra las
+        partes que necesita y solo vuelve a subir las que faltan.
+      tags: [multimedia]
+      parameters:
+        - $ref: "#/components/parameters/UploadSessionID"
+      responses:
+        "200":
+          description: Partes confirmadas hasta el momento
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  parts:
+                    type: array
+                    items: { $ref: "#/components/schemas/UploadedPart" }
 
   /uploads/{uploadSessionID}/complete:
     post:
@@ -606,9 +650,16 @@ components:
       type: object
       properties:
         upload_session: { $ref: "#/components/schemas/UploadSession" }
-        upload_url:
-          type: string
-          description: URL prefirmada; el frontend sube el archivo directo aquí con PUT
+        recommended_part_bytes:
+          type: integer
+          description: Tamaño de parte sugerido para trocear el archivo (8MB)
+
+    UploadedPart:
+      type: object
+      properties:
+        part_number: { type: integer }
+        etag: { type: string }
+        size_bytes: { type: integer, format: int64 }
 
     UploadSession:
       type: object

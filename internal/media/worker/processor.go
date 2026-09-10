@@ -8,8 +8,13 @@
 package worker
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,6 +23,24 @@ import (
 	mediadomain "github.com/equipo-mooc/plataforma-mooc/internal/media/domain"
 	mediausecase "github.com/equipo-mooc/plataforma-mooc/internal/media/usecase"
 )
+
+// allowedMimeTypesByKind es la lista blanca de MIME reales que aceptamos
+// por tipo de recurso. NOTA: http.DetectContentType (stdlib) detecta bien
+// imagen/video/audio/pdf por firma binaria, pero NO distingue un .pptx o
+// .odp de un .zip genérico (ambos son contenedores ZIP) — por eso
+// "presentation" no se valida contra esta lista, solo se confirma que
+// parece un ZIP. Para detección MIME robusta de verdad, la alternativa es
+// una librería de magic numbers (ej. github.com/gabriel-vasile/mimetype),
+// que no agregué para no sumar otra dependencia sin que el equipo lo
+// decida.
+var allowedMimeTypesByKind = map[mediadomain.MediaKind]map[string]bool{
+	mediadomain.MediaKindImage: {"image/jpeg": true, "image/png": true, "image/gif": true, "image/webp": true},
+	mediadomain.MediaKindVideo: {"video/mp4": true, "video/webm": true, "video/quicktime": true, "video/x-msvideo": true},
+	mediadomain.MediaKindAudio: {"audio/mpeg": true, "audio/wav": true, "audio/ogg": true, "audio/mp4": true, "audio/x-wav": true},
+	mediadomain.MediaKindPDF:   {"application/pdf": true},
+	// image, file no tienen lista estricta aparte de la de arriba /
+	// ninguna: "file" es deliberadamente genérico (descargables varios).
+}
 
 type Processor struct {
 	mediaRepo   mediadomain.MediaRepository
@@ -94,7 +117,7 @@ func (p *Processor) setResourceProcessingStatus(resourceID string, status course
 	return p.coursesRepo.UpdateResource(res)
 }
 
-// ---------- scan_antivirus ----------
+// ---------- scan_antivirus (+ validación real de checksum y MIME) ----------
 
 func (p *Processor) scanAntivirus(job *mediadomain.MediaJob, asset *mediadomain.MediaAsset) error {
 	if err := p.setResourceProcessingStatus(asset.ResourceID, coursesdomain.ProcessingProcessing, nil); err != nil {
@@ -106,6 +129,47 @@ func (p *Processor) scanAntivirus(job *mediadomain.MediaJob, asset *mediadomain.
 		return fmt.Errorf("descargando original para escaneo: %w", err)
 	}
 	defer os.Remove(localPath)
+
+	// ---- checksum real + MIME real ----
+	//
+	// Esto es lo que reemplaza la verificación que NO se puede hacer de
+	// forma confiable en el momento de la carga (el ETag de S3/MinIO no
+	// es un SHA256 real, ver la advertencia en platform/s3storage.go).
+	// Aquí sí: el archivo ya está completo en disco, así que se puede
+	// leer byte a byte.
+	realChecksum, realMimeType, err := inspectFile(localPath)
+	if err != nil {
+		return fmt.Errorf("inspeccionando archivo descargado: %w", err)
+	}
+
+	if asset.ChecksumSHA256 != nil && *asset.ChecksumSHA256 != realChecksum {
+		// El cliente había declarado un checksum al iniciar la carga y no
+		// coincide con lo que realmente llegó: fallo permanente, igual
+		// que un archivo infectado (no tiene sentido reintentar).
+		_ = p.storage.DeleteObject(asset.OriginalStorageKey)
+		job.Attempts = job.MaxAttempts
+		return fmt.Errorf("%w: declarado=%s calculado=%s", mediadomain.ErrChecksumMismatch, *asset.ChecksumSHA256, realChecksum)
+	}
+
+	if allowed, restricted := allowedMimeTypesByKind[asset.Kind]; restricted && !allowed[realMimeType] {
+		_ = p.storage.DeleteObject(asset.OriginalStorageKey)
+		job.Attempts = job.MaxAttempts
+		return fmt.Errorf("%w: detectado=%s", mediadomain.ErrMimeNotAllowed, realMimeType)
+	}
+	if asset.Kind == mediadomain.MediaKindPresentation && !looksLikeZip(localPath) {
+		_ = p.storage.DeleteObject(asset.OriginalStorageKey)
+		job.Attempts = job.MaxAttempts
+		return fmt.Errorf("%w: el archivo no tiene firma de contenedor zip (pptx/odp)", mediadomain.ErrMimeNotAllowed)
+	}
+
+	// Ambas validaciones pasaron: se deja constancia del checksum y MIME
+	// REALES en el asset (sobreescribe lo que era solo el valor declarado
+	// por el cliente, guardado provisionalmente en CompleteUpload).
+	asset.ChecksumSHA256 = &realChecksum
+	asset.OriginalMimeType = &realMimeType
+	if err := p.mediaRepo.UpdateAsset(asset); err != nil {
+		return err
+	}
 
 	// clamdscan habla con el daemon clamav ya levantado en docker-compose
 	// (ver modulo-cursos-catalogo.md: "docker compose up -d ... clamav").
@@ -259,10 +323,50 @@ func (p *Processor) convertPresentationToPDF(job *mediadomain.MediaJob, asset *m
 		return fmt.Errorf("subiendo pdf convertido: %w", err)
 	}
 
-	asset.ConvertedPDFKey = &remoteKey
-	if err := p.mediaRepo.UpdateAsset(asset); err != nil {
-		return err
+	return p.setResourceProcessingStatus(asset.ResourceID, coursesdomain.ProcessingReady, &asset.ID)
+}
+
+// ---------- validación de contenido real ----------
+
+// inspectFile calcula el SHA256 real del archivo y detecta su MIME real
+// por firma binaria (los primeros 512 bytes, que es lo que
+// http.DetectContentType necesita). Ambos se hacen en una sola pasada por
+// el archivo para no leerlo dos veces.
+func inspectFile(localPath string) (checksumHex string, mimeType string, err error) {
+	f, err := os.Open(localPath)
+	if err != nil {
+		return "", "", err
+	}
+	defer f.Close()
+
+	hasher := sha256.New()
+	header := make([]byte, 512)
+	n, _ := io.ReadFull(f, header)
+	mimeType = http.DetectContentType(header[:n])
+
+	hasher.Write(header[:n])
+	if _, err := io.Copy(hasher, f); err != nil {
+		return "", "", err
 	}
 
-	return p.setResourceProcessingStatus(asset.ResourceID, coursesdomain.ProcessingReady, &asset.ID)
+	return hex.EncodeToString(hasher.Sum(nil)), mimeType, nil
+}
+
+// looksLikeZip confirma la firma binaria "PK\x03\x04" al inicio del
+// archivo. pptx y odp son, por dentro, contenedores ZIP — esto no
+// confirma que el CONTENIDO sea una presentación válida (para eso haría
+// falta abrir el ZIP y revisar [Content_Types].xml), pero descarta de
+// entrada un archivo renombrado que ni siquiera es un ZIP.
+func looksLikeZip(localPath string) bool {
+	f, err := os.Open(localPath)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	sig := make([]byte, 4)
+	if _, err := io.ReadFull(f, sig); err != nil {
+		return false
+	}
+	return bytes.Equal(sig, []byte{0x50, 0x4B, 0x03, 0x04})
 }

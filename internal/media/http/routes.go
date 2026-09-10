@@ -18,6 +18,8 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 	authoring := g.Group("", authctx.RequireRole(authctx.RoleTeacher, authctx.RoleAdmin))
 
 	authoring.POST("/resources/:resourceID/uploads/initiate", h.InitiateUpload)
+	authoring.GET("/uploads/:uploadSessionID/parts", h.ListUploadedParts)
+	authoring.GET("/uploads/:uploadSessionID/parts/:partNumber/url", h.GetUploadPartURL)
 	authoring.POST("/uploads/:uploadSessionID/complete", h.CompleteUpload)
 
 	g.GET("/resources/:resourceID/media", h.GetMediaStatus)

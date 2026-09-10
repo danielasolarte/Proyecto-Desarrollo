@@ -11,6 +11,7 @@ package http
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -124,7 +125,7 @@ func (h *Handler) InitiateUpload(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, apierror.New(apierror.CodeValidation, "cuerpo invalido"))
 	}
 
-	session, uploadURL, err := mediausecase.InitiateUpload(h.mediaRepo, h.storage, mediausecase.InitiateUploadInput{
+	session, err := mediausecase.InitiateUpload(h.mediaRepo, h.storage, mediausecase.InitiateUploadInput{
 		ResourceID:             resourceID,
 		ResourceKind:           kind,
 		InitiatedBy:            user.ID,
@@ -137,9 +138,45 @@ func (h *Handler) InitiateUpload(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, map[string]any{
-		"upload_session": session,
-		"upload_url":     uploadURL,
+		"upload_session":         session,
+		"recommended_part_bytes": mediausecase.RecommendedPartSizeBytes,
 	})
+}
+
+// ---------- partes (multipart reanudable) ----------
+
+func (h *Handler) GetUploadPartURL(c echo.Context) error {
+	user, err := currentUser(c)
+	if err != nil {
+		return respondError(c, err)
+	}
+	sessionID := c.Param("uploadSessionID")
+	partNumber, err := strconv.Atoi(c.Param("partNumber"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, apierror.New(apierror.CodeValidation, "partNumber invalido"))
+	}
+
+	url, err := mediausecase.GetUploadPartURL(h.mediaRepo, h.storage, sessionID, partNumber, user.ID, user.Role == authctx.RoleAdmin)
+	if err != nil {
+		return respondError(c, err)
+	}
+	return c.JSON(http.StatusOK, map[string]any{"url": url})
+}
+
+// ListUploadedParts es lo que el cliente llama al reanudar: le dice qué
+// partes ya llegaron completas, para subir solo las que faltan.
+func (h *Handler) ListUploadedParts(c echo.Context) error {
+	user, err := currentUser(c)
+	if err != nil {
+		return respondError(c, err)
+	}
+	sessionID := c.Param("uploadSessionID")
+
+	parts, err := mediausecase.ListUploadedParts(h.mediaRepo, h.storage, sessionID, user.ID, user.Role == authctx.RoleAdmin)
+	if err != nil {
+		return respondError(c, err)
+	}
+	return c.JSON(http.StatusOK, map[string]any{"parts": parts})
 }
 
 // ---------- confirmar carga ----------
