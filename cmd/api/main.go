@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
@@ -27,6 +28,9 @@ import (
 	badgesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/badges/http"
 	badgesPG "github.com/equipo-mooc/plataforma-mooc/internal/badges/postgres"
 	badgesUC "github.com/equipo-mooc/plataforma-mooc/internal/badges/usecase"
+	mediaHTTP "github.com/equipo-mooc/plataforma-mooc/internal/media/http"
+	mediaPG "github.com/equipo-mooc/plataforma-mooc/internal/media/postgres"
+	mediaPlatform "github.com/equipo-mooc/plataforma-mooc/internal/media/platform"
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/mailer"
 )
 
@@ -108,6 +112,45 @@ func main() {
 	quizService := quizzesUC.NewService(quizRepo)
 	quizHandler := quizzesHTTP.NewHandler(quizService, quizRepo, courseRepo, catalogRepo, progressService)
 	quizzesHTTP.RegisterRoutes(e, quizHandler)
+
+	// Media: storage (MinIO/S3) y cola de trabajos (Redis/asynq) son
+	// infraestructura propia del módulo, aparte de userRepo/sessionStore
+	// que ya usan los demás.
+	s3Endpoint := os.Getenv("S3_ENDPOINT")
+	if s3Endpoint == "" {
+		s3Endpoint = "localhost:9000"
+	}
+	s3AccessKey := os.Getenv("S3_ACCESS_KEY")
+	if s3AccessKey == "" {
+		s3AccessKey = "mooc"
+	}
+	s3SecretKey := os.Getenv("S3_SECRET_KEY")
+	if s3SecretKey == "" {
+		s3SecretKey = "mooc12345"
+	}
+	s3Bucket := os.Getenv("S3_BUCKET")
+	if s3Bucket == "" {
+		s3Bucket = "mooc-media"
+	}
+	s3UseSSL, _ := strconv.ParseBool(os.Getenv("S3_USE_SSL"))
+
+	mediaStorage, err := mediaPlatform.NewS3Storage(mediaPlatform.S3Config{
+		Endpoint:  s3Endpoint,
+		AccessKey: s3AccessKey,
+		SecretKey: s3SecretKey,
+		Bucket:    s3Bucket,
+		UseSSL:    s3UseSSL,
+	})
+	if err != nil {
+		log.Fatalf("no se pudo conectar a minio/s3: %v", err)
+	}
+
+	mediaQueue := mediaPlatform.NewAsynqQueue(redisAddr)
+	defer mediaQueue.Close()
+
+	mediaRepo := mediaPG.NewMediaRepository(db)
+	mediaHandler := mediaHTTP.NewHandler(mediaRepo, courseRepo, mediaStorage, mediaQueue)
+	mediaHTTP.RegisterRoutes(e, mediaHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {
