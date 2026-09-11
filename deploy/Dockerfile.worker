@@ -1,0 +1,39 @@
+# ---------- build ----------
+FROM golang:1.23-bookworm AS builder
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/worker ./cmd/worker
+
+# ---------- runtime ----------
+# A diferencia de la API, el worker no puede ser "distroless": necesita
+# ffmpeg (transcodificación HLS), libreoffice (conversión de
+# presentaciones) y clamdscan (cliente que habla con el contenedor
+# clamav por red, ver sección 5.1 puntos 5 y 6).
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ffmpeg \
+        libreoffice \
+        clamav-daemon \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# clamdscan lee este archivo para saber a qué clamd conectarse. Se apunta
+# al servicio "clamav" del docker-compose por TCP en vez de arrancar un
+# clamd local (que no necesitamos: el escaneo real ya corre en su propio
+# contenedor).
+RUN mkdir -p /etc/clamav && \
+    { \
+        echo "TCPSocket 3310"; \
+        echo "TCPAddr clamav"; \
+    } > /etc/clamav/clamd.conf
+
+WORKDIR /app
+COPY --from=builder /out/worker /app/worker
+
+RUN mkdir -p /tmp/media
+ENTRYPOINT ["/app/worker"]

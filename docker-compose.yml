@@ -9,11 +9,21 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mooc -d mooc"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   redis:
     image: redis:7
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   minio:
     image: minio/minio
@@ -26,6 +36,27 @@ services:
       - "9001:9001"
     volumes:
       - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Contenedor de un solo uso: crea el bucket donde vive todo lo del
+  # módulo de multimedia (originales, HLS, PDFs convertidos) apenas MinIO
+  # está listo, y le pone política de lectura pública a las URLs firmadas
+  # de descarga. Corre una vez y termina (no es un servicio de larga vida).
+  minio-init:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 mooc mooc12345 &&
+      mc mb --ignore-existing local/mooc-media &&
+      mc anonymous set download local/mooc-media
+      "
 
   mailpit:
     image: axllent/mailpit
@@ -37,7 +68,76 @@ services:
     image: clamav/clamav:stable
     ports:
       - "3310:3310"
+    volumes:
+      - clamavdata:/var/lib/clamav
+    # La imagen tarda en arrancar porque descarga las firmas de virus
+    # (freshclam) antes de levantar clamd. El healthcheck evita que el
+    # worker intente escanear archivos antes de que clamd esté listo.
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  api:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.api
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://mooc:mooc@postgres:5432/mooc?sslmode=disable
+      REDIS_ADDR: redis:6379
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: mooc
+      S3_SECRET_KEY: mooc12345
+      S3_BUCKET: mooc-media
+      S3_USE_SSL: "false"
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      HTTP_PORT: "8080"
+
+  worker:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      clamav:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://mooc:mooc@postgres:5432/mooc?sslmode=disable
+      REDIS_ADDR: redis:6379
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: mooc
+      S3_SECRET_KEY: mooc12345
+      S3_BUCKET: mooc-media
+      S3_USE_SSL: "false"
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: "3310"
+      WORKER_WORKDIR: /tmp/media
+    # Permite escalar a varias instancias del worker (sección 4: "la API
+    # y los workers pueden escalar a múltiples instancias"), por ejemplo:
+    # docker compose up -d --scale worker=3
+    deploy:
+      replicas: 1
 
 volumes:
   pgdata:
   miniodata:
+  clamavdata:
