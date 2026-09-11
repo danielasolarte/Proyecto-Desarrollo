@@ -173,7 +173,7 @@ func (p *Processor) scanAntivirus(job *mediadomain.MediaJob, asset *mediadomain.
 
 	// clamdscan habla con el daemon clamav ya levantado en docker-compose
 	// (ver modulo-cursos-catalogo.md: "docker compose up -d ... clamav").
-	cmd := exec.Command("clamdscan", "--no-summary", localPath)
+	cmd := exec.Command("clamdscan", "--stream", "--no-summary", localPath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		var exitErr *exec.ExitError
