@@ -1,49 +1,53 @@
 openapi: 3.1.0
 info:
-  title: Plataforma MOOC — Cursos, Autoría y Catálogo
-  description: >
-    Endpoints del módulo de cursos, autoría y catálogo (Persona 1 / Persona B).
-    Documenta solo esta parte de la API; los demás módulos (identidad,
-    multimedia, quizzes, progreso) agregan sus propios paths a este mismo
-    documento cuando se integren.
-  version: "0.1.0"
+  title: Plataforma MOOC - API
+  description: Especificacion OpenAPI integrada de la plataforma MOOC. Incluye identidad, administracion, cursos
+    y autoria, catalogo e inscripciones, multimedia, quizzes, progreso e insignias verificables.
+  version: 1.0.0
 servers:
-  - url: /api/v1
+- url: /api/v1
 security:
-  - sessionAuth: []
+- sessionAuth: []
 paths:
   /auth/register:
     post:
       summary: Registro publico de estudiantes con envio de verificacion por Mailpit
-      tags: [identidad]
+      tags:
+      - identidad
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/RegisterRequest" }
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
       responses:
-        "201": { description: Estudiante creado en pending_verification }
-        "409": { description: Email ya registrado }
-
+        '201':
+          description: Estudiante creado en pending_verification
+        '409':
+          description: Email ya registrado
   /auth/bootstrap-admin:
     post:
       summary: Crear el primer administrador solo si no existe ningun admin activo
-      tags: [identidad]
+      tags:
+      - identidad
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/RegisterRequest" }
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
       responses:
-        "201": { description: Administrador inicial creado }
-        "409": { description: Ya existe un administrador activo }
-
+        '201':
+          description: Administrador inicial creado
+        '409':
+          description: Ya existe un administrador activo
   /auth/verify-email:
     post:
       summary: Verificar correo con token enviado a Mailpit
-      tags: [identidad]
+      tags:
+      - identidad
       security: []
       requestBody:
         required: true
@@ -51,38 +55,46 @@ paths:
           application/json:
             schema:
               type: object
-              required: [token]
+              required:
+              - token
               properties:
-                token: { type: string }
+                token:
+                  type: string
       responses:
-        "200": { description: Usuario activado }
-        "400": { description: Token invalido o expirado }
-
+        '200':
+          description: Usuario activado
+        '400':
+          description: Token invalido o expirado
   /auth/login:
     post:
       summary: Login con sesion opaca revocable guardada en Redis y Postgres
-      tags: [identidad]
+      tags:
+      - identidad
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/LoginRequest" }
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
       responses:
-        "200": { description: Token de sesion y datos del usuario }
-        "401": { description: Credenciales invalidas }
-
+        '200':
+          description: Token de sesion y datos del usuario
+        '401':
+          description: Credenciales invalidas
   /auth/logout:
     post:
       summary: Revocar la sesion actual
-      tags: [identidad]
+      tags:
+      - identidad
       responses:
-        "204": { description: Sesion revocada }
-
+        '204':
+          description: Sesion revocada
   /auth/password/forgot:
     post:
       summary: Solicitar token de recuperacion de clave por Mailpit
-      tags: [identidad]
+      tags:
+      - identidad
       security: []
       requestBody:
         required: true
@@ -90,16 +102,20 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email]
+              required:
+              - email
               properties:
-                email: { type: string, format: email }
+                email:
+                  type: string
+                  format: email
       responses:
-        "202": { description: Solicitud aceptada sin revelar si el email existe }
-
+        '202':
+          description: Solicitud aceptada sin revelar si el email existe
   /auth/password/reset:
     post:
       summary: Cambiar clave usando token de recuperacion
-      tags: [identidad]
+      tags:
+      - identidad
       security: []
       requestBody:
         required: true
@@ -107,65 +123,80 @@ paths:
           application/json:
             schema:
               type: object
-              required: [token, new_password]
+              required:
+              - token
+              - new_password
               properties:
-                token: { type: string }
-                new_password: { type: string, minLength: 8 }
+                token:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 8
       responses:
-        "204": { description: Clave cambiada }
-
+        '204':
+          description: Clave cambiada
   /me:
     get:
       summary: Obtener el usuario autenticado
-      tags: [identidad]
+      tags:
+      - identidad
       responses:
-        "200": { description: Usuario actual }
-
+        '200':
+          description: Usuario actual
   /admin/users:
     get:
       summary: Listar usuarios
-      tags: [administracion]
+      tags:
+      - administracion
       responses:
-        "200": { description: Usuarios activos/no eliminados }
-
+        '200':
+          description: Usuarios activos/no eliminados
   /admin/users/admins:
     post:
       summary: Crear administrador desde administracion
-      tags: [administracion]
+      tags:
+      - administracion
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/RegisterRequest" }
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
       responses:
-        "201": { description: Administrador activo creado }
-
+        '201':
+          description: Administrador activo creado
   /admin/users/teachers:
     post:
       summary: Crear profesor desde administracion
-      tags: [administracion]
+      tags:
+      - administracion
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/RegisterRequest" }
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
       responses:
-        "201": { description: Profesor activo creado }
-
+        '201':
+          description: Profesor activo creado
   /admin/users/{userID}:
     get:
       summary: Obtener un usuario por ID
-      tags: [administracion]
+      tags:
+      - administracion
       parameters:
-        - $ref: "#/components/parameters/UserID"
+      - $ref: '#/components/parameters/UserID'
       responses:
-        "200": { description: Usuario encontrado }
-        "404": { $ref: "#/components/responses/NotFound" }
+        '200':
+          description: Usuario encontrado
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       summary: Cambiar nombre, rol o estado de un usuario
-      tags: [administracion]
+      tags:
+      - administracion
       parameters:
-        - $ref: "#/components/parameters/UserID"
+      - $ref: '#/components/parameters/UserID'
       requestBody:
         required: true
         content:
@@ -173,215 +204,269 @@ paths:
             schema:
               type: object
               properties:
-                full_name: { type: string }
-                role: { type: string, enum: [student, teacher, admin] }
-                status: { type: string, enum: [pending_verification, active, suspended, deleted] }
+                full_name:
+                  type: string
+                role:
+                  type: string
+                  enum:
+                  - student
+                  - teacher
+                  - admin
+                status:
+                  type: string
+                  enum:
+                  - pending_verification
+                  - active
+                  - suspended
+                  - deleted
       responses:
-        "200": { description: Usuario actualizado }
-        "409": { description: Proteccion del ultimo administrador activo }
+        '200':
+          description: Usuario actualizado
+        '409':
+          description: Proteccion del ultimo administrador activo
     delete:
       summary: Marcar usuario como deleted
-      tags: [administracion]
+      tags:
+      - administracion
       parameters:
-        - $ref: "#/components/parameters/UserID"
+      - $ref: '#/components/parameters/UserID'
       responses:
-        "204": { description: Usuario eliminado logicamente }
-
+        '204':
+          description: Usuario eliminado logicamente
   /admin/users/{userID}/sessions:
     get:
       summary: Listar sesiones de un usuario
-      tags: [administracion]
+      tags:
+      - administracion
       parameters:
-        - $ref: "#/components/parameters/UserID"
+      - $ref: '#/components/parameters/UserID'
       responses:
-        "200": { description: Sesiones del usuario }
+        '200':
+          description: Sesiones del usuario
     delete:
       summary: Revocar todas las sesiones de un usuario
-      tags: [administracion]
+      tags:
+      - administracion
       parameters:
-        - $ref: "#/components/parameters/UserID"
+      - $ref: '#/components/parameters/UserID'
       responses:
-        "204": { description: Sesiones revocadas }
-
+        '204':
+          description: Sesiones revocadas
   /admin/sessions/{sessionID}:
     delete:
       summary: Revocar una sesion desde administracion
-      tags: [administracion]
+      tags:
+      - administracion
       parameters:
-        - $ref: "#/components/parameters/SessionID"
+      - $ref: '#/components/parameters/SessionID'
       responses:
-        "204": { description: Sesion revocada }
-
+        '204':
+          description: Sesion revocada
   /admin/audit-log:
     get:
       summary: Consultar auditoria reciente
-      tags: [administracion]
+      tags:
+      - administracion
       responses:
-        "200": { description: Eventos de auditoria }
-
+        '200':
+          description: Eventos de auditoria
   /courses:
     post:
       summary: Crear un curso nuevo (crea también su primera versión en borrador)
-      tags: [autoria]
+      tags:
+      - autoria
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [title]
+              required:
+              - title
               properties:
-                title: { type: string }
-                summary: { type: string }
-                category: { type: string }
+                title:
+                  type: string
+                summary:
+                  type: string
+                category:
+                  type: string
       responses:
-        "201":
+        '201':
           description: Curso y primera versión creados
-        "400":
-          $ref: "#/components/responses/ValidationError"
-
+        '400':
+          $ref: '#/components/responses/ValidationError'
   /courses/{courseID}:
     get:
       summary: Obtener metadatos de un curso
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/CourseID"
+      - $ref: '#/components/parameters/CourseID'
       responses:
-        "200": { description: Curso encontrado }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+        '200':
+          description: Curso encontrado
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security: []
   /courses/{courseID}/preview:
     get:
       summary: Previsualizar el árbol de la versión draft (o publicada si no hay draft)
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/CourseID"
+      - $ref: '#/components/parameters/CourseID'
       responses:
-        "200":
+        '200':
           description: Árbol completo más la lista de problemas de publicación (vacía si ya se puede publicar)
-
+      security: []
   /courses/{courseID}/draft:
     post:
-      summary: >
-        Crear un borrador de actualización a partir de la versión publicada
-        (opcional: borradores de actualización con clasificación de cambios)
-      tags: [autoria]
+      summary: 'Crear un borrador de actualización a partir de la versión publicada (opcional: borradores de actualización
+        con clasificación de cambios)
+
+        '
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/CourseID"
+      - $ref: '#/components/parameters/CourseID'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [change_type]
+              required:
+              - change_type
               properties:
-                change_type: { type: string, enum: [minor, major] }
+                change_type:
+                  type: string
+                  enum:
+                  - minor
+                  - major
       responses:
-        "201": { description: Nueva versión draft creada, copiando la estructura publicada }
-        "409": { description: El curso ya tiene un borrador en curso }
-
+        '201':
+          description: Nueva versión draft creada
+          copiando la estructura publicada: null
+        '409':
+          description: El curso ya tiene un borrador en curso
   /courses/{courseID}/publish:
     post:
       summary: Publicar la versión draft del curso (queda inmutable)
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/CourseID"
+      - $ref: '#/components/parameters/CourseID'
       responses:
-        "200": { description: Versión publicada }
-        "400": { $ref: "#/components/responses/ValidationError" }
-
+        '200':
+          description: Versión publicada
+        '400':
+          $ref: '#/components/responses/ValidationError'
   /versions/{versionID}:
     patch:
       summary: Editar metadatos de una versión en borrador (título, resumen, categoría)
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/VersionID"
+      - $ref: '#/components/parameters/VersionID'
       responses:
-        "200": { description: Versión actualizada }
-        "423": { description: La versión ya fue publicada y es inmutable }
-
+        '200':
+          description: Versión actualizada
+        '423':
+          description: La versión ya fue publicada y es inmutable
   /versions/{versionID}/modules:
     post:
       summary: Crear un módulo dentro de una versión en borrador
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/VersionID"
+      - $ref: '#/components/parameters/VersionID'
       responses:
-        "201": { description: Módulo creado }
-
+        '201':
+          description: Módulo creado
   /modules/{moduleID}:
     patch:
       summary: Editar un módulo (título, posición)
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/ModuleID"
+      - $ref: '#/components/parameters/ModuleID'
       responses:
-        "200": { description: Módulo actualizado }
+        '200':
+          description: Módulo actualizado
     delete:
       summary: Eliminar un módulo
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/ModuleID"
+      - $ref: '#/components/parameters/ModuleID'
       responses:
-        "204": { description: Eliminado }
-
+        '204':
+          description: Eliminado
   /modules/{moduleID}/units:
     post:
       summary: Crear una unidad dentro de un módulo
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/ModuleID"
+      - $ref: '#/components/parameters/ModuleID'
       responses:
-        "201": { description: Unidad creada }
-
+        '201':
+          description: Unidad creada
   /units/{unitID}:
     patch:
       summary: Editar una unidad (título, posición)
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/UnitID"
+      - $ref: '#/components/parameters/UnitID'
       responses:
-        "200": { description: Unidad actualizada }
+        '200':
+          description: Unidad actualizada
     delete:
       summary: Eliminar una unidad
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/UnitID"
+      - $ref: '#/components/parameters/UnitID'
       responses:
-        "204": { description: Eliminada }
-
+        '204':
+          description: Eliminada
   /units/{unitID}/resources:
     post:
       summary: Crear un recurso dentro de una unidad
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/UnitID"
+      - $ref: '#/components/parameters/UnitID'
       responses:
-        "201": { description: Recurso creado }
-
+        '201':
+          description: Recurso creado
   /resources/{resourceID}:
     patch:
       summary: Editar metadatos de un recurso (título, visibilidad, obligatoriedad, posición)
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/ResourceID"
+      - $ref: '#/components/parameters/ResourceID'
       responses:
-        "200": { description: Recurso actualizado }
+        '200':
+          description: Recurso actualizado
     delete:
       summary: Eliminar un recurso
-      tags: [autoria]
+      tags:
+      - autoria
       parameters:
-        - $ref: "#/components/parameters/ResourceID"
+      - $ref: '#/components/parameters/ResourceID'
       responses:
-        "204": { description: Eliminado }
-
+        '204':
+          description: Eliminado
   /resources/{resourceID}/content/draft:
     put:
       summary: Autosave del contenido Markdown de un recurso rich_text
-      tags: [editor]
+      tags:
+      - editor
       parameters:
-        - $ref: "#/components/parameters/ResourceID"
+      - $ref: '#/components/parameters/ResourceID'
       requestBody:
         required: true
         content:
@@ -389,128 +474,156 @@ paths:
             schema:
               type: object
               properties:
-                markdown: { type: string }
+                markdown:
+                  type: string
       responses:
-        "200": { description: Borrador guardado }
+        '200':
+          description: Borrador guardado
     get:
       summary: Recuperar el último borrador autosaved
-      tags: [editor]
+      tags:
+      - editor
       parameters:
-        - $ref: "#/components/parameters/ResourceID"
+      - $ref: '#/components/parameters/ResourceID'
       responses:
-        "200": { description: Contenido del borrador }
-
+        '200':
+          description: Contenido del borrador
   /resources/{resourceID}/content/publish:
     post:
       summary: Mover el borrador autosaved a contenido oficial dentro de la versión en edición
-      tags: [editor]
+      tags:
+      - editor
       parameters:
-        - $ref: "#/components/parameters/ResourceID"
+      - $ref: '#/components/parameters/ResourceID'
       responses:
-        "200": { description: Contenido publicado dentro del borrador }
-
+        '200':
+          description: Contenido publicado dentro del borrador
   /catalog:
     get:
       summary: Buscar cursos publicados, con filtros y paginación por cursor
-      tags: [catalogo]
+      tags:
+      - catalogo
       parameters:
-        - name: q
-          in: query
-          schema: { type: string }
-        - name: category
-          in: query
-          schema: { type: string }
-        - name: cursor
-          in: query
-          schema: { type: string }
-        - name: limit
-          in: query
-          schema: { type: integer, default: 20, maximum: 100 }
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: category
+        in: query
+        schema:
+          type: string
+      - name: cursor
+        in: query
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
       responses:
-        "200": { description: Lista de cursos publicados más el cursor de la siguiente página }
-
+        '200':
+          description: Lista de cursos publicados más el cursor de la siguiente página
+      security: []
   /courses/{courseID}/enrollments:
     post:
       summary: Inscribirse a un curso publicado (o reactivar una inscripción retirada)
-      tags: [catalogo]
+      tags:
+      - catalogo
       parameters:
-        - $ref: "#/components/parameters/CourseID"
+      - $ref: '#/components/parameters/CourseID'
       responses:
-        "201": { description: Inscripción activa }
-        "409": { description: Ya estaba inscrito }
+        '201':
+          description: Inscripción activa
+        '409':
+          description: Ya estaba inscrito
     delete:
       summary: Retirarse de un curso (conserva el historial de la inscripción)
-      tags: [catalogo]
+      tags:
+      - catalogo
       parameters:
-        - $ref: "#/components/parameters/CourseID"
+      - $ref: '#/components/parameters/CourseID'
       responses:
-        "204": { description: Retirado }
-
+        '204':
+          description: Retirado
   /me/enrollments:
     get:
       summary: Listar mis inscripciones (estudiante autenticado)
-      tags: [catalogo]
+      tags:
+      - catalogo
       responses:
-        "200": { description: Lista de inscripciones }
-
+        '200':
+          description: Lista de inscripciones
   /resources/{resourceID}/uploads/initiate:
     post:
-      summary: >
-        Abrir una carga multipart reanudable. NO devuelve una URL de
-        subida: el cliente pide la URL de cada parte por separado (ver
-        /uploads/{uploadSessionID}/parts/{partNumber}/url) para poder
-        reanudar tras una interrupción.
-      tags: [multimedia]
+      summary: 'Abrir una carga multipart reanudable. NO devuelve una URL de subida: el cliente pide la URL de cada
+        parte por separado (ver /uploads/{uploadSessionID}/parts/{partNumber}/url) para poder reanudar tras una
+        interrupción.
+
+        '
+      tags:
+      - multimedia
       parameters:
-        - $ref: "#/components/parameters/ResourceID"
+      - $ref: '#/components/parameters/ResourceID'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/InitiateUploadRequest" }
+            schema:
+              $ref: '#/components/schemas/InitiateUploadRequest'
       responses:
-        "201":
+        '201':
           description: Sesión de carga multipart abierta
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/InitiateUploadResponse" }
-        "400": { $ref: "#/components/responses/ValidationError" }
-        "403": { description: No eres el profesor dueño del curso }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+              schema:
+                $ref: '#/components/schemas/InitiateUploadResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          description: No eres el profesor dueño del curso
+        '404':
+          $ref: '#/components/responses/NotFound'
   /uploads/{uploadSessionID}/parts/{partNumber}/url:
     get:
       summary: Obtener la URL prefirmada para subir una parte específica
-      tags: [multimedia]
+      tags:
+      - multimedia
       parameters:
-        - $ref: "#/components/parameters/UploadSessionID"
-        - name: partNumber
-          in: path
-          required: true
-          schema: { type: integer, minimum: 1 }
+      - $ref: '#/components/parameters/UploadSessionID'
+      - name: partNumber
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
       responses:
-        "200":
+        '200':
           description: URL prefirmada para esa parte
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  url: { type: string }
-        "403": { description: No eres quien inició esta carga }
-        "409": { description: La sesión ya no está activa o expiró }
-
+                  url:
+                    type: string
+        '403':
+          description: No eres quien inició esta carga
+        '409':
+          description: La sesión ya no está activa o expiró
   /uploads/{uploadSessionID}/parts:
     get:
-      summary: >
-        Listar las partes que ya llegaron completas al bucket. Es lo que
-        el cliente usa para reanudar: compara esta lista contra las
-        partes que necesita y solo vuelve a subir las que faltan.
-      tags: [multimedia]
+      summary: 'Listar las partes que ya llegaron completas al bucket. Es lo que el cliente usa para reanudar: compara
+        esta lista contra las partes que necesita y solo vuelve a subir las que faltan.
+
+        '
+      tags:
+      - multimedia
       parameters:
-        - $ref: "#/components/parameters/UploadSessionID"
+      - $ref: '#/components/parameters/UploadSessionID'
       responses:
-        "200":
+        '200':
           description: Partes confirmadas hasta el momento
           content:
             application/json:
@@ -519,237 +632,1368 @@ paths:
                 properties:
                   parts:
                     type: array
-                    items: { $ref: "#/components/schemas/UploadedPart" }
-
+                    items:
+                      $ref: '#/components/schemas/UploadedPart'
   /uploads/{uploadSessionID}/complete:
     post:
-      summary: >
-        Confirmar que la carga terminó: verifica integridad (checksum,
-        tamaño), cierra la sesión y encola el primer trabajo de
-        procesamiento (antivirus). Idempotente: una doble entrega para la
-        misma sesión no crea un segundo job.
-      tags: [multimedia]
+      summary: 'Confirmar que la carga terminó: verifica integridad (checksum, tamaño), cierra la sesión y encola
+        el primer trabajo de procesamiento (antivirus). Idempotente: una doble entrega para la misma sesión no crea
+        un segundo job.
+
+        '
+      tags:
+      - multimedia
       parameters:
-        - $ref: "#/components/parameters/UploadSessionID"
+      - $ref: '#/components/parameters/UploadSessionID'
       responses:
-        "200":
+        '200':
           description: Carga confirmada; devuelve el media_asset creado o actualizado
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/MediaAsset" }
-        "400": { description: "El archivo no llegó al bucket, o el checksum no coincide" }
-        "403": { description: No eres quien inició esta carga }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409": { description: La sesión de carga ya no está activa }
-
+              schema:
+                $ref: '#/components/schemas/MediaAsset'
+        '400':
+          description: El archivo no llegó al bucket, o el checksum no coincide
+        '403':
+          description: No eres quien inició esta carga
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: La sesión de carga ya no está activa
   /resources/{resourceID}/media:
     get:
       summary: Consultar el estado de procesamiento del asset multimedia de un recurso
-      tags: [multimedia]
+      tags:
+      - multimedia
       parameters:
-        - $ref: "#/components/parameters/ResourceID"
+      - $ref: '#/components/parameters/ResourceID'
       responses:
-        "200":
+        '200':
           description: Asset multimedia encontrado
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/MediaAsset" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+              schema:
+                $ref: '#/components/schemas/MediaAsset'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /resources/{resourceID}/playback:
     get:
-      summary: >
-        Obtener una URL prefirmada de lectura para reproducir/descargar el
-        recurso ya procesado (manifest HLS para video/audio, PDF para
-        pdf/presentation). El control de inscripción se aplica en el
-        módulo de catálogo antes de llegar aquí.
-      tags: [multimedia]
+      summary: Obtener URL prefirmada de reproduccion o descarga
+      tags:
+      - multimedia
       parameters:
-        - $ref: "#/components/parameters/ResourceID"
+      - $ref: '#/components/parameters/ResourceID'
       responses:
-        "200":
+        '200':
           description: URL de reproducción/descarga, válida por tiempo limitado
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/PlaybackURLResponse" }
-        "404": { description: "El asset todavia no existe o no ha terminado de procesarse" }
-
+              schema:
+                $ref: '#/components/schemas/PlaybackURLResponse'
+        '404':
+          description: El asset todavia no existe o no ha terminado de procesarse
+        '403':
+          description: Estudiante sin inscripcion activa o acceso no autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Devuelve el derivado apropiado del asset. Para estudiantes se exige una inscripcion activa en
+        el curso al que pertenece el recurso.
+  /health:
+    get:
+      summary: Healthcheck de la API
+      tags:
+      - sistema
+      security: []
+      servers:
+      - url: /
+      responses:
+        '200':
+          description: API disponible
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                required:
+                - status
+  /resources/{resourceID}/quiz:
+    post:
+      summary: Crear quiz asociado a un recurso de tipo quiz
+      description: Solo profesor propietario del curso o administrador.
+      tags:
+      - quizzes
+      parameters:
+      - $ref: '#/components/parameters/ResourceID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuizRequest'
+      responses:
+        '201':
+          description: Quiz creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quiz'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /quizzes/{quizID}/questions:
+    post:
+      summary: Crear pregunta de seleccion multiple
+      description: Solo profesor propietario del curso o administrador.
+      tags:
+      - quizzes
+      parameters:
+      - $ref: '#/components/parameters/QuizID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuestionRequest'
+      responses:
+        '201':
+          description: Pregunta creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionAuthoring'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /questions/{questionID}/options:
+    post:
+      summary: Crear opcion para una pregunta
+      description: Solo profesor propietario del curso o administrador. is_correct nunca se expone en el snapshot
+        del estudiante.
+      tags:
+      - quizzes
+      parameters:
+      - $ref: '#/components/parameters/QuestionID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuestionOptionRequest'
+      responses:
+        '201':
+          description: Opcion creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionOptionAuthoring'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /quizzes/{quizID}/authoring:
+    get:
+      summary: Consultar quiz completo para autoria
+      description: Incluye preguntas, opciones y claves correctas. Solo profesor propietario o administrador.
+      tags:
+      - quizzes
+      parameters:
+      - $ref: '#/components/parameters/QuizID'
+      responses:
+        '200':
+          description: Quiz de autoria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAuthoringResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /quizzes/{quizID}/attempts:
+    post:
+      summary: Iniciar intento de quiz
+      description: Solo estudiantes con inscripcion activa y sobre la version publicada. El snapshot no contiene
+        is_correct.
+      tags:
+      - quizzes
+      parameters:
+      - $ref: '#/components/parameters/QuizID'
+      responses:
+        '201':
+          description: Intento iniciado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Numero maximo de intentos alcanzado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /attempts/{attemptID}:
+    get:
+      summary: Recuperar intento y respuestas guardadas
+      description: Permite reanudar un intento parcialmente contestado.
+      tags:
+      - quizzes
+      parameters:
+      - $ref: '#/components/parameters/AttemptID'
+      responses:
+        '200':
+          description: Intento y respuestas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptWithAnswersResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /attempts/{attemptID}/answers/{questionID}:
+    put:
+      summary: Guardar o reemplazar respuesta parcial
+      description: El servidor valida que la pregunta y la opcion pertenezcan al quiz del intento.
+      tags:
+      - quizzes
+      parameters:
+      - $ref: '#/components/parameters/AttemptID'
+      - $ref: '#/components/parameters/QuestionID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveAnswerRequest'
+      responses:
+        '200':
+          description: Respuesta guardada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptAnswer'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Intento expirado o ya enviado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /attempts/{attemptID}/submit:
+    post:
+      summary: Enviar intento final y calificar en servidor
+      description: Requiere Idempotency-Key. El servidor calcula puntaje, porcentaje y aprobado, registra el resultado
+        de progreso y recalcula el curso.
+      tags:
+      - quizzes
+      parameters:
+      - $ref: '#/components/parameters/AttemptID'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Intento calificado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Intento expirado, ya enviado o conflicto de idempotencia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /resources/{resourceID}/progress/open:
+    post:
+      summary: Abrir recurso e iniciar seguimiento de progreso
+      description: Solo estudiantes con inscripcion activa.
+      tags:
+      - progreso
+      parameters:
+      - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Progreso iniciado o recuperado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceProgress'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /resources/{resourceID}/progress/heartbeat:
+    post:
+      summary: Registrar heartbeat y posicion del recurso
+      description: Acumula tiempo activo usando tiempo del servidor. Para video/audio valida la posicion contra
+        duration_seconds obtenida del modulo multimedia.
+      tags:
+      - progreso
+      parameters:
+      - $ref: '#/components/parameters/ResourceID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeartbeatRequest'
+      responses:
+        '200':
+          description: Heartbeat aceptado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceProgress'
+        '400':
+          description: Heartbeat invalido o posicion imposible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /resources/{resourceID}/progress/complete:
+    post:
+      summary: Marcar recurso como completado y recalcular curso
+      description: Exige al menos 30 segundos activos. Para video/audio exige asset listo y posicion de al menos
+        90% de la duracion. No acepta porcentajes calculados por el cliente.
+      tags:
+      - progreso
+      parameters:
+      - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Recurso completado y progreso del curso recalculado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteResourceResponse'
+        '400':
+          description: No cumple los requisitos de completitud
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /courses/{courseID}/progress:
+    get:
+      summary: Consultar progreso agregado del curso
+      description: Calculado por el servidor para la inscripcion activa del estudiante.
+      tags:
+      - progreso
+      parameters:
+      - $ref: '#/components/parameters/CourseID'
+      responses:
+        '200':
+          description: Progreso del curso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseProgress'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /courses/{courseID}/badge:
+    post:
+      summary: Crear la definicion de insignia de un curso
+      description: Profesor propietario del curso o administrador. Solo existe una definicion por curso.
+      tags:
+      - insignias
+      parameters:
+      - $ref: '#/components/parameters/CourseID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBadgeRequest'
+      responses:
+        '201':
+          description: Insignia creada o existente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Badge'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /badges/verify/{verificationCode}:
+    get:
+      summary: Verificar publicamente una insignia
+      description: No requiere autenticacion y no expone el correo del estudiante.
+      tags:
+      - insignias
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/VerificationCode'
+      responses:
+        '200':
+          description: Resultado de verificacion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicBadgeVerification'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /badge-issuances/{issuanceID}/revoke:
+    post:
+      summary: Revocar una emision de insignia
+      description: Solo administradores.
+      tags:
+      - insignias
+      parameters:
+      - $ref: '#/components/parameters/IssuanceID'
+      responses:
+        '200':
+          description: Insignia revocada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeBadgeResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   securitySchemes:
     sessionAuth:
       type: apiKey
       in: header
       name: X-Session-Token
-      description: >
-        Token opaco de sesion emitido por /auth/login. Tambien se acepta
-        Authorization: Bearer <token>.
+      description: 'Token opaco de sesion emitido por /auth/login. Tambien se acepta Authorization: Bearer <token>.
+
+        '
   parameters:
     CourseID:
       name: courseID
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     VersionID:
       name: versionID
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     ModuleID:
       name: moduleID
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     UnitID:
       name: unitID
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     ResourceID:
       name: resourceID
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     UserID:
       name: userID
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     SessionID:
       name: sessionID
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     UploadSessionID:
       name: uploadSessionID
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
+    QuizID:
+      name: quizID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    QuestionID:
+      name: questionID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AttemptID:
+      name: attemptID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IssuanceID:
+      name: issuanceID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    VerificationCode:
+      name: verificationCode
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Clave unica para hacer idempotente el submit final del intento.
+      schema:
+        type: string
+        minLength: 1
   responses:
     NotFound:
       description: Recurso no encontrado
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/Error" }
+          schema:
+            $ref: '#/components/schemas/Error'
     ValidationError:
       description: Error de validación
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/Error" }
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Operacion no autorizada
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Conflicto con el estado actual del recurso
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
     InitiateUploadRequest:
       type: object
-      required: [mime_type]
       properties:
-        mime_type: { type: string, example: "video/mp4" }
-        size_bytes: { type: integer, format: int64 }
+        mime_type:
+          type: string
+          example: video/mp4
+        size_bytes:
+          type: integer
+          format: int64
+          minimum: 0
         checksum_sha256:
           type: string
-          description: Checksum declarado por el cliente, se contrasta al completar la carga
-
+          description: Checksum SHA-256 declarado por el cliente.
     InitiateUploadResponse:
       type: object
       properties:
-        upload_session: { $ref: "#/components/schemas/UploadSession" }
+        upload_session:
+          $ref: '#/components/schemas/UploadSession'
         recommended_part_bytes:
           type: integer
           description: Tamaño de parte sugerido para trocear el archivo (8MB)
-
     UploadedPart:
       type: object
       properties:
-        part_number: { type: integer }
-        etag: { type: string }
-        size_bytes: { type: integer, format: int64 }
-
+        PartNumber:
+          type: integer
+        ETag:
+          type: string
+        SizeBytes:
+          type: integer
+          format: int64
     UploadSession:
       type: object
       properties:
-        id: { type: string, format: uuid }
-        resource_id: { type: string, format: uuid }
-        initiated_by: { type: string, format: uuid }
-        status: { type: string, enum: [initiated, uploading, completed, aborted, expired] }
-        expected_mime_type: { type: string }
-        expected_size_bytes: { type: integer, format: int64 }
-        created_at: { type: string, format: date-time }
-        expires_at: { type: string, format: date-time }
-        completed_at: { type: string, format: date-time }
-
+        ID:
+          type: string
+          format: uuid
+        ResourceID:
+          type: string
+          format: uuid
+        InitiatedBy:
+          type: string
+          format: uuid
+        StorageKey:
+          type: string
+        StorageUploadID:
+          type:
+          - string
+          - 'null'
+        Status:
+          type: string
+          enum:
+          - initiated
+          - uploading
+          - completed
+          - aborted
+          - expired
+        ExpectedMimeType:
+          type:
+          - string
+          - 'null'
+        ExpectedSizeBytes:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        DeclaredChecksumSHA256:
+          type:
+          - string
+          - 'null'
+        CreatedAt:
+          type: string
+          format: date-time
+        ExpiresAt:
+          type: string
+          format: date-time
+        CompletedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        UpdatedAt:
+          type: string
+          format: date-time
     MediaAsset:
       type: object
       properties:
-        id: { type: string, format: uuid }
-        resource_id: { type: string, format: uuid }
-        kind: { type: string, enum: [image, video, audio, pdf, presentation, file] }
-        original_mime_type: { type: string }
-        original_size_bytes: { type: integer, format: int64 }
-        duration_seconds:
-          type: integer
-          description: Solo para video/audio
-        created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
-
+        ID:
+          type: string
+          format: uuid
+        ResourceID:
+          type: string
+          format: uuid
+        Kind:
+          type: string
+          enum:
+          - image
+          - video
+          - audio
+          - pdf
+          - presentation
+          - file
+        OriginalStorageKey:
+          type: string
+        OriginalMimeType:
+          type:
+          - string
+          - 'null'
+        OriginalSizeBytes:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        ChecksumSHA256:
+          type:
+          - string
+          - 'null'
+        HLSManifestKey:
+          type:
+          - string
+          - 'null'
+        DurationSeconds:
+          type:
+          - integer
+          - 'null'
+        ConvertedPDFKey:
+          type:
+          - string
+          - 'null'
+        CreatedAt:
+          type: string
+          format: date-time
+        UpdatedAt:
+          type: string
+          format: date-time
     PlaybackURLResponse:
       type: object
       properties:
         url:
           type: string
           description: URL prefirmada de lectura, expira en 15 minutos
-
     RegisterRequest:
       type: object
-      required: [email, password, full_name]
+      required:
+      - email
+      - password
+      - full_name
       properties:
-        email: { type: string, format: email }
-        password: { type: string, minLength: 8 }
-        full_name: { type: string }
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        full_name:
+          type: string
     LoginRequest:
       type: object
-      required: [email, password]
+      required:
+      - email
+      - password
       properties:
-        email: { type: string, format: email }
-        password: { type: string }
+        email:
+          type: string
+          format: email
+        password:
+          type: string
     User:
       type: object
       properties:
-        id: { type: string, format: uuid }
-        email: { type: string, format: email }
-        full_name: { type: string }
-        role: { type: string, enum: [student, teacher, admin] }
-        status: { type: string, enum: [pending_verification, active, suspended, deleted] }
-        email_verified_at: { type: string, format: date-time }
-        created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        role:
+          type: string
+          enum:
+          - student
+          - teacher
+          - admin
+        status:
+          type: string
+          enum:
+          - pending_verification
+          - active
+          - suspended
+          - deleted
+        email_verified_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     Session:
       type: object
       properties:
-        id: { type: string, format: uuid }
-        user_id: { type: string, format: uuid }
-        revoked_at: { type: string, format: date-time }
-        expires_at: { type: string, format: date-time }
-        created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        revoked_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     AuditLog:
       type: object
       properties:
-        id: { type: string, format: uuid }
-        actor_id: { type: string, format: uuid }
-        action: { type: string }
-        entity_type: { type: string }
-        entity_id: { type: string, format: uuid }
-        metadata: { type: string }
-        created_at: { type: string, format: date-time }
+        id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+        action:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        metadata:
+          type: string
+        created_at:
+          type: string
+          format: date-time
     AuthResult:
       type: object
       properties:
-        user: { $ref: "#/components/schemas/User" }
-        session: { $ref: "#/components/schemas/Session" }
-        token: { type: string }
-        expires_at: { type: string, format: date-time }
+        user:
+          $ref: '#/components/schemas/User'
+        session:
+          $ref: '#/components/schemas/Session'
+        token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
     Error:
       type: object
       properties:
         error:
           type: object
           properties:
-            code: { type: string }
-            message: { type: string }
+            code:
+              type: string
+            message:
+              type: string
+    CreateQuizRequest:
+      type: object
+      required:
+      - passing_score
+      - feedback_mode
+      properties:
+        passing_score:
+          type: number
+          minimum: 0
+          maximum: 100
+        max_attempts:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        time_limit_seconds:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        feedback_mode:
+          type: string
+          enum:
+          - none
+          - after_submit
+          - after_pass
+    Quiz:
+      type: object
+      description: Representacion devuelta directamente por el modelo Go de autoria.
+      properties:
+        ID:
+          type: string
+          format: uuid
+        ResourceID:
+          type: string
+          format: uuid
+        PassingScore:
+          type: number
+        MaxAttempts:
+          type:
+          - integer
+          - 'null'
+        TimeLimitSeconds:
+          type:
+          - integer
+          - 'null'
+        FeedbackMode:
+          type: string
+          enum:
+          - none
+          - after_submit
+          - after_pass
+        CreatedAt:
+          type: string
+          format: date-time
+        UpdatedAt:
+          type: string
+          format: date-time
+    CreateQuestionRequest:
+      type: object
+      required:
+      - text
+      - position
+      - points
+      properties:
+        text:
+          type: string
+          minLength: 1
+        position:
+          type: integer
+          minimum: 1
+        points:
+          type: number
+          exclusiveMinimum: 0
+    CreateQuestionOptionRequest:
+      type: object
+      required:
+      - text
+      - position
+      - is_correct
+      properties:
+        text:
+          type: string
+          minLength: 1
+        position:
+          type: integer
+          minimum: 1
+        is_correct:
+          type: boolean
+    QuestionOptionAuthoring:
+      type: object
+      properties:
+        ID:
+          type: string
+          format: uuid
+        QuestionID:
+          type: string
+          format: uuid
+        Text:
+          type: string
+        Position:
+          type: integer
+        IsCorrect:
+          type: boolean
+        CreatedAt:
+          type: string
+          format: date-time
+        UpdatedAt:
+          type: string
+          format: date-time
+    QuestionAuthoring:
+      type: object
+      properties:
+        ID:
+          type: string
+          format: uuid
+        QuizID:
+          type: string
+          format: uuid
+        StableID:
+          type: string
+          format: uuid
+        Text:
+          type: string
+        Position:
+          type: integer
+        Points:
+          type: number
+        Options:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionOptionAuthoring'
+        CreatedAt:
+          type: string
+          format: date-time
+        UpdatedAt:
+          type: string
+          format: date-time
+    QuizAuthoringResponse:
+      type: object
+      required:
+      - quiz
+      - questions
+      properties:
+        quiz:
+          $ref: '#/components/schemas/Quiz'
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionAuthoring'
+    SnapshotOption:
+      type: object
+      required:
+      - id
+      - text
+      - position
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          type: string
+        position:
+          type: integer
+    SnapshotQuestion:
+      type: object
+      required:
+      - id
+      - stable_id
+      - text
+      - position
+      - points
+      - options
+      properties:
+        id:
+          type: string
+          format: uuid
+        stable_id:
+          type: string
+          format: uuid
+        text:
+          type: string
+        position:
+          type: integer
+        points:
+          type: number
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/SnapshotOption'
+    QuizSnapshot:
+      type: object
+      required:
+      - quiz_id
+      - questions
+      properties:
+        quiz_id:
+          type: string
+          format: uuid
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SnapshotQuestion'
+    AttemptResponse:
+      type: object
+      required:
+      - id
+      - quiz_id
+      - status
+      - snapshot
+      - started_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        quiz_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - in_progress
+          - submitted
+          - expired
+        score:
+          type: number
+        percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        passed:
+          type: boolean
+        snapshot:
+          $ref: '#/components/schemas/QuizSnapshot'
+        started_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        submitted_at:
+          type: string
+          format: date-time
+    SaveAnswerRequest:
+      type: object
+      properties:
+        selected_option_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+    AttemptAnswer:
+      type: object
+      properties:
+        ID:
+          type: string
+          format: uuid
+        AttemptID:
+          type: string
+          format: uuid
+        QuestionID:
+          type: string
+          format: uuid
+        SelectedOptionID:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        SavedAt:
+          type: string
+          format: date-time
+        CreatedAt:
+          type: string
+          format: date-time
+        UpdatedAt:
+          type: string
+          format: date-time
+    AttemptWithAnswersResponse:
+      type: object
+      required:
+      - attempt
+      - answers
+      properties:
+        attempt:
+          $ref: '#/components/schemas/AttemptResponse'
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttemptAnswer'
+    HeartbeatRequest:
+      type: object
+      properties:
+        position_seconds:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+        client_timestamp:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    ResourceProgress:
+      type: object
+      properties:
+        ID:
+          type: string
+          format: uuid
+        StudentID:
+          type: string
+          format: uuid
+        EnrollmentID:
+          type: string
+          format: uuid
+        ResourceID:
+          type: string
+          format: uuid
+        ResourceStableID:
+          type: string
+          format: uuid
+        Status:
+          type: string
+          enum:
+          - not_started
+          - in_progress
+          - completed
+        OpenedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        LastActivityAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        CompletedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        ActiveSeconds:
+          type: integer
+          minimum: 0
+        LastPositionSeconds:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+        CreatedAt:
+          type: string
+          format: date-time
+        UpdatedAt:
+          type: string
+          format: date-time
+    CourseProgress:
+      type: object
+      properties:
+        ID:
+          type: string
+          format: uuid
+        StudentID:
+          type: string
+          format: uuid
+        EnrollmentID:
+          type: string
+          format: uuid
+        CourseID:
+          type: string
+          format: uuid
+        Status:
+          type: string
+          enum:
+          - in_progress
+          - completed
+          - approved
+        ProgressPercentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        CompletedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        ApprovedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        CreatedAt:
+          type: string
+          format: date-time
+        UpdatedAt:
+          type: string
+          format: date-time
+    CompleteResourceResponse:
+      type: object
+      required:
+      - resource_progress
+      - course_progress
+      properties:
+        resource_progress:
+          $ref: '#/components/schemas/ResourceProgress'
+        course_progress:
+          $ref: '#/components/schemas/CourseProgress'
+    CreateBadgeRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type:
+          - string
+          - 'null'
+        image_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+    Badge:
+      type: object
+      properties:
+        ID:
+          type: string
+          format: uuid
+        CourseID:
+          type: string
+          format: uuid
+        Name:
+          type: string
+        Description:
+          type:
+          - string
+          - 'null'
+        ImageURL:
+          type:
+          - string
+          - 'null'
+        Active:
+          type: boolean
+        CreatedAt:
+          type: string
+          format: date-time
+        UpdatedAt:
+          type: string
+          format: date-time
+    PublicBadgeVerification:
+      type: object
+      required:
+      - valid
+      - badge_name
+      - course_id
+      - verification_code
+      - issued_at
+      - revoked
+      properties:
+        valid:
+          type: boolean
+        badge_name:
+          type: string
+        description:
+          type: string
+        image_url:
+          type: string
+        course_id:
+          type: string
+          format: uuid
+        verification_code:
+          type: string
+          format: uuid
+        issued_at:
+          type: string
+          format: date-time
+        revoked:
+          type: boolean
+    RevokeBadgeResponse:
+      type: object
+      required:
+      - revoked
+      properties:
+        revoked:
+          type: boolean
+          const: true
+tags:
+- name: identidad
+  description: Registro, autenticacion, sesiones y recuperacion de clave.
+- name: administracion
+  description: Gestion administrativa de usuarios, sesiones y auditoria.
+- name: autoria
+  description: Cursos, versiones, modulos, unidades y recursos.
+- name: editor
+  description: Edicion y publicacion de contenido Markdown.
+- name: catalogo
+  description: Catalogo publico e inscripciones.
+- name: multimedia
+  description: Carga multipart, procesamiento asincrono y playback.
+- name: quizzes
+  description: Autoria de quizzes, preguntas, opciones e intentos.
+- name: progreso
+  description: Seguimiento de recursos y progreso agregado del curso.
+- name: insignias
+  description: Definicion, emision, verificacion publica y revocacion de insignias.
+- name: sistema
+  description: Salud de la API.

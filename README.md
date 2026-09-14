@@ -532,17 +532,28 @@ Actualmente hay pruebas automaticas para Auth/Admin:
 
 La especificacion esta en:
 
-```text
 api/openapi.yaml
-```
+
 
 Incluye endpoints de:
 
-- identidad;
-- administracion;
-- cursos/autoria;
+- identidad y autenticacion;
+- administracion de usuarios y sesiones;
+- cursos, autoria y versionado;
 - editor Markdown;
-- catalogo e inscripciones.
+- catalogo e inscripciones;
+- multimedia y cargas multipart;
+- procesamiento y reproduccion de recursos multimedia;
+- quizzes, preguntas y opciones;
+- intentos, guardado parcial y calificacion;
+- progreso de recursos y cursos;
+- heartbeats y validacion de progreso multimedia;
+- insignias;
+- emision automatica de insignias;
+- verificacion publica de insignias;
+- revocacion de insignias.
+
+La especificacion usa OpenAPI 3.1 y define los esquemas de request/response, parametros de ruta, autenticacion, respuestas de error y endpoints publicos y protegidos de la plataforma.
 
 ## Notas de entrega
 
