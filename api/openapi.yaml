@@ -453,6 +453,127 @@ paths:
       responses:
         "200": { description: Lista de inscripciones }
 
+  /resources/{resourceID}/uploads/initiate:
+    post:
+      summary: >
+        Abrir una carga multipart reanudable. NO devuelve una URL de
+        subida: el cliente pide la URL de cada parte por separado (ver
+        /uploads/{uploadSessionID}/parts/{partNumber}/url) para poder
+        reanudar tras una interrupción.
+      tags: [multimedia]
+      parameters:
+        - $ref: "#/components/parameters/ResourceID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InitiateUploadRequest" }
+      responses:
+        "201":
+          description: Sesión de carga multipart abierta
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InitiateUploadResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { description: No eres el profesor dueño del curso }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /uploads/{uploadSessionID}/parts/{partNumber}/url:
+    get:
+      summary: Obtener la URL prefirmada para subir una parte específica
+      tags: [multimedia]
+      parameters:
+        - $ref: "#/components/parameters/UploadSessionID"
+        - name: partNumber
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: URL prefirmada para esa parte
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string }
+        "403": { description: No eres quien inició esta carga }
+        "409": { description: La sesión ya no está activa o expiró }
+
+  /uploads/{uploadSessionID}/parts:
+    get:
+      summary: >
+        Listar las partes que ya llegaron completas al bucket. Es lo que
+        el cliente usa para reanudar: compara esta lista contra las
+        partes que necesita y solo vuelve a subir las que faltan.
+      tags: [multimedia]
+      parameters:
+        - $ref: "#/components/parameters/UploadSessionID"
+      responses:
+        "200":
+          description: Partes confirmadas hasta el momento
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  parts:
+                    type: array
+                    items: { $ref: "#/components/schemas/UploadedPart" }
+
+  /uploads/{uploadSessionID}/complete:
+    post:
+      summary: >
+        Confirmar que la carga terminó: verifica integridad (checksum,
+        tamaño), cierra la sesión y encola el primer trabajo de
+        procesamiento (antivirus). Idempotente: una doble entrega para la
+        misma sesión no crea un segundo job.
+      tags: [multimedia]
+      parameters:
+        - $ref: "#/components/parameters/UploadSessionID"
+      responses:
+        "200":
+          description: Carga confirmada; devuelve el media_asset creado o actualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaAsset" }
+        "400": { description: "El archivo no llegó al bucket, o el checksum no coincide" }
+        "403": { description: No eres quien inició esta carga }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: La sesión de carga ya no está activa }
+
+  /resources/{resourceID}/media:
+    get:
+      summary: Consultar el estado de procesamiento del asset multimedia de un recurso
+      tags: [multimedia]
+      parameters:
+        - $ref: "#/components/parameters/ResourceID"
+      responses:
+        "200":
+          description: Asset multimedia encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaAsset" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /resources/{resourceID}/playback:
+    get:
+      summary: >
+        Obtener una URL prefirmada de lectura para reproducir/descargar el
+        recurso ya procesado (manifest HLS para video/audio, PDF para
+        pdf/presentation). El control de inscripción se aplica en el
+        módulo de catálogo antes de llegar aquí.
+      tags: [multimedia]
+      parameters:
+        - $ref: "#/components/parameters/ResourceID"
+      responses:
+        "200":
+          description: URL de reproducción/descarga, válida por tiempo limitado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlaybackURLResponse" }
+        "404": { description: "El asset todavia no existe o no ha terminado de procesarse" }
+
 components:
   securitySchemes:
     sessionAuth:
@@ -498,6 +619,11 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    UploadSessionID:
+      name: uploadSessionID
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
   responses:
     NotFound:
       description: Recurso no encontrado
@@ -510,6 +636,65 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
   schemas:
+    InitiateUploadRequest:
+      type: object
+      required: [mime_type]
+      properties:
+        mime_type: { type: string, example: "video/mp4" }
+        size_bytes: { type: integer, format: int64 }
+        checksum_sha256:
+          type: string
+          description: Checksum declarado por el cliente, se contrasta al completar la carga
+
+    InitiateUploadResponse:
+      type: object
+      properties:
+        upload_session: { $ref: "#/components/schemas/UploadSession" }
+        recommended_part_bytes:
+          type: integer
+          description: Tamaño de parte sugerido para trocear el archivo (8MB)
+
+    UploadedPart:
+      type: object
+      properties:
+        part_number: { type: integer }
+        etag: { type: string }
+        size_bytes: { type: integer, format: int64 }
+
+    UploadSession:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        resource_id: { type: string, format: uuid }
+        initiated_by: { type: string, format: uuid }
+        status: { type: string, enum: [initiated, uploading, completed, aborted, expired] }
+        expected_mime_type: { type: string }
+        expected_size_bytes: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+
+    MediaAsset:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        resource_id: { type: string, format: uuid }
+        kind: { type: string, enum: [image, video, audio, pdf, presentation, file] }
+        original_mime_type: { type: string }
+        original_size_bytes: { type: integer, format: int64 }
+        duration_seconds:
+          type: integer
+          description: Solo para video/audio
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    PlaybackURLResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          description: URL prefirmada de lectura, expira en 15 minutos
+
     RegisterRequest:
       type: object
       required: [email, password, full_name]
