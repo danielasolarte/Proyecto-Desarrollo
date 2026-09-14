@@ -9,6 +9,7 @@ import (
 
 	"github.com/equipo-mooc/plataforma-mooc/internal/progress/domain"
 	coursesDomain "github.com/equipo-mooc/plataforma-mooc/internal/courses/domain"
+	mediaDomain "github.com/equipo-mooc/plataforma-mooc/internal/media/domain"
 )
 
 const (
@@ -17,20 +18,23 @@ const (
 )
 
 type Service struct {
-	repo       domain.Repository
-	courseRepo coursesDomain.CourseRepository
+	repo        domain.Repository
+	courseRepo  coursesDomain.CourseRepository
 	badgeIssuer BadgeIssuer
+	mediaReader MediaReader
 }
 
 func NewService(
 	repo domain.Repository,
 	courseRepo coursesDomain.CourseRepository,
 	badgeIssuer BadgeIssuer,
+	mediaReader MediaReader,
 ) *Service {
 	return &Service{
 		repo:        repo,
 		courseRepo:  courseRepo,
 		badgeIssuer: badgeIssuer,
+		mediaReader: mediaReader,
 	}
 }
 
@@ -41,6 +45,10 @@ type BadgeIssuer interface {
 		enrollmentID uuid.UUID,
 		courseID uuid.UUID,
 	) error
+}
+
+type MediaReader interface {
+	FindAssetByResourceID(resourceID string) (*mediaDomain.MediaAsset, error)
 }
 
 func (s *Service) OpenResource(
@@ -142,6 +150,30 @@ func (s *Service) Heartbeat(
 
 	if positionSeconds != nil && *positionSeconds < 0 {
 		return nil, domain.ErrInvalidHeartbeat
+	}
+
+	if positionSeconds != nil && s.mediaReader != nil {
+
+		resource, err := s.courseRepo.FindResourceByID(resourceID.String())
+		if err != nil {
+			return nil, err
+		}
+
+		if resource.Type == coursesDomain.ResourceVideo ||
+			resource.Type == coursesDomain.ResourceAudio {
+
+			asset, err := s.mediaReader.FindAssetByResourceID(
+				resourceID.String(),
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			if asset.DurationSeconds != nil &&
+				*positionSeconds > *asset.DurationSeconds+5 {
+				return nil, domain.ErrInvalidHeartbeat
+			}
+		}
 	}
 
 	addSeconds := 0
@@ -267,6 +299,45 @@ func (s *Service) CompleteResource(
 
 	if progress.Status == domain.ResourceStatusCompleted {
 		return progress, nil
+	}
+
+	resource, err := s.courseRepo.FindResourceByID(resourceID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	if resource.Type.IsMedia() {
+
+		if resource.ProcessingStatus == nil ||
+			*resource.ProcessingStatus != coursesDomain.ProcessingReady {
+			return nil, domain.ErrInvalidProgress
+		}
+
+		if s.mediaReader != nil &&
+			(resource.Type == coursesDomain.ResourceVideo ||
+				resource.Type == coursesDomain.ResourceAudio) {
+
+			asset, err := s.mediaReader.FindAssetByResourceID(resourceID.String())
+			if err != nil {
+				return nil, err
+			}
+
+			if asset.DurationSeconds != nil &&
+				*asset.DurationSeconds > 0 {
+
+				if progress.LastPositionSeconds == nil {
+					return nil, domain.ErrInvalidProgress
+				}
+
+				requiredPosition := int(
+					float64(*asset.DurationSeconds) * 0.90,
+				)
+
+				if *progress.LastPositionSeconds < requiredPosition {
+					return nil, domain.ErrInvalidProgress
+				}
+			}
+		}
 	}
 
 	if progress.ActiveSeconds < minCompletionSeconds {

@@ -19,6 +19,7 @@ import (
 	coursesdomain "github.com/equipo-mooc/plataforma-mooc/internal/courses/domain"
 	mediadomain "github.com/equipo-mooc/plataforma-mooc/internal/media/domain"
 	mediausecase "github.com/equipo-mooc/plataforma-mooc/internal/media/usecase"
+	catalogDomain "github.com/equipo-mooc/plataforma-mooc/internal/catalog/domain"
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/apierror"
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/authctx"
 )
@@ -28,12 +29,25 @@ const presignedDownloadExpiry = 15 * time.Minute
 type Handler struct {
 	mediaRepo   mediadomain.MediaRepository
 	coursesRepo coursesdomain.CourseRepository
+	catalogRepo catalogDomain.CatalogRepository
 	storage     mediadomain.ObjectStorage
 	queue       mediadomain.JobQueue
 }
 
-func NewHandler(mediaRepo mediadomain.MediaRepository, coursesRepo coursesdomain.CourseRepository, storage mediadomain.ObjectStorage, queue mediadomain.JobQueue) *Handler {
-	return &Handler{mediaRepo: mediaRepo, coursesRepo: coursesRepo, storage: storage, queue: queue}
+func NewHandler(
+	mediaRepo mediadomain.MediaRepository,
+	coursesRepo coursesdomain.CourseRepository,
+	catalogRepo catalogDomain.CatalogRepository,
+	storage mediadomain.ObjectStorage,
+	queue mediadomain.JobQueue,
+) *Handler {
+	return &Handler{
+		mediaRepo:   mediaRepo,
+		coursesRepo: coursesRepo,
+		catalogRepo: catalogRepo,
+		storage:     storage,
+		queue:       queue,
+	}
 }
 
 // ---------- helpers compartidos ----------
@@ -244,13 +258,29 @@ func (h *Handler) GetMediaStatus(c echo.Context) error {
 // aquí; este endpoint asume que quien llama ya tiene derecho a ver el
 // recurso (sección 6, "control de acceso").
 func (h *Handler) GetPlaybackURL(c echo.Context) error {
-	if _, err := currentUser(c); err != nil {
-		return respondError(c, err)
+	user, err := currentUser(c)
+	if err != nil {
+		return respondError(c, err)	
 	}
 	resourceID := c.Param("resourceID")
+	course, _, err := h.ownerOfResource(resourceID)
+	if err != nil {
+		return respondError(c, err)
+	}
 	asset, err := h.mediaRepo.FindAssetByResourceID(resourceID)
 	if err != nil {
 		return respondError(c, err)
+	}
+
+	if user.Role == authctx.RoleStudent {
+		enrollment, err := h.catalogRepo.FindEnrollment(
+			user.ID,
+			course.ID,
+		)
+		if err != nil ||
+			enrollment.Status != catalogDomain.EnrollmentActive {
+			return respondError(c, mediadomain.ErrForbidden)
+		}
 	}
 
 	key := asset.OriginalStorageKey

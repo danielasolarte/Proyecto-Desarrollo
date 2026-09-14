@@ -92,12 +92,16 @@ func main() {
 	// Progress repository
 	progressRepo := progressPG.NewRepository(db)
 
+	// Media repository
+	mediaRepo := mediaPG.NewMediaRepository(db)
+
+
 	// Badges
 	badgeRepo := badgesPG.NewRepository(db)
 	badgeService := badgesUC.NewService(badgeRepo, progressRepo)
 
 	// Progress service
-	progressService := progressUC.NewService(progressRepo, courseRepo, badgeService)
+	progressService := progressUC.NewService(progressRepo, courseRepo, badgeService, mediaRepo)
 
 	// Progress HTTP
 	progressHandler := progressHTTP.NewHandler(progressService, courseRepo, catalogRepo)
@@ -148,8 +152,7 @@ func main() {
 	mediaQueue := mediaPlatform.NewAsynqQueue(redisAddr)
 	defer mediaQueue.Close()
 
-	mediaRepo := mediaPG.NewMediaRepository(db)
-	mediaHandler := mediaHTTP.NewHandler(mediaRepo, courseRepo, mediaStorage, mediaQueue)
+	mediaHandler := mediaHTTP.NewHandler(mediaRepo, courseRepo, catalogRepo, mediaStorage, mediaQueue)
 	mediaHTTP.RegisterRoutes(e, mediaHandler)
 
 	port := os.Getenv("PORT")
