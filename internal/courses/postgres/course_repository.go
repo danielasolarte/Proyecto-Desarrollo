@@ -311,7 +311,7 @@ func (r *CourseRepository) ListModulesByVersion(versionID string) ([]domain.Modu
 	}
 	defer rows.Close()
 
-	var out []domain.Module
+	out := []domain.Module{}
 	for rows.Next() {
 		var m domain.Module
 		if err := rows.Scan(&m.ID, &m.CourseVersionID, &m.StableID, &m.Title, &m.Position, &m.CreatedAt, &m.UpdatedAt); err != nil {
@@ -367,7 +367,7 @@ func (r *CourseRepository) ListUnitsByModule(moduleID string) ([]domain.Unit, er
 	}
 	defer rows.Close()
 
-	var out []domain.Unit
+	out := []domain.Unit{}
 	for rows.Next() {
 		var u domain.Unit
 		if err := rows.Scan(&u.ID, &u.ModuleID, &u.StableID, &u.Title, &u.Position, &u.CreatedAt, &u.UpdatedAt); err != nil {
@@ -435,7 +435,7 @@ func (r *CourseRepository) ListResourcesByUnit(unitID string) ([]domain.Resource
 	}
 	defer rows.Close()
 
-	var out []domain.Resource
+	out := []domain.Resource{}
 	for rows.Next() {
 		res, err := scanResourceRow(rows)
 		if err != nil {
@@ -514,14 +514,14 @@ func (r *CourseRepository) LoadTree(versionID string) (*domain.CourseTree, error
 		return nil, err
 	}
 
-	tree := &domain.CourseTree{Version: version}
+	tree := &domain.CourseTree{Version: version, Modules: []domain.ModuleTree{}}
 	for i := range modules {
 		mod := modules[i]
 		units, err := r.ListUnitsByModule(mod.ID)
 		if err != nil {
 			return nil, err
 		}
-		modTree := domain.ModuleTree{Module: &mod}
+		modTree := domain.ModuleTree{Module: &mod, Units: []domain.UnitTree{}}
 		for j := range units {
 			unit := units[j]
 			resources, err := r.ListResourcesByUnit(unit.ID)
