@@ -15,7 +15,7 @@ import (
 // COMPLETA de errores encontrados (no solo el primero), porque el
 // enunciado pide una "lista exhaustiva de errores" en la previsualización.
 func ValidatePublication(tree *domain.CourseTree) []string {
-	var problems []string
+	problems := []string{}
 
 	v := tree.Version
 	if strings.TrimSpace(v.Title) == "" {
@@ -138,7 +138,7 @@ func Preview(repo domain.CourseRepository, courseID string) (*domain.CourseTree,
 		return nil, nil, err
 	}
 
-	var problems []string
+	problems := []string{}
 	if tree.Version.Status == domain.VersionStatusDraft {
 		problems = ValidatePublication(tree)
 	}

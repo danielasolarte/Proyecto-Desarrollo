@@ -93,7 +93,7 @@ func (r *CatalogRepository) SearchPublishedCourses(filter domain.SearchFilter) (
 	}
 	defer rows.Close()
 
-	var out []domain.CourseSummary
+	out := []domain.CourseSummary{}
 	for rows.Next() {
 		var s domain.CourseSummary
 		if err := rows.Scan(&s.CourseID, &s.Slug, &s.Title, &s.Summary, &s.Category, &s.PublishedAt); err != nil {
@@ -180,7 +180,7 @@ func (r *CatalogRepository) ListEnrollmentsByStudent(studentID string) ([]domain
 	}
 	defer rows.Close()
 
-	var out []domain.Enrollment
+	out := []domain.Enrollment{}
 	for rows.Next() {
 		var e domain.Enrollment
 		var withdrawnAt *time.Time

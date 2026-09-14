@@ -66,85 +66,85 @@ const (
 // ---------- entidades ----------
 
 type Course struct {
-	ID                   string
-	TeacherID            string
-	Slug                 string
-	PublishedVersionID   *string
-	LatestDraftVersionID *string
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                   string    `json:"id"`
+	TeacherID            string    `json:"teacher_id"`
+	Slug                 string    `json:"slug"`
+	PublishedVersionID   *string   `json:"published_version_id,omitempty"`
+	LatestDraftVersionID *string   `json:"latest_draft_version_id,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }
 
 type CourseVersion struct {
-	ID            string
-	CourseID      string
-	VersionNumber int
-	Status        VersionStatus
-	Title         string
-	Summary       string
-	Category      string
-	ChangeType    *ChangeType
-	PublishedAt   *time.Time
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID            string        `json:"id"`
+	CourseID      string        `json:"course_id"`
+	VersionNumber int           `json:"version_number"`
+	Status        VersionStatus `json:"status"`
+	Title         string        `json:"title"`
+	Summary       string        `json:"summary"`
+	Category      string        `json:"category"`
+	ChangeType    *ChangeType   `json:"change_type,omitempty"`
+	PublishedAt   *time.Time    `json:"published_at,omitempty"`
+	CreatedAt     time.Time     `json:"created_at"`
+	UpdatedAt     time.Time     `json:"updated_at"`
 }
 
 type Module struct {
-	ID              string
-	CourseVersionID string
-	StableID        string
-	Title           string
-	Position        int
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID              string    `json:"id"`
+	CourseVersionID string    `json:"course_version_id"`
+	StableID        string    `json:"stable_id"`
+	Title           string    `json:"title"`
+	Position        int       `json:"position"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 type Unit struct {
-	ID        string
-	ModuleID  string
-	StableID  string
-	Title     string
-	Position  int
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        string    `json:"id"`
+	ModuleID  string    `json:"module_id"`
+	StableID  string    `json:"stable_id"`
+	Title     string    `json:"title"`
+	Position  int       `json:"position"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Resource struct {
-	ID                   string
-	UnitID               string
-	StableID             string
-	Type                 ResourceType
-	Title                string
-	Position             int
-	Visible              bool
-	Required             bool
-	Downloadable         bool
-	ProcessingStatus     *ProcessingStatus
-	ContentMarkdown      *string
-	ContentDraftMarkdown *string
-	DraftSavedAt         *time.Time
-	ExternalURL          *string
-	MediaAssetID         *string
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                   string            `json:"id"`
+	UnitID               string            `json:"unit_id"`
+	StableID             string            `json:"stable_id"`
+	Type                 ResourceType      `json:"type"`
+	Title                string            `json:"title"`
+	Position             int               `json:"position"`
+	Visible              bool              `json:"visible"`
+	Required             bool              `json:"required"`
+	Downloadable         bool              `json:"downloadable"`
+	ProcessingStatus     *ProcessingStatus `json:"processing_status,omitempty"`
+	ContentMarkdown      *string           `json:"content_markdown,omitempty"`
+	ContentDraftMarkdown *string           `json:"content_draft_markdown,omitempty"`
+	DraftSavedAt         *time.Time        `json:"draft_saved_at,omitempty"`
+	ExternalURL          *string           `json:"external_url,omitempty"`
+	MediaAssetID         *string           `json:"media_asset_id,omitempty"`
+	CreatedAt            time.Time         `json:"created_at"`
+	UpdatedAt            time.Time         `json:"updated_at"`
 }
 
 // CourseTree es el árbol completo de una versión: módulos, con sus
 // unidades, con sus recursos, ya ordenados por posición. Es lo que se
 // devuelve en la previsualización y en la consulta de una versión.
 type CourseTree struct {
-	Version *CourseVersion
-	Modules []ModuleTree
+	Version *CourseVersion `json:"version"`
+	Modules []ModuleTree   `json:"modules"`
 }
 
 type ModuleTree struct {
-	Module *Module
-	Units  []UnitTree
+	Module *Module    `json:"module"`
+	Units  []UnitTree `json:"units"`
 }
 
 type UnitTree struct {
-	Unit      *Unit
-	Resources []Resource
+	Unit      *Unit      `json:"unit"`
+	Resources []Resource `json:"resources"`
 }
 
 // ---------- errores de dominio ----------
