@@ -16,18 +16,18 @@ Implementado:
 
 - Persona 1: cursos, autoria y catalogo.
 - Persona 2: identidad, sesiones y administracion.
+- Persona 4: quizzes, intentos, progreso de recursos, progreso de cursos e insignias    verificables.
 - Infraestructura local base con Docker Compose: PostgreSQL, Redis, MinIO,
   Mailpit y ClamAV.
 - API base con Echo.
 - Worker base con asynq.
-- Migraciones SQL con `golang-migrate`.
-- OpenAPI parcial en `api/openapi.yaml`.
+- Migraciones SQL con golang-migrate.
+- OpenAPI parcial en api/openapi.yaml.
 
 Pendiente para completar el alcance total del proyecto:
 
 - Persona 3: multimedia, URLs prefirmadas, carga multipart, ClamAV real,
   procesamiento HLS con ffmpeg, DLQ y endpoints PDF/HLS.
-- Persona 4: quizzes, intentos, progreso, insignias y prueba de carga con k6.
 - Dockerfiles y servicios `api`/`worker` dentro de `docker-compose.yml`.
 - CI, metricas, trazas y pruebas E2E completas.
 
@@ -73,32 +73,89 @@ Cubre:
 - Proteccion del ultimo administrador activo.
 - Pruebas de casos de uso de Auth/Admin.
 
+### Persona 4 - Quizzes, Progreso e Insignias
+
+Cubre:
+
+- Migraciones para quizzes, questions, question_options, attempts,
+  attempt_answers, resource_progress, progress_events,
+  course_progress, badges y badge_issuances.
+
+#### Quizzes
+
+- Creacion de quizzes asociados a recursos de tipo quiz.
+- Creacion de preguntas de seleccion multiple y sus opciones.
+- Configuracion de puntaje minimo de aprobacion, numero maximo de intentos,
+  limite de tiempo y modo de feedback.
+- Inicio de intentos por estudiantes inscritos.
+- Snapshot del quiz al iniciar el intento para conservar su contenido durante
+  la resolucion.
+- El snapshot entregado al estudiante no expone las respuestas correctas.
+- Guardado parcial de respuestas y recuperacion de intentos en progreso.
+- Validacion de que la pregunta y opcion seleccionada pertenezcan al quiz.
+- Calificacion realizada exclusivamente en el servidor.
+- Calculo de puntaje, porcentaje y estado de aprobacion.
+- Manejo de expiracion de intentos.
+- Submit final protegido mediante Idempotency-Key.
+- Reintentos del mismo submit devuelven el resultado existente.
+
+#### Progreso
+
+- Seguimiento de progreso por recurso mediante identificadores estables.
+- Registro de apertura de recursos.
+- Heartbeats para contabilizar tiempo de actividad validado por el servidor.
+- Registro de posicion de reproduccion o lectura.
+- Rechazo de valores de progreso calculados directamente por el cliente.
+- Tiempo minimo de actividad antes de permitir completar recursos normales.
+- Registro de eventos de progreso.
+- Los quizzes se marcan como completados al realizar el submit final.
+- Registro independiente de eventos quiz_submitted y quiz_passed.
+- Calculo del porcentaje del curso a partir de recursos visibles y obligatorios.
+- Estado completed cuando todos los recursos obligatorios fueron completados.
+- Estado approved cuando, ademas, todos los quizzes obligatorios fueron
+  aprobados.
+- Conservacion del progreso mediante stable_id.
+
+#### Insignias
+
+- Definicion de una insignia por curso.
+- Emision automatica cuando el progreso del curso alcanza approved.
+- Una sola emision por estudiante, curso e insignia.
+- Codigo UUID unico de verificacion.
+- Endpoint publico de verificacion sin autenticacion.
+- La verificacion publica no expone el correo del estudiante.
+- Revocacion administrativa de insignias.
+- Una insignia revocada permanece consultable pero se reporta como invalida.
+
 ## Estructura
 
-```text
 cmd/
-  api/                 main del servidor HTTP
-  worker/              main del worker asynq
+  api/                  main del servidor HTTP
+  worker/               main del worker asynq
+
 internal/
-  admin/               endpoints administrativos
-  auth/                identidad, sesiones y middleware
-  catalog/             catalogo e inscripciones
-  courses/             cursos, versionado, autoria y editor
-  platform/            utilidades compartidas
-migrations/            migraciones SQL de golang-migrate
-api/                   OpenAPI 3.1
-docs/                  documentacion por modulo
-docker-compose.yml     infraestructura local
-```
+  admin/                endpoints administrativos
+  auth/                 identidad, sesiones y middleware
+  badges/               insignias, emisiones y verificacion publica
+  catalog/              catalogo e inscripciones
+  courses/              cursos, versionado, autoria y editor
+  progress/             progreso por recurso y curso
+  quizzes/              quizzes, preguntas, intentos y calificacion
+  platform/             utilidades compartidas
+
+migrations/             migraciones SQL de golang-migrate
+api/                    OpenAPI 3.1
+docs/                   documentacion por modulo
+docker-compose.yml      infraestructura local
 
 Cada modulo sigue el patron:
 
-```text
+
 domain/    entidades, errores e interfaces
 usecase/   reglas de negocio
 postgres/  implementacion SQL
 http/      handlers y rutas Echo
-```
+
 
 ## Requisitos
 
@@ -107,11 +164,10 @@ http/      handlers y rutas Echo
 - Docker y Docker Compose.
 - `golang-migrate` para aplicar migraciones.
 
-Instalar `golang-migrate` si no esta disponible:
+Instalar golang-migrate si no esta disponible:
 
-```bash
 go install -tags "postgres" github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-```
+
 
 ## Configuracion
 
@@ -168,7 +224,7 @@ go run ./cmd/worker
 7. Probar healthcheck:
 
 ```bash
-curl localhost:8080/healthz
+curl localhost:8080/health
 ```
 
 Respuesta esperada:
@@ -323,6 +379,129 @@ Inscribirse como estudiante:
 curl -X POST localhost:8080/api/v1/courses/COURSE_ID/enrollments \
   -H "Authorization: Bearer TOKEN_ESTUDIANTE"
 ```
+
+## Flujo rapido de Quizzes
+
+Crear un quiz para un recurso como profesor:
+
+```bash
+curl -X POST localhost:8080/api/v1/resources/RESOURCE_ID/quiz \
+  -H "Authorization: Bearer TOKEN_PROFESOR" \
+  -H "Content-Type: application/json" \
+  -d "{\"passing_score\":60,\"max_attempts\":3,\"time_limit_seconds\":900,\"feedback_mode\":\"after_submit\"}"
+```
+
+Crear una pregunta:
+
+```bash
+curl -X POST localhost:8080/api/v1/quizzes/QUIZ_ID/questions \
+  -H "Authorization: Bearer TOKEN_PROFESOR" \
+  -H "Content-Type: application/json" \
+  -d "{\"text\":\"Pregunta de prueba\",\"position\":1,\"points\":1}"
+```
+
+Crear una opción:
+
+```Bash
+curl -X POST localhost:8080/api/v1/questions/QUESTION_ID/options \
+  -H "Authorization: Bearer TOKEN_PROFESOR" \
+  -H "Content-Type: application/json" \
+  -d "{\"text\":\"Respuesta A\",\"position\":1,\"is_correct\":true}"
+```
+
+Iniciar intento como estudiante:
+
+```Bash
+curl -X POST localhost:8080/api/v1/quizzes/QUIZ_ID/attempts \
+  -H "Authorization: Bearer TOKEN_ESTUDIANTE"
+```
+Guardar una respuesta:
+
+```Bash
+curl -X PUT localhost:8080/api/v1/attempts/ATTEMPT_ID/answers/QUESTION_ID \
+  -H "Authorization: Bearer TOKEN_ESTUDIANTE" \
+  -H "Content-Type: application/json" \
+  -d "{\"selected_option_id\":\"OPTION_ID\"}"
+```
+
+Enviar intento final:
+
+```Bash
+curl -X POST localhost:8080/api/v1/attempts/ATTEMPT_ID/submit \
+  -H "Authorization: Bearer TOKEN_ESTUDIANTE" \
+  -H "Idempotency-Key: submit-intento-1"
+```
+La calificacion es calculada en el servidor. El cliente nunca recibe la clave
+de respuestas correctas dentro del snapshot utilizado durante el intento.
+
+
+## Flujo rapido de Progeeso
+
+Abrir un recurso:
+
+```Bash
+curl -X POST localhost:8080/api/v1/resources/RESOURCE_ID/progress/open \
+  -H "Authorization: Bearer TOKEN_ESTUDIANTE"
+```
+Registrat actividad:
+
+```Bash
+curl -X POST localhost:8080/api/v1/resources/RESOURCE_ID/progress/heartbeat \
+  -H "Authorization: Bearer TOKEN_ESTUDIANTE" \
+  -H "Content-Type: application/json" \
+  -d "{\"position_seconds\":30}"
+```
+
+Completar un recurso:
+
+```Bash
+curl -X POST localhost:8080/api/v1/resources/RESOURCE_ID/progress/complete \
+  -H "Authorization: Bearer TOKEN_ESTUDIANTE"
+```
+
+Consultar progreso curso:
+
+```Bash
+curl localhost:8080/api/v1/courses/COURSE_ID/progress \
+  -H "Authorization: Bearer TOKEN_ESTUDIANTE"
+```
+
+El porcentaje de progreso se calcula exclusivamente en el servidor a partir
+de los recursos visibles y obligatorios de la version publicada.
+
+## Flujo rapido de Insignias
+
+Crear la insignia de un curso como profesor propietario o administrador:
+
+```Bash
+curl -X POST localhost:8080/api/v1/courses/COURSE_ID/badge \
+  -H "Authorization: Bearer TOKEN_PROFESOR" \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"Curso completado\",\"description\":\"Insignia por aprobar el curso\",\"image_url\":\"https://example.com/badge.png\"}"
+```
+
+Cuando un estudiante alcanza el estado approved, la insignia se emite
+automaticamente.
+Cada emision contiene un verification_code UUID unico.
+
+Verificar insignia publicamente:
+
+```Bash
+curl localhost:8080/api/v1/badges/verify/VERIFICATION_CODE
+```
+
+Este endpoint es publico y no requiere autenticacion.
+
+Revocar emision como admin:
+
+```Bash
+curl -X POST localhost:8080/api/v1/badge-issuances/ISSUANCE_ID/revoke \
+  -H "Authorization: Bearer TOKEN_ADMIN"
+```
+
+Una insignia revocada continua siendo verificable, pero su campo valid
+se reporta como false.
+
 
 ## Pruebas
 
