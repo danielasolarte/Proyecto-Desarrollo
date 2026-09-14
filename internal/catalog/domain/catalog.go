@@ -18,23 +18,23 @@ const (
 // estudiante necesita para decidir si le interesa un curso, sin exponer
 // nada del árbol de contenido (eso vive en el módulo de cursos).
 type CourseSummary struct {
-	CourseID    string
-	Slug        string
-	Title       string
-	Summary     string
-	Category    string
-	PublishedAt time.Time
+	CourseID    string    `json:"course_id"`
+	Slug        string    `json:"slug"`
+	Title       string    `json:"title"`
+	Summary     string    `json:"summary"`
+	Category    string    `json:"category"`
+	PublishedAt time.Time `json:"published_at"`
 }
 
 type Enrollment struct {
-	ID          string
-	StudentID   string
-	CourseID    string
-	Status      EnrollmentStatus
-	EnrolledAt  time.Time
-	WithdrawnAt *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          string           `json:"id"`
+	StudentID   string           `json:"student_id"`
+	CourseID    string           `json:"course_id"`
+	Status      EnrollmentStatus `json:"status"`
+	EnrolledAt  time.Time        `json:"enrolled_at"`
+	WithdrawnAt *time.Time       `json:"withdrawn_at,omitempty"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
 }
 
 type SearchFilter struct {
