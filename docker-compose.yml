@@ -26,7 +26,7 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio
+    image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: mooc
@@ -47,7 +47,7 @@ services:
   # está listo, y le pone política de lectura pública a las URLs firmadas
   # de descarga. Corre una vez y termina (no es un servicio de larga vida).
   minio-init:
-    image: minio/mc
+    image: quay.io/minio/minio:latest
     depends_on:
       minio:
         condition: service_healthy

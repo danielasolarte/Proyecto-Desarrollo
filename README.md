@@ -528,6 +528,26 @@ Actualmente hay pruebas automaticas para Auth/Admin:
 - endpoint HTTP de registro;
 - middleware HTTP con ruta sin token, token de estudiante y token de admin.
 
+Adicionalmente, se cuenta con una coleccion reproducible de Postman para validar de punta a punta los modulos de quizzes, progreso e insignias.
+
+La coleccion cubre:
+
+- creacion de quizzes, preguntas y opciones;
+- inicio de intentos;
+- snapshot del quiz sin exposicion de respuestas correctas;
+- guardado parcial y recuperacion de intentos;
+- calificacion realizada en el servidor;
+- submit final con Idempotency-Key;
+- repeticion idempotente del submit;
+- calculo del progreso del curso;
+- transicion a estado approved;
+- emision automatica de insignias;
+- verificacion publica de insignias;
+- revocacion de insignias;
+- control de acceso por rol;
+- rechazo de solicitudes sin autenticacion;
+- rechazo de heartbeats multimedia con posiciones invalidas.
+
 ## OpenAPI
 
 La especificacion esta en:

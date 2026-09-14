@@ -1,0 +1,1626 @@
+{
+  "info": {
+    "name": "Plataforma MOOC — Persona 4 (Quizzes, Progreso e Insignias)",
+    "description": "Colección funcional para probar los endpoints implementados por Persona 4: quizzes e intentos, progreso de recursos/curso e insignias verificables.\n\nUso recomendado:\n1. Levanta infraestructura, aplica migraciones y ejecuta la API.\n2. Importa esta colección en Postman.\n3. Ejecuta las carpetas EN ORDEN (0 -> 1 -> 2 -> 3 -> 4).\n4. La colección crea admin, profesor y estudiante con correos únicos, crea un curso con un quiz obligatorio, lo publica, inscribe al estudiante, resuelve/aprueba el quiz y verifica que el curso quede approved.\n5. Para la carpeta 4 (verificación/revocación de badge), copia manualmente issuance_id y verification_code desde la tabla badge_issuances usando la consulta indicada en la descripción de esa carpeta, porque la API actual no expone un endpoint de listado de emisiones.\n6. La carpeta 3 incluye pruebas negativas de seguridad/idempotencia. La prueba de heartbeats con tiempo activo real se deja como flujo manual opcional porque requiere esperas reales entre requests.\n\nNota: los scripts toleran respuestas con campos ID/id en los endpoints de autoría.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "teacher_email",
+      "value": ""
+    },
+    {
+      "key": "teacher_password",
+      "value": "Teacher12345"
+    },
+    {
+      "key": "teacher_token",
+      "value": ""
+    },
+    {
+      "key": "student_email",
+      "value": ""
+    },
+    {
+      "key": "student_password",
+      "value": "Student12345"
+    },
+    {
+      "key": "student_token",
+      "value": ""
+    },
+    {
+      "key": "student_verification_token",
+      "value": ""
+    },
+    {
+      "key": "course_id",
+      "value": ""
+    },
+    {
+      "key": "draft_version_id",
+      "value": ""
+    },
+    {
+      "key": "module_id",
+      "value": ""
+    },
+    {
+      "key": "unit_id",
+      "value": ""
+    },
+    {
+      "key": "quiz_resource_id",
+      "value": ""
+    },
+    {
+      "key": "quiz_id",
+      "value": ""
+    },
+    {
+      "key": "question_id",
+      "value": ""
+    },
+    {
+      "key": "correct_option_id",
+      "value": ""
+    },
+    {
+      "key": "wrong_option_id",
+      "value": ""
+    },
+    {
+      "key": "enrollment_id",
+      "value": ""
+    },
+    {
+      "key": "attempt_id",
+      "value": ""
+    },
+    {
+      "key": "idempotency_key",
+      "value": "persona4-submit-{{$guid}}"
+    },
+    {
+      "key": "badge_id",
+      "value": ""
+    },
+    {
+      "key": "issuance_id",
+      "value": ""
+    },
+    {
+      "key": "verification_code",
+      "value": ""
+    },
+    {
+      "key": "progress_resource_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Setup — admin, profesor y estudiante",
+      "item": [
+        {
+          "name": "Bootstrap admin (201 o 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/bootstrap-admin",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "bootstrap-admin"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin.persona4@mooc.test\",\n  \"password\": \"Admin12345\",\n  \"full_name\": \"Admin Persona 4\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 creado o 409 ya existía', function () { pm.expect([201,409]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin.persona4@mooc.test\",\n  \"password\": \"Admin12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login admin exitoso', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.token).to.be.a('string');",
+                  "  pm.collectionVariables.set('admin_token', j.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin crea profesor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users/teachers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "teachers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"teacher.{{$timestamp}}@mooc.test\",\n  \"password\": \"Teacher12345\",\n  \"full_name\": \"Profesor Persona 4\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('profesor creado', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  const j = pm.response.json();",
+                  "  pm.collectionVariables.set('teacher_email', j.email);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login profesor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{teacher_email}}\",\n  \"password\": \"{{teacher_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login profesor', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const j=pm.response.json();",
+                  "  pm.expect(j.user.role).to.eql('teacher');",
+                  "  pm.collectionVariables.set('teacher_token', j.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar estudiante",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student.{{$timestamp}}@mooc.test\",\n  \"password\": \"Student12345\",\n  \"full_name\": \"Estudiante Persona 4\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estudiante registrado', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  const j=pm.response.json();",
+                  "  pm.collectionVariables.set('student_email', j.user.email);",
+                  "  pm.collectionVariables.set('student_verification_token', j.verification_token_dev);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar correo estudiante",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/verify-email",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "verify-email"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{student_verification_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('correo verificado', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login estudiante",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login estudiante', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const j=pm.response.json();",
+                  "  pm.expect(j.user.role).to.eql('student');",
+                  "  pm.collectionVariables.set('student_token', j.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Autoría — curso, quiz e insignia",
+      "item": [
+        {
+          "name": "Crear curso",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Curso Persona 4 {{$timestamp}}\",\n  \"summary\": \"Curso de prueba para quizzes, progreso e insignias\",\n  \"category\": \"testing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('curso y draft creados', function () {",
+                  "  pm.response.to.have.status(201); const j=pm.response.json();",
+                  "  pm.collectionVariables.set('course_id', j.course.id);",
+                  "  pm.collectionVariables.set('draft_version_id', j.version.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear módulo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/versions/{{draft_version_id}}/modules",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "versions",
+                "{{draft_version_id}}",
+                "modules"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Módulo Persona 4\",\n  \"position\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('módulo creado', function () { pm.response.to.have.status(201); const j=pm.response.json(); pm.collectionVariables.set('module_id', j.id || j.ID); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear unidad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/modules/{{module_id}}/units",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "modules",
+                "{{module_id}}",
+                "units"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Unidad Quiz\",\n  \"position\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('unidad creada', function () { pm.response.to.have.status(201); const j=pm.response.json(); pm.collectionVariables.set('unit_id', j.id || j.ID); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear recurso quiz obligatorio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/units/{{unit_id}}/resources",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "units",
+                "{{unit_id}}",
+                "resources"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"quiz\",\n  \"title\": \"Quiz final\",\n  \"position\": 1,\n  \"visible\": true,\n  \"required\": true,\n  \"downloadable\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recurso quiz creado', function () { pm.response.to.have.status(201); const j=pm.response.json(); pm.collectionVariables.set('quiz_resource_id', j.id || j.ID); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear quiz",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/resources/{{quiz_resource_id}}/quiz",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "resources",
+                "{{quiz_resource_id}}",
+                "quiz"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"passing_score\": 60,\n  \"max_attempts\": 3,\n  \"time_limit_seconds\": 900,\n  \"feedback_mode\": \"after_submit\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('quiz creado', function () {",
+                  "  pm.response.to.have.status(201); const j=pm.response.json();",
+                  "  pm.collectionVariables.set('quiz_id', j.id || j.ID);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear pregunta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/quizzes/{{quiz_id}}/questions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "quizzes",
+                "{{quiz_id}}",
+                "questions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"¿Cuánto es 2 + 2?\",\n  \"position\": 1,\n  \"points\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('pregunta creada', function () { pm.response.to.have.status(201); const j=pm.response.json(); pm.collectionVariables.set('question_id', j.id || j.ID); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear opción correcta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/questions/{{question_id}}/options",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "questions",
+                "{{question_id}}",
+                "options"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"4\",\n  \"position\": 1,\n  \"is_correct\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('opción correcta creada', function () { pm.response.to.have.status(201); const j=pm.response.json(); pm.collectionVariables.set('correct_option_id', j.id || j.ID); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear opción incorrecta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/questions/{{question_id}}/options",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "questions",
+                "{{question_id}}",
+                "options"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"5\",\n  \"position\": 2,\n  \"is_correct\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('opción incorrecta creada', function () { pm.response.to.have.status(201); const j=pm.response.json(); pm.collectionVariables.set('wrong_option_id', j.id || j.ID); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar quiz de autoría",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/quizzes/{{quiz_id}}/authoring",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "quizzes",
+                "{{quiz_id}}",
+                "authoring"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('autoría incluye opciones y clave', function () {",
+                  "  pm.response.to.have.status(200); const s=pm.response.text();",
+                  "  pm.expect(s).to.include('IsCorrect');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear badge del curso",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/{{course_id}}/badge",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses",
+                "{{course_id}}",
+                "badge"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Persona 4 Approved\",\n  \"description\": \"Insignia por aprobar el curso de prueba\",\n  \"image_url\": \"https://example.com/badge.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('badge creado', function () { pm.response.to.have.status(201); const j=pm.response.json(); pm.collectionVariables.set('badge_id', j.id || j.ID); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publicar curso",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/{{course_id}}/publish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses",
+                "{{course_id}}",
+                "publish"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('curso publicado', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Estudiante — inscripción, intento, submit y progreso",
+      "item": [
+        {
+          "name": "Inscribirse al curso",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/{{course_id}}/enrollments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses",
+                "{{course_id}}",
+                "enrollments"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('inscripción activa', function () {",
+                  "  pm.response.to.have.status(201); const j=pm.response.json();",
+                  "  pm.collectionVariables.set('enrollment_id', j.id || j.ID);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar intento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/quizzes/{{quiz_id}}/attempts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "quizzes",
+                "{{quiz_id}}",
+                "attempts"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('intento iniciado', function () {",
+                  "  pm.response.to.have.status(201); const j=pm.response.json();",
+                  "  pm.collectionVariables.set('attempt_id', j.id);",
+                  "});",
+                  "pm.test('snapshot NO expone is_correct', function () {",
+                  "  const j=pm.response.json();",
+                  "  const snapshot=JSON.stringify(j.snapshot || {});",
+                  "  pm.expect(snapshot.toLowerCase()).to.not.include('is_correct');",
+                  "  pm.expect(snapshot).to.not.include('IsCorrect');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Guardar respuesta parcial correcta",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attempts/{{attempt_id}}/answers/{{question_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attempts",
+                "{{attempt_id}}",
+                "answers",
+                "{{question_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"selected_option_id\": \"{{correct_option_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('respuesta parcial guardada', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recuperar intento (resume)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attempts/{{attempt_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attempts",
+                "{{attempt_id}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('intento recuperable con respuestas', function () {",
+                  "  pm.response.to.have.status(200); const j=pm.response.json();",
+                  "  pm.expect(j.answers).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit final — calificación servidor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attempts/{{attempt_id}}/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attempts",
+                "{{attempt_id}}",
+                "submit"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('submit exitoso', function () { pm.response.to.have.status(200); });",
+                  "pm.test('aprobado y porcentaje calculado por servidor', function () {",
+                  "  const j=pm.response.json(); pm.expect(j.passed).to.eql(true); pm.expect(j.percentage).to.be.at.least(60);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Repetir MISMO submit — debe ser idempotente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attempts/{{attempt_id}}/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attempts",
+                "{{attempt_id}}",
+                "submit"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('reintento idempotente devuelve 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('sigue siendo el mismo intento', function () { const j=pm.response.json(); pm.expect(j.id).to.eql(pm.collectionVariables.get('attempt_id')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar progreso del curso — debe quedar approved",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/{{course_id}}/progress",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses",
+                "{{course_id}}",
+                "progress"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('curso aprobado al 100%', function () {",
+                  "  pm.response.to.have.status(200); const j=pm.response.json();",
+                  "  const status=j.Status || j.status; const pct=j.ProgressPercentage ?? j.progress_percentage;",
+                  "  pm.expect(status).to.eql('approved'); pm.expect(pct).to.eql(100);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Casos adversos y control de acceso",
+      "item": [
+        {
+          "name": "Estudiante intenta crear quiz — 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/resources/{{quiz_resource_id}}/quiz",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "resources",
+                "{{quiz_resource_id}}",
+                "quiz"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"passing_score\": 60,\n  \"max_attempts\": 1,\n  \"time_limit_seconds\": 300,\n  \"feedback_mode\": \"after_submit\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estudiante no puede autorar quiz', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit sin Idempotency-Key — debe fallar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attempts/{{attempt_id}}/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attempts",
+                "{{attempt_id}}",
+                "submit"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin Idempotency-Key falla', function () { pm.expect([400,409]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estudiante no puede crear badge",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/{{course_id}}/badge",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses",
+                "{{course_id}}",
+                "badge"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Badge ilegal\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 para estudiante', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Progreso sin token — debe fallar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/courses/{{course_id}}/progress",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "courses",
+                "{{course_id}}",
+                "progress"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin token no accede a progreso', function () { pm.expect([401,403]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Heartbeat fraudulento opcional (requiere progress_resource_id multimedia)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/resources/{{progress_resource_id}}/progress/heartbeat",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "resources",
+                "{{progress_resource_id}}",
+                "progress",
+                "heartbeat"
+              ]
+            },
+            "description": "Prueba opcional de integración Persona 3 + Persona 4. Antes de ejecutarla, define progress_resource_id con el UUID de un video/audio procesado (ready) del curso e inicia su progreso con /progress/open. Si duration_seconds es menor a 999999, el servidor debe rechazar el heartbeat.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"position_seconds\": 999999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('posición multimedia imposible se rechaza', function () { pm.expect([400,403,404]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Insignia — verificación pública y revocación",
+      "description": "La API emite automáticamente el badge al llegar a approved, pero actualmente no expone un endpoint para listar badge_issuances. Antes de correr esta carpeta, consulta PostgreSQL:\n\nSELECT id, verification_code FROM badge_issuances WHERE course_id = '{{course_id}}';\n\nCopia los valores obtenidos en las variables de colección issuance_id y verification_code.\n\nEl valor de course_id está en la sección de variables al abrir la colección, se guardó automaticamente durante la capeta 1.",
+      "item": [
+        {
+          "name": "Verificar badge PUBLICAMENTE (sin token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/badges/verify/{{verification_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "badges",
+                "verify",
+                "{{verification_code}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('verificación pública funciona sin token', function () { pm.response.to.have.status(200); });",
+                  "pm.test('badge válido y sin email', function () {",
+                  "  const j=pm.response.json(); pm.expect(j.valid).to.eql(true);",
+                  "  pm.expect(JSON.stringify(j).toLowerCase()).to.not.include('email');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin revoca la emisión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/badge-issuances/{{issuance_id}}/revoke",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "badge-issuances",
+                "{{issuance_id}}",
+                "revoke"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('revocación exitosa', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().revoked).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar badge revocado — valid=false",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/badges/verify/{{verification_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "badges",
+                "verify",
+                "{{verification_code}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('badge revocado sigue verificable pero inválido', function () {",
+                  "  pm.response.to.have.status(200); const j=pm.response.json();",
+                  "  pm.expect(j.valid).to.eql(false); pm.expect(j.revoked).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
