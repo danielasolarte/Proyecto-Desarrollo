@@ -40,9 +40,9 @@ const (
 type JobType string
 
 const (
-	JobScanAntivirus              JobType = "scan_antivirus"
-	JobTranscodeHLS               JobType = "transcode_hls"
-	JobConvertPresentationToPDF   JobType = "convert_presentation_to_pdf"
+	JobScanAntivirus            JobType = "scan_antivirus"
+	JobTranscodeHLS             JobType = "transcode_hls"
+	JobConvertPresentationToPDF JobType = "convert_presentation_to_pdf"
 )
 
 // JobStatus refleja el ciclo de vida de un media_job en la cola de asynq.
@@ -77,66 +77,66 @@ const (
 // multimedia: 1:1 con resources.id (columna resources.media_asset_id del
 // módulo de cursos apunta aquí una vez que el asset queda listo).
 type MediaAsset struct {
-	ID                  string
-	ResourceID          string
-	Kind                MediaKind
-	OriginalStorageKey  string
-	OriginalMimeType    *string
-	OriginalSizeBytes   *int64
-	ChecksumSHA256      *string
-	HLSManifestKey      *string // solo video/audio
-	DurationSeconds     *int    // solo video/audio
-	ConvertedPDFKey     *string // solo presentation
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	ID                 string    `json:"id"`
+	ResourceID         string    `json:"resource_id"`
+	Kind               MediaKind `json:"kind"`
+	OriginalStorageKey string    `json:"original_storage_key"`
+	OriginalMimeType   *string   `json:"original_mime_type,omitempty"`
+	OriginalSizeBytes  *int64    `json:"original_size_bytes,omitempty"`
+	ChecksumSHA256     *string   `json:"checksum_sha256,omitempty"`
+	HLSManifestKey     *string   `json:"hls_manifest_key,omitempty"`  // solo video/audio
+	DurationSeconds    *int      `json:"duration_seconds,omitempty"`  // solo video/audio
+	ConvertedPDFKey    *string   `json:"converted_pdf_key,omitempty"` // solo presentation
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // UploadSession representa una carga en curso: se crea al pedir la URL
 // prefirmada y se cierra al confirmar que el archivo llegó completo.
 type UploadSession struct {
-	ID                     string
-	ResourceID             string
-	InitiatedBy            string
-	StorageKey             string
-	StorageUploadID        *string
-	Status                 UploadStatus
-	ExpectedMimeType       *string
-	ExpectedSizeBytes      *int64
-	DeclaredChecksumSHA256 *string
-	CreatedAt              time.Time
-	ExpiresAt              time.Time
-	CompletedAt            *time.Time
-	UpdatedAt              time.Time
+	ID                     string       `json:"id"`
+	ResourceID             string       `json:"resource_id"`
+	InitiatedBy            string       `json:"initiated_by"`
+	StorageKey             string       `json:"storage_key"`
+	StorageUploadID        *string      `json:"storage_upload_id,omitempty"`
+	Status                 UploadStatus `json:"status"`
+	ExpectedMimeType       *string      `json:"expected_mime_type,omitempty"`
+	ExpectedSizeBytes      *int64       `json:"expected_size_bytes,omitempty"`
+	DeclaredChecksumSHA256 *string      `json:"declared_checksum_sha256,omitempty"`
+	CreatedAt              time.Time    `json:"created_at"`
+	ExpiresAt              time.Time    `json:"expires_at"`
+	CompletedAt            *time.Time   `json:"completed_at,omitempty"`
+	UpdatedAt              time.Time    `json:"updated_at"`
 }
 
 // MediaJob es un trabajo encolado para el worker. La IdempotencyKey evita
 // que una doble entrega (mismo evento procesado dos veces) genere salidas
 // duplicadas (sección 6, "tolerancia a fallos").
 type MediaJob struct {
-	ID             string
-	MediaAssetID   string
-	JobType        JobType
-	Status         JobStatus
-	Attempts       int
-	MaxAttempts    int
-	LastError      *string
-	IdempotencyKey string
-	LockedAt       *time.Time
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID             string     `json:"id"`
+	MediaAssetID   string     `json:"media_asset_id"`
+	JobType        JobType    `json:"job_type"`
+	Status         JobStatus  `json:"status"`
+	Attempts       int        `json:"attempts"`
+	MaxAttempts    int        `json:"max_attempts"`
+	LastError      *string    `json:"last_error,omitempty"`
+	IdempotencyKey string     `json:"idempotency_key"`
+	LockedAt       *time.Time `json:"locked_at,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 // ---------- errores de dominio ----------
 
 var (
-	ErrNotFound            = errors.New("recurso multimedia no encontrado")
-	ErrForbidden           = errors.New("no autorizado sobre este recurso multimedia")
-	ErrUploadNotActive     = errors.New("la sesion de carga no esta activa")
-	ErrUploadExpired       = errors.New("la sesion de carga ha expirado")
-	ErrChecksumMismatch    = errors.New("el checksum declarado no coincide con el archivo recibido")
-	ErrMimeNotAllowed      = errors.New("el tipo MIME real no esta permitido para este recurso")
-	ErrJobAlreadyTerminal  = errors.New("el job ya se encuentra en un estado terminal")
-	ErrValidation          = errors.New("error de validacion")
+	ErrNotFound           = errors.New("recurso multimedia no encontrado")
+	ErrForbidden          = errors.New("no autorizado sobre este recurso multimedia")
+	ErrUploadNotActive    = errors.New("la sesion de carga no esta activa")
+	ErrUploadExpired      = errors.New("la sesion de carga ha expirado")
+	ErrChecksumMismatch   = errors.New("el checksum declarado no coincide con el archivo recibido")
+	ErrMimeNotAllowed     = errors.New("el tipo MIME real no esta permitido para este recurso")
+	ErrJobAlreadyTerminal = errors.New("el job ya se encuentra en un estado terminal")
+	ErrValidation         = errors.New("error de validacion")
 )
 
 // ---------- repositorios (implementados en internal/media/postgres) ----------
@@ -171,9 +171,9 @@ type MediaRepository interface {
 // eso "reanudar" es simple — se le pregunta a S3/MinIO qué partes ya
 // tiene, en vez de confiar en el estado que guardó el navegador.
 type UploadedPart struct {
-	PartNumber int
-	ETag       string
-	SizeBytes  int64
+	PartNumber int    `json:"part_number"`
+	ETag       string `json:"etag"`
+	SizeBytes  int64  `json:"size_bytes"`
 }
 
 type ObjectStorage interface {

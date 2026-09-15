@@ -138,12 +138,27 @@ func main() {
 	}
 	s3UseSSL, _ := strconv.ParseBool(os.Getenv("S3_USE_SSL"))
 
+	// S3_PUBLIC_ENDPOINT es el host:puerto que queda firmado dentro de las
+	// URLs prefirmadas que recibe un cliente externo (navegador, Postman,
+	// reproductor HLS) -- distinto de S3_ENDPOINT cuando la API corre
+	// dentro de docker-compose (host interno "minio:9000") pero quien sube
+	// o reproduce el archivo está fuera de esa red (ver S3Config en
+	// internal/media/platform/s3storage.go). Si no se define, se usa el
+	// mismo S3_ENDPOINT de siempre.
+	s3PublicEndpoint := os.Getenv("S3_PUBLIC_ENDPOINT")
+	s3PublicUseSSL := s3UseSSL
+	if v := os.Getenv("S3_PUBLIC_USE_SSL"); v != "" {
+		s3PublicUseSSL, _ = strconv.ParseBool(v)
+	}
+
 	mediaStorage, err := mediaPlatform.NewS3Storage(mediaPlatform.S3Config{
-		Endpoint:  s3Endpoint,
-		AccessKey: s3AccessKey,
-		SecretKey: s3SecretKey,
-		Bucket:    s3Bucket,
-		UseSSL:    s3UseSSL,
+		Endpoint:       s3Endpoint,
+		AccessKey:      s3AccessKey,
+		SecretKey:      s3SecretKey,
+		Bucket:         s3Bucket,
+		UseSSL:         s3UseSSL,
+		PublicEndpoint: s3PublicEndpoint,
+		PublicUseSSL:   s3PublicUseSSL,
 	})
 	if err != nil {
 		log.Fatalf("no se pudo conectar a minio/s3: %v", err)

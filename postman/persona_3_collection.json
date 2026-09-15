@@ -88,6 +88,10 @@
     {
       "key": "recommendedPartBytes",
       "value": ""
+    },
+    {
+      "key": "hlsPollCount",
+      "value": "0"
     }
   ],
   "item": [
@@ -448,7 +452,7 @@
                 "exec": [
                   "pm.test('carga iniciada', function () { pm.response.to.have.status(201); });",
                   "const body = pm.response.json();",
-                  "pm.collectionVariables.set('uploadSessionId', body.upload_session.id);",
+                  "pm.collectionVariables.set('uploadSessionId', body.upload_session.ID);",
                   "pm.collectionVariables.set('recommendedPartBytes', body.recommended_part_bytes);"
                 ]
               }
@@ -603,8 +607,41 @@
               }
             ],
             "url": "{{baseUrl}}/resources/{{resourceId}}/media",
-            "description": "Corre esto varias veces (cada pocos segundos) hasta ver el HLS ya generado (hls_manifest_key con valor). Mientras tanto, mira la terminal del worker: deberias ver clamdscan y luego ffmpeg corriendo ahi."
-          }
+            "description": "Sondea el estado del asset hasta que el worker termine (antivirus + ffmpeg). Si 'hls_manifest_key' todavia no aparece, este mismo request se vuelve a encolar solo (patron postman.setNextRequest), hasta 40 veces. Para que el tiempo de espera sea real, corre la coleccion con Delay ~3000ms entre requests. Mientras tanto, en la terminal del worker deberias ver clamdscan y luego ffmpeg corriendo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const ready = !!(body && body.hls_manifest_key);",
+                  "let count = parseInt(pm.collectionVariables.get('hlsPollCount') || '0', 10);",
+                  "",
+                  "if (ready) {",
+                  "    pm.test('el asset ya tiene HLS listo (hls_manifest_key presente)', function () {",
+                  "        pm.expect(ready).to.be.true;",
+                  "    });",
+                  "    pm.collectionVariables.set('hlsPollCount', '0');",
+                  "} else if (count < 40) {",
+                  "    // El worker todavia esta procesando (antivirus + ffmpeg). En vez de fallar,",
+                  "    // nos volvemos a encolar a nosotros mismos: es el patron estandar de Postman",
+                  "    // para esperar un proceso asincrono dentro del Collection Runner/Newman.",
+                  "    // IMPORTANTE: para que esto tenga tiempo real de esperar, corre la coleccion",
+                  "    // completa con un Delay de ~3000ms entre requests (campo 'Delay' del Runner,",
+                  "    // o 'newman run ... --delay-request 3000').",
+                  "    pm.collectionVariables.set('hlsPollCount', String(count + 1));",
+                  "    postman.setNextRequest('Ver estado de procesamiento');",
+                  "} else {",
+                  "    pm.collectionVariables.set('hlsPollCount', '0');",
+                  "    pm.test('el worker no termino a tiempo', function () {",
+                  "        pm.expect.fail('processing_status no llego a ready tras 40 intentos -- revisa el log del worker (docker compose logs worker)');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Obtener URL de reproduccion (como profesor, dueno del curso)",
@@ -700,7 +737,7 @@
               "script": {
                 "exec": [
                   "pm.test('carga iniciada', function () { pm.response.to.have.status(201); });",
-                  "pm.collectionVariables.set('uploadSessionId', pm.response.json().upload_session.id);"
+                  "pm.collectionVariables.set('uploadSessionId', pm.response.json().upload_session.ID);"
                 ]
               }
             }
@@ -806,7 +843,7 @@
               "script": {
                 "exec": [
                   "pm.test('carga iniciada', function () { pm.response.to.have.status(201); });",
-                  "pm.collectionVariables.set('uploadSessionId', pm.response.json().upload_session.id);"
+                  "pm.collectionVariables.set('uploadSessionId', pm.response.json().upload_session.ID);"
                 ]
               }
             }

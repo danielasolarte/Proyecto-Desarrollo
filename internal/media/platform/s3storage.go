@@ -23,6 +23,33 @@ type S3Config struct {
 	SecretKey string
 	Bucket    string
 	UseSSL    bool
+
+	// PublicEndpoint es el host:puerto que debe quedar firmado dentro de
+	// las URLs prefirmadas que se entregan a un cliente EXTERNO (el
+	// navegador del profesor, Postman, un reproductor HLS). Endpoint, en
+	// cambio, es el host que usa este mismo proceso (API/worker) para
+	// hablar con MinIO/S3 directamente (StatObject, multipart, descargas
+	// del worker) — dentro de docker-compose eso es "minio:9000", que solo
+	// resuelve DENTRO de la red de contenedores. Si un cliente externo
+	// usara ese mismo host firmado, la petición nunca llegaría (DNS no
+	// resuelve "minio" fuera de docker). Si PublicEndpoint queda vacío, se
+	// usa Endpoint para todo (comportamiento anterior, válido cuando la
+	// API también corre fuera de docker o hay un proxy que sí resuelve el
+	// nombre interno).
+	PublicEndpoint string
+	PublicUseSSL   bool
+
+	// Region fuerza la region que minio-go usa para firmar (SigV4 la
+	// necesita). Si queda vacio, minio-go la resuelve solo la primera vez
+	// con una llamada real GetBucketLocation contra el endpoint del
+	// cliente -- y eso es un problema para publicClient: su endpoint
+	// (ej. "localhost:9000") es el que ve un cliente EXTERNO, no
+	// necesariamente algo alcanzable desde dentro de este proceso. Sin
+	// Region fijo, firmar una URL terminaria intentando una conexion real
+	// hacia ese host publico y fallando con 500 si no es alcanzable desde
+	// aqui (por ejemplo, "localhost" adentro de un contenedor no es MinIO).
+	// MinIO usa "us-east-1" por defecto si no se configura otra cosa.
+	Region string
 }
 
 type S3Storage struct {
@@ -35,12 +62,25 @@ type S3Storage struct {
 	// profesor, no nuestro backend.
 	core   *minio.Core
 	bucket string
+
+	// publicClient firma exactamente igual que client (mismas credenciales)
+	// pero apuntando al host público, y SOLO se usa para generar las URLs
+	// que salen hacia afuera (PresignDownload, PresignUploadPart). Las
+	// operaciones que este mismo proceso ejecuta contra el bucket siguen
+	// yendo por client/core, sobre la red interna.
+	publicClient *minio.Client
 }
 
 func NewS3Storage(cfg S3Config) (*S3Storage, error) {
+	region := cfg.Region
+	if region == "" {
+		region = "us-east-1"
+	}
+
 	opts := &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
 		Secure: cfg.UseSSL,
+		Region: region,
 	}
 	client, err := minio.New(cfg.Endpoint, opts)
 	if err != nil {
@@ -50,11 +90,27 @@ func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &S3Storage{client: client, core: core, bucket: cfg.Bucket}, nil
+
+	publicEndpoint := cfg.PublicEndpoint
+	publicUseSSL := cfg.PublicUseSSL
+	if publicEndpoint == "" {
+		publicEndpoint = cfg.Endpoint
+		publicUseSSL = cfg.UseSSL
+	}
+	publicClient, err := minio.New(publicEndpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+		Secure: publicUseSSL,
+		Region: region,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &S3Storage{client: client, core: core, bucket: cfg.Bucket, publicClient: publicClient}, nil
 }
 
 func (s *S3Storage) PresignDownload(key string, expiresIn time.Duration) (string, error) {
-	u, err := s.client.PresignedGetObject(context.Background(), s.bucket, key, expiresIn, url.Values{})
+	u, err := s.publicClient.PresignedGetObject(context.Background(), s.bucket, key, expiresIn, url.Values{})
 	if err != nil {
 		return "", err
 	}
@@ -91,7 +147,7 @@ func (s *S3Storage) PresignUploadPart(key string, uploadID string, partNumber in
 	params.Set("partNumber", strconv.Itoa(partNumber))
 	params.Set("uploadId", uploadID)
 
-	u, err := s.client.Presign(context.Background(), http.MethodPut, s.bucket, key, expiresIn, params)
+	u, err := s.publicClient.Presign(context.Background(), http.MethodPut, s.bucket, key, expiresIn, params)
 	if err != nil {
 		return "", err
 	}
