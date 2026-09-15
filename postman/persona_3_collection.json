@@ -1,9 +1,1428 @@
 {
   "info": {
+    "_postman_id": "7f028f72-98ff-4c14-8e0d-4f3d110b76d5",
     "name": "MOOC - Modulo Multimedia (Persona 3)",
     "description": "Flujo completo del modulo de multimedia: identidad, autoria de curso/recurso, carga multipart reanudable con interrupcion real, encolamiento y procesamiento asincrono (HLS), casos negativos de checksum y MIME real, publicacion del curso, y control de acceso a la reproduccion segun inscripcion del estudiante. Cada request guarda en variables de coleccion lo que la siguiente necesita.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "41938985"
   },
+  "item": [
+    {
+      "name": "1. Identidad (admin y profesor)",
+      "item": [
+        {
+          "name": "Bootstrap admin (solo la primera vez)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 201 la primera vez, 409 si ya existe un admin -- ambos son OK para seguir",
+                  "pm.test('bootstrap ok o admin ya existia', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"full_name\": \"Admin Inicial\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/bootstrap-admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "bootstrap-admin"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('login admin ok', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('adminToken', body.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear profesor (con token de admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('profesor creado o ya existia', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"{{teacherPassword}}\",\n  \"full_name\": \"Profesor de Prueba\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/teachers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "teachers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login profesor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('login profesor ok', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('teacherToken', body.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"{{teacherPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Curso -> Recurso",
+      "item": [
+        {
+          "name": "Crear curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('curso creado', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('courseId', body.course.id);",
+                  "pm.collectionVariables.set('versionId', body.version.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Curso de prueba multimedia\",\n  \"summary\": \"Solo para probar cargas\",\n  \"category\": \"pruebas\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear modulo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('modulo creado', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('moduleId', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Modulo 1\",\n  \"position\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/versions/{{versionId}}/modules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "versions",
+                "{{versionId}}",
+                "modules"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear unidad",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('unidad creada', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('unitId', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Unidad 1\",\n  \"position\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{moduleId}}/units",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{moduleId}}",
+                "units"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear recurso video (camino feliz)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('recurso creado', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('resourceId', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"video\",\n  \"title\": \"Video de prueba\",\n  \"position\": 1,\n  \"visible\": true,\n  \"required\": true,\n  \"downloadable\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/units/{{unitId}}/resources",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "{{unitId}}",
+                "resources"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear recurso oculto (para probar checksum invalido)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('recurso creado', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('resourceIdChecksumFail', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"video\",\n  \"title\": \"Video checksum invalido\",\n  \"position\": 2,\n  \"visible\": false,\n  \"required\": false,\n  \"downloadable\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/units/{{unitId}}/resources",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "{{unitId}}",
+                "resources"
+              ]
+            },
+            "description": "Se marca visible:false a proposito: como esta carga se hace fallar intencionalmente, si fuera visible bloquearia la publicacion del curso mas adelante (seccion 6: 'todos los recursos visibles disponibles')."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear recurso oculto (para probar MIME real invalido)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('recurso creado', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('resourceIdMimeFail', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"video\",\n  \"title\": \"Video mime invalido\",\n  \"position\": 3,\n  \"visible\": false,\n  \"required\": false,\n  \"downloadable\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/units/{{unitId}}/resources",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "units",
+                "{{unitId}}",
+                "resources"
+              ]
+            },
+            "description": "Tambien oculto por la misma razon que el anterior."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Carga multimedia (camino feliz, con interrupcion y reanudacion)",
+      "item": [
+        {
+          "name": "Iniciar carga",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('carga iniciada', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('uploadSessionId', body.upload_session.id);",
+                  "pm.collectionVariables.set('recommendedPartBytes', body.recommended_part_bytes);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mime_type\": \"video/mp4\",\n  \"size_bytes\": 1048576\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/resources/{{resourceId}}/uploads/initiate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "resources",
+                "{{resourceId}}",
+                "uploads",
+                "initiate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pedir URL de la parte 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('url de parte obtenida', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('partUrl', pm.response.json().url);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts/1/url",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{uploadSessionId}}",
+                "parts",
+                "1",
+                "url"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Simular corte de conexion: ver que partes llegaron (debe estar vacio)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('ninguna parte ha llegado todavia', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().parts.length).to.eql(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{uploadSessionId}}",
+                "parts"
+              ]
+            },
+            "description": "Todavia no subimos nada a la URL prefirmada (se 'cayo' la conexion antes de hacer el PUT). Esto prueba que la reanudacion no confia en lo que diga el cliente, sino en lo que de verdad tiene el storage."
+          },
+          "response": []
+        },
+        {
+          "name": "Reanudar: volver a pedir la URL de la parte 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('url de parte obtenida de nuevo', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('partUrl', pm.response.json().url);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts/1/url",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{uploadSessionId}}",
+                "parts",
+                "1",
+                "url"
+              ]
+            },
+            "description": "El cliente 'reconecta' y pide de nuevo la URL de la misma parte -- pedirla otra vez no cuenta como una parte nueva, la decide S3/MinIO cuando de verdad reciba el PUT."
+          },
+          "response": []
+        },
+        {
+          "name": "Subir parte 1 (edita el body con tu archivo de video)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": "/Users/mac/Downloads/videoPreba.mp4"
+              }
+            },
+            "url": {
+              "raw": "{{partUrl}}",
+              "host": [
+                "{{partUrl}}"
+              ]
+            },
+            "description": "IMPORTANTE: en Postman, ve a la pestana Body -> binary y selecciona un archivo de video pequeno de tu computador antes de enviar. Guarda este mismo archivo, lo vas a reusar en la prueba de checksum invalido."
+          },
+          "response": []
+        },
+        {
+          "name": "Ver que partes llegaron (ya reanudado, ahora si debe aparecer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('la parte 1 ya llego', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().parts.length).to.eql(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{uploadSessionId}}",
+                "parts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Completar carga",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('carga completada', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{uploadSessionId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{uploadSessionId}}",
+                "complete"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ver estado de procesamiento",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/resources/{{resourceId}}/media",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "resources",
+                "{{resourceId}}",
+                "media"
+              ]
+            },
+            "description": "Corre esto varias veces (cada pocos segundos) hasta ver el HLS ya generado (hls_manifest_key con valor). Mientras tanto, mira la terminal del worker: deberias ver clamdscan y luego ffmpeg corriendo ahi."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener URL de reproduccion (como profesor, dueno del curso)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/resources/{{resourceId}}/playback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "resources",
+                "{{resourceId}}",
+                "playback"
+              ]
+            },
+            "description": "Solo funciona una vez que el asset ya tiene manifest HLS. La url que devuelve se puede pegar directo en el navegador. El profesor siempre puede reproducir su propio curso, inscrito o no -- el chequeo de inscripcion (seccion 7) solo aplica a estudiantes."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Publicacion del curso",
+      "item": [
+        {
+          "name": "Previsualizar curso antes de publicar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('preview ok', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}",
+                "preview"
+              ]
+            },
+            "description": "Publico/solo-lectura, no exige token. Muestra el arbol completo y la lista exhaustiva de problemas de publicacion (seccion 6). Los dos recursos ocultos (checksum/mime) no deberian aparecer en 'problems' porque visible:false los excluye de la validacion."
+          },
+          "response": []
+        },
+        {
+          "name": "Publicar curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('curso publicado', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}",
+                "publish"
+              ]
+            },
+            "description": "Debe fallar con 422/validacion si 'Video de prueba' todavia no esta en estado ready (el worker no ha terminado el HLS) -- si pasa eso, espera unos segundos y reintenta este mismo request."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Prueba negativa: checksum declarado no coincide",
+      "item": [
+        {
+          "name": "Iniciar carga con checksum invalido a proposito",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('carga iniciada', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('uploadSessionId', pm.response.json().upload_session.id);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mime_type\": \"video/mp4\",\n  \"size_bytes\": 1048576,\n  \"checksum_sha256\": \"0000000000000000000000000000000000000000000000000000000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/resources/{{resourceIdChecksumFail}}/uploads/initiate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "resources",
+                "{{resourceIdChecksumFail}}",
+                "uploads",
+                "initiate"
+              ]
+            },
+            "description": "El checksum declarado nunca va a coincidir con el archivo real que subamos. El worker recalcula el SHA256 de verdad al procesar el asset y lo compara contra este valor (ver internal/media/worker/processor.go)."
+          },
+          "response": []
+        },
+        {
+          "name": "Pedir URL de la parte 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('url de parte obtenida', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('partUrl', pm.response.json().url);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts/1/url",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{uploadSessionId}}",
+                "parts",
+                "1",
+                "url"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Subir parte 1 (usa el mismo archivo de video que ya tenias)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": "/Users/mac/Downloads/videoPreba.mp4"
+              }
+            },
+            "url": {
+              "raw": "{{partUrl}}",
+              "host": [
+                "{{partUrl}}"
+              ]
+            },
+            "description": "El contenido no importa para esta prueba: el checksum declarado en el paso anterior ya es incorrecto sin importar que subas."
+          },
+          "response": []
+        },
+        {
+          "name": "Completar carga",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('carga completada (la validacion real es asincrona)', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{uploadSessionId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{uploadSessionId}}",
+                "complete"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar que el procesamiento fallo por checksum",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}",
+                "preview"
+              ]
+            },
+            "description": "La validacion de checksum ocurre DENTRO del worker (job scan_antivirus), no en esta respuesta HTTP. Corre este GET repetidas veces cada ~20 segundos: el worker reintenta 3 veces con backoff (seccion 6, 'tras tres reintentos fallidos, el trabajo llega a la DLQ'), asi que puede tardar 1-2 minutos en total. Busca en tree.modules[].units[].resources[] el recurso 'Video checksum invalido' y confirma que su processing_status termine en 'failed'. Tambien puedes mirar la terminal del worker: debe loguear el error de checksum en cada intento."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Prueba negativa: MIME real no permitido",
+      "item": [
+        {
+          "name": "Iniciar carga declarando mime_type video/mp4",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('carga iniciada', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('uploadSessionId', pm.response.json().upload_session.id);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mime_type\": \"video/mp4\",\n  \"size_bytes\": 1024\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/resources/{{resourceIdMimeFail}}/uploads/initiate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "resources",
+                "{{resourceIdMimeFail}}",
+                "uploads",
+                "initiate"
+              ]
+            },
+            "description": "Sin checksum_sha256 a proposito, para aislar esta prueba y que el unico motivo de fallo sea el MIME real."
+          },
+          "response": []
+        },
+        {
+          "name": "Pedir URL de la parte 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('url de parte obtenida', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('partUrl', pm.response.json().url);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts/1/url",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{uploadSessionId}}",
+                "parts",
+                "1",
+                "url"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Subir parte 1 (IMPORTANTE: sube un .txt, NO un video real)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": "/Users/mac/Downloads/simple.txt"
+              }
+            },
+            "url": {
+              "raw": "{{partUrl}}",
+              "host": [
+                "{{partUrl}}"
+              ]
+            },
+            "description": "Aqui esta la clave de la prueba: declaramos mime_type=video/mp4 pero subimos un archivo de texto plano cualquiera (crea uno con Notas de prueba y adjuntalo). internal/media/worker/processor.go detecta el MIME real con http.DetectContentType sobre el CONTENIDO (no la extension ni lo declarado), ve que es text/plain, y lo rechaza porque no esta en la lista blanca de 'video' (ErrMimeNotAllowed)."
+          },
+          "response": []
+        },
+        {
+          "name": "Completar carga",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('carga completada (la validacion real es asincrona)', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{uploadSessionId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{uploadSessionId}}",
+                "complete"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar que el procesamiento fallo por MIME real",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}",
+                "preview"
+              ]
+            },
+            "description": "Igual que en la prueba de checksum: espera ~1-2 minutos (3 reintentos con backoff) y vuelve a correr este GET. Busca 'Video mime invalido' en el arbol y confirma processing_status: 'failed'. En la terminal del worker el error debe mencionar el mime real detectado (por ejemplo text/plain)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Estudiante: control de acceso por inscripcion",
+      "item": [
+        {
+          "name": "Registrar estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('estudiante registrado o ya existia', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('verificationToken', pm.response.json().verification_token_dev);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\",\n  \"full_name\": \"Estudiante de Prueba\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "El campo verification_token_dev solo existe para pruebas locales (en produccion el token viaja por correo via Mailpit/SMTP real)."
+          },
+          "response": []
+        },
+        {
+          "name": "Verificar correo del estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('correo verificado o token no aplicable', function () {",
+                  "  pm.expect([200, 400, 422]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{verificationToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "verify-email"
+              ]
+            },
+            "description": "Si el registro anterior devolvio 409 (ya existia de una corrida previa), este paso puede fallar porque no tenemos un token nuevo -- en ese caso el estudiante ya deberia estar verificado y puedes saltar directo al login."
+          },
+          "response": []
+        },
+        {
+          "name": "Login estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('login estudiante ok', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('studentToken', pm.response.json().token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Intentar reproducir SIN estar inscrito (debe rechazar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('acceso rechazado por falta de inscripcion', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/resources/{{resourceId}}/playback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "resources",
+                "{{resourceId}}",
+                "playback"
+              ]
+            },
+            "description": "El estudiante todavia no se ha inscrito al curso. handler.go valida FindEnrollment solo cuando el rol es student, y debe devolver 403 (ErrForbidden)."
+          },
+          "response": []
+        },
+        {
+          "name": "Inscribirse al curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('inscripcion creada', function () { pm.response.to.have.status(201); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}/enrollments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}",
+                "enrollments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reproducir ya inscrito (ahora si debe funcionar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('reproduccion autorizada tras inscripcion', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.have.property('url');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/resources/{{resourceId}}/playback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "resources",
+                "{{resourceId}}",
+                "playback"
+              ]
+            },
+            "description": "Con la inscripcion activa, GetPlaybackURL debe devolver 200 y una URL prefirmada de lectura."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
   "variable": [
     {
       "key": "baseUrl",
@@ -88,1008 +1507,6 @@
     {
       "key": "recommendedPartBytes",
       "value": ""
-    },
-    {
-      "key": "hlsPollCount",
-      "value": "0"
-    }
-  ],
-  "item": [
-    {
-      "name": "1. Identidad (admin y profesor)",
-      "item": [
-        {
-          "name": "Bootstrap admin (solo la primera vez)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/auth/bootstrap-admin",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"full_name\": \"Admin Inicial\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "// 201 la primera vez, 409 si ya existe un admin -- ambos son OK para seguir",
-                  "pm.test('bootstrap ok o admin ya existia', function () {",
-                  "  pm.expect([201, 409]).to.include(pm.response.code);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Login admin",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/auth/login",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('login admin ok', function () { pm.response.to.have.status(200); });",
-                  "const body = pm.response.json();",
-                  "pm.collectionVariables.set('adminToken', body.token);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Crear profesor (con token de admin)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/admin/users/teachers",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"{{teacherPassword}}\",\n  \"full_name\": \"Profesor de Prueba\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('profesor creado o ya existia', function () {",
-                  "  pm.expect([201, 409]).to.include(pm.response.code);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Login profesor",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/auth/login",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"{{teacherPassword}}\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('login profesor ok', function () { pm.response.to.have.status(200); });",
-                  "const body = pm.response.json();",
-                  "pm.collectionVariables.set('teacherToken', body.token);"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "2. Curso -> Recurso",
-      "item": [
-        {
-          "name": "Crear curso",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/courses",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Curso de prueba multimedia\",\n  \"summary\": \"Solo para probar cargas\",\n  \"category\": \"pruebas\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('curso creado', function () { pm.response.to.have.status(201); });",
-                  "const body = pm.response.json();",
-                  "pm.collectionVariables.set('courseId', body.course.id);",
-                  "pm.collectionVariables.set('versionId', body.version.id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Crear modulo",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/versions/{{versionId}}/modules",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Modulo 1\",\n  \"position\": 1\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('modulo creado', function () { pm.response.to.have.status(201); });",
-                  "pm.collectionVariables.set('moduleId', pm.response.json().id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Crear unidad",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/modules/{{moduleId}}/units",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Unidad 1\",\n  \"position\": 1\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('unidad creada', function () { pm.response.to.have.status(201); });",
-                  "pm.collectionVariables.set('unitId', pm.response.json().id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Crear recurso video (camino feliz)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/units/{{unitId}}/resources",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"video\",\n  \"title\": \"Video de prueba\",\n  \"position\": 1,\n  \"visible\": true,\n  \"required\": true,\n  \"downloadable\": false\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('recurso creado', function () { pm.response.to.have.status(201); });",
-                  "pm.collectionVariables.set('resourceId', pm.response.json().id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Crear recurso oculto (para probar checksum invalido)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/units/{{unitId}}/resources",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"video\",\n  \"title\": \"Video checksum invalido\",\n  \"position\": 2,\n  \"visible\": false,\n  \"required\": false,\n  \"downloadable\": false\n}"
-            },
-            "description": "Se marca visible:false a proposito: como esta carga se hace fallar intencionalmente, si fuera visible bloquearia la publicacion del curso mas adelante (seccion 6: 'todos los recursos visibles disponibles')."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('recurso creado', function () { pm.response.to.have.status(201); });",
-                  "pm.collectionVariables.set('resourceIdChecksumFail', pm.response.json().id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Crear recurso oculto (para probar MIME real invalido)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/units/{{unitId}}/resources",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"video\",\n  \"title\": \"Video mime invalido\",\n  \"position\": 3,\n  \"visible\": false,\n  \"required\": false,\n  \"downloadable\": false\n}"
-            },
-            "description": "Tambien oculto por la misma razon que el anterior."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('recurso creado', function () { pm.response.to.have.status(201); });",
-                  "pm.collectionVariables.set('resourceIdMimeFail', pm.response.json().id);"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "3. Carga multimedia (camino feliz, con interrupcion y reanudacion)",
-      "item": [
-        {
-          "name": "Iniciar carga",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/resources/{{resourceId}}/uploads/initiate",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"mime_type\": \"video/mp4\",\n  \"size_bytes\": 1048576\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('carga iniciada', function () { pm.response.to.have.status(201); });",
-                  "const body = pm.response.json();",
-                  "pm.collectionVariables.set('uploadSessionId', body.upload_session.ID);",
-                  "pm.collectionVariables.set('recommendedPartBytes', body.recommended_part_bytes);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Pedir URL de la parte 1",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts/1/url"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('url de parte obtenida', function () { pm.response.to.have.status(200); });",
-                  "pm.collectionVariables.set('partUrl', pm.response.json().url);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Simular corte de conexion: ver que partes llegaron (debe estar vacio)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts",
-            "description": "Todavia no subimos nada a la URL prefirmada (se 'cayo' la conexion antes de hacer el PUT). Esto prueba que la reanudacion no confia en lo que diga el cliente, sino en lo que de verdad tiene el storage."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('ninguna parte ha llegado todavia', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().parts.length).to.eql(0);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Reanudar: volver a pedir la URL de la parte 1",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts/1/url",
-            "description": "El cliente 'reconecta' y pide de nuevo la URL de la misma parte -- pedirla otra vez no cuenta como una parte nueva, la decide S3/MinIO cuando de verdad reciba el PUT."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('url de parte obtenida de nuevo', function () { pm.response.to.have.status(200); });",
-                  "pm.collectionVariables.set('partUrl', pm.response.json().url);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Subir parte 1 (edita el body con tu archivo de video)",
-          "request": {
-            "method": "PUT",
-            "header": [],
-            "url": "{{partUrl}}",
-            "body": {
-              "mode": "binary"
-            },
-            "description": "IMPORTANTE: en Postman, ve a la pestana Body -> binary y selecciona un archivo de video pequeno de tu computador antes de enviar. Guarda este mismo archivo, lo vas a reusar en la prueba de checksum invalido."
-          }
-        },
-        {
-          "name": "Ver que partes llegaron (ya reanudado, ahora si debe aparecer)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('la parte 1 ya llego', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json().parts.length).to.eql(1);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Completar carga",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/uploads/{{uploadSessionId}}/complete"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('carga completada', function () { pm.response.to.have.status(200); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Ver estado de procesamiento",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/resources/{{resourceId}}/media",
-            "description": "Sondea el estado del asset hasta que el worker termine (antivirus + ffmpeg). Si 'hls_manifest_key' todavia no aparece, este mismo request se vuelve a encolar solo (patron postman.setNextRequest), hasta 40 veces. Para que el tiempo de espera sea real, corre la coleccion con Delay ~3000ms entre requests. Mientras tanto, en la terminal del worker deberias ver clamdscan y luego ffmpeg corriendo."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const body = pm.response.json();",
-                  "const ready = !!(body && body.hls_manifest_key);",
-                  "let count = parseInt(pm.collectionVariables.get('hlsPollCount') || '0', 10);",
-                  "",
-                  "if (ready) {",
-                  "    pm.test('el asset ya tiene HLS listo (hls_manifest_key presente)', function () {",
-                  "        pm.expect(ready).to.be.true;",
-                  "    });",
-                  "    pm.collectionVariables.set('hlsPollCount', '0');",
-                  "} else if (count < 40) {",
-                  "    // El worker todavia esta procesando (antivirus + ffmpeg). En vez de fallar,",
-                  "    // nos volvemos a encolar a nosotros mismos: es el patron estandar de Postman",
-                  "    // para esperar un proceso asincrono dentro del Collection Runner/Newman.",
-                  "    // IMPORTANTE: para que esto tenga tiempo real de esperar, corre la coleccion",
-                  "    // completa con un Delay de ~3000ms entre requests (campo 'Delay' del Runner,",
-                  "    // o 'newman run ... --delay-request 3000').",
-                  "    pm.collectionVariables.set('hlsPollCount', String(count + 1));",
-                  "    postman.setNextRequest('Ver estado de procesamiento');",
-                  "} else {",
-                  "    pm.collectionVariables.set('hlsPollCount', '0');",
-                  "    pm.test('el worker no termino a tiempo', function () {",
-                  "        pm.expect.fail('processing_status no llego a ready tras 40 intentos -- revisa el log del worker (docker compose logs worker)');",
-                  "    });",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Obtener URL de reproduccion (como profesor, dueno del curso)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/resources/{{resourceId}}/playback",
-            "description": "Solo funciona una vez que el asset ya tiene manifest HLS. La url que devuelve se puede pegar directo en el navegador. El profesor siempre puede reproducir su propio curso, inscrito o no -- el chequeo de inscripcion (seccion 7) solo aplica a estudiantes."
-          }
-        }
-      ]
-    },
-    {
-      "name": "4. Publicacion del curso",
-      "item": [
-        {
-          "name": "Previsualizar curso antes de publicar",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/courses/{{courseId}}/preview",
-            "description": "Publico/solo-lectura, no exige token. Muestra el arbol completo y la lista exhaustiva de problemas de publicacion (seccion 6). Los dos recursos ocultos (checksum/mime) no deberian aparecer en 'problems' porque visible:false los excluye de la validacion."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('preview ok', function () { pm.response.to.have.status(200); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Publicar curso",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/courses/{{courseId}}/publish",
-            "description": "Debe fallar con 422/validacion si 'Video de prueba' todavia no esta en estado ready (el worker no ha terminado el HLS) -- si pasa eso, espera unos segundos y reintenta este mismo request."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('curso publicado', function () { pm.response.to.have.status(200); });"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "5. Prueba negativa: checksum declarado no coincide",
-      "item": [
-        {
-          "name": "Iniciar carga con checksum invalido a proposito",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/resources/{{resourceIdChecksumFail}}/uploads/initiate",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"mime_type\": \"video/mp4\",\n  \"size_bytes\": 1048576,\n  \"checksum_sha256\": \"0000000000000000000000000000000000000000000000000000000000000000\"\n}"
-            },
-            "description": "El checksum declarado nunca va a coincidir con el archivo real que subamos. El worker recalcula el SHA256 de verdad al procesar el asset y lo compara contra este valor (ver internal/media/worker/processor.go)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('carga iniciada', function () { pm.response.to.have.status(201); });",
-                  "pm.collectionVariables.set('uploadSessionId', pm.response.json().upload_session.ID);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Pedir URL de la parte 1",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts/1/url"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('url de parte obtenida', function () { pm.response.to.have.status(200); });",
-                  "pm.collectionVariables.set('partUrl', pm.response.json().url);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Subir parte 1 (usa el mismo archivo de video que ya tenias)",
-          "request": {
-            "method": "PUT",
-            "header": [],
-            "url": "{{partUrl}}",
-            "body": {
-              "mode": "binary"
-            },
-            "description": "El contenido no importa para esta prueba: el checksum declarado en el paso anterior ya es incorrecto sin importar que subas."
-          }
-        },
-        {
-          "name": "Completar carga",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/uploads/{{uploadSessionId}}/complete"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('carga completada (la validacion real es asincrona)', function () { pm.response.to.have.status(200); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Confirmar que el procesamiento fallo por checksum",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/courses/{{courseId}}/preview",
-            "description": "La validacion de checksum ocurre DENTRO del worker (job scan_antivirus), no en esta respuesta HTTP. Corre este GET repetidas veces cada ~20 segundos: el worker reintenta 3 veces con backoff (seccion 6, 'tras tres reintentos fallidos, el trabajo llega a la DLQ'), asi que puede tardar 1-2 minutos en total. Busca en tree.modules[].units[].resources[] el recurso 'Video checksum invalido' y confirma que su processing_status termine en 'failed'. Tambien puedes mirar la terminal del worker: debe loguear el error de checksum en cada intento."
-          }
-        }
-      ]
-    },
-    {
-      "name": "6. Prueba negativa: MIME real no permitido",
-      "item": [
-        {
-          "name": "Iniciar carga declarando mime_type video/mp4",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/resources/{{resourceIdMimeFail}}/uploads/initiate",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"mime_type\": \"video/mp4\",\n  \"size_bytes\": 1024\n}"
-            },
-            "description": "Sin checksum_sha256 a proposito, para aislar esta prueba y que el unico motivo de fallo sea el MIME real."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('carga iniciada', function () { pm.response.to.have.status(201); });",
-                  "pm.collectionVariables.set('uploadSessionId', pm.response.json().upload_session.ID);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Pedir URL de la parte 1",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/uploads/{{uploadSessionId}}/parts/1/url"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('url de parte obtenida', function () { pm.response.to.have.status(200); });",
-                  "pm.collectionVariables.set('partUrl', pm.response.json().url);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Subir parte 1 (IMPORTANTE: sube un .txt, NO un video real)",
-          "request": {
-            "method": "PUT",
-            "header": [],
-            "url": "{{partUrl}}",
-            "body": {
-              "mode": "binary"
-            },
-            "description": "Aqui esta la clave de la prueba: declaramos mime_type=video/mp4 pero subimos un archivo de texto plano cualquiera (crea uno con Notas de prueba y adjuntalo). internal/media/worker/processor.go detecta el MIME real con http.DetectContentType sobre el CONTENIDO (no la extension ni lo declarado), ve que es text/plain, y lo rechaza porque no esta en la lista blanca de 'video' (ErrMimeNotAllowed)."
-          }
-        },
-        {
-          "name": "Completar carga",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{teacherToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/uploads/{{uploadSessionId}}/complete"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('carga completada (la validacion real es asincrona)', function () { pm.response.to.have.status(200); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Confirmar que el procesamiento fallo por MIME real",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/courses/{{courseId}}/preview",
-            "description": "Igual que en la prueba de checksum: espera ~1-2 minutos (3 reintentos con backoff) y vuelve a correr este GET. Busca 'Video mime invalido' en el arbol y confirma processing_status: 'failed'. En la terminal del worker el error debe mencionar el mime real detectado (por ejemplo text/plain)."
-          }
-        }
-      ]
-    },
-    {
-      "name": "7. Estudiante: control de acceso por inscripcion",
-      "item": [
-        {
-          "name": "Registrar estudiante",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/auth/register",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\",\n  \"full_name\": \"Estudiante de Prueba\"\n}"
-            },
-            "description": "El campo verification_token_dev solo existe para pruebas locales (en produccion el token viaja por correo via Mailpit/SMTP real)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('estudiante registrado o ya existia', function () {",
-                  "  pm.expect([201, 409]).to.include(pm.response.code);",
-                  "});",
-                  "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set('verificationToken', pm.response.json().verification_token_dev);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Verificar correo del estudiante",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/auth/verify-email",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"token\": \"{{verificationToken}}\"\n}"
-            },
-            "description": "Si el registro anterior devolvio 409 (ya existia de una corrida previa), este paso puede fallar porque no tenemos un token nuevo -- en ese caso el estudiante ya deberia estar verificado y puedes saltar directo al login."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('correo verificado o token no aplicable', function () {",
-                  "  pm.expect([200, 400, 422]).to.include(pm.response.code);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Login estudiante",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/auth/login",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('login estudiante ok', function () { pm.response.to.have.status(200); });",
-                  "pm.collectionVariables.set('studentToken', pm.response.json().token);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Intentar reproducir SIN estar inscrito (debe rechazar)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{studentToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/resources/{{resourceId}}/playback",
-            "description": "El estudiante todavia no se ha inscrito al curso. handler.go valida FindEnrollment solo cuando el rol es student, y debe devolver 403 (ErrForbidden)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('acceso rechazado por falta de inscripcion', function () {",
-                  "  pm.response.to.have.status(403);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Inscribirse al curso",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{studentToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/courses/{{courseId}}/enrollments"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('inscripcion creada', function () { pm.response.to.have.status(201); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Reproducir ya inscrito (ahora si debe funcionar)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{studentToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/resources/{{resourceId}}/playback",
-            "description": "Con la inscripcion activa, GetPlaybackURL debe devolver 200 y una URL prefirmada de lectura."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('reproduccion autorizada tras inscripcion', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "  pm.expect(pm.response.json()).to.have.property('url');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
     }
   ]
 }
