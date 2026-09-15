@@ -81,7 +81,6 @@ services:
       start_period: 60s
 
   api:
-    profiles: ["full"]
     build:
       context: .
       dockerfile: deploy/Dockerfile.api
@@ -107,7 +106,6 @@ services:
       HTTP_PORT: "8080"
 
   worker:
-    profiles: ["full"]
     build:
       context: .
       dockerfile: deploy/Dockerfile.worker
