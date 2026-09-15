@@ -519,6 +519,17 @@ $env:GOCACHE = (Resolve-Path .).Path + '\.gocache'
 go test ./...
 ```
 
+Para poder ejecutar las pruebas desde postman es necesario volver a ejecutar las migraciones y volver a levantar el back, para evitar errores de repeticion de variables de pruebas previamente hechas. 
+
+Se hace con los siguientes comandos:
+
+```Bash
+docker compose down -v
+docker compose up -d
+migrate -database "postgres://mooc:mooc@localhost:5432/mooc?sslmode=disable" -path migrations up
+go run ./cmd/api
+```
+
 Actualmente hay pruebas automaticas para Auth/Admin:
 
 - registro de estudiante y token de verificacion;
@@ -547,6 +558,56 @@ La coleccion cubre:
 - control de acceso por rol;
 - rechazo de solicitudes sin autenticacion;
 - rechazo de heartbeats multimedia con posiciones invalidas.
+
+## Pruebas de carga con k6
+
+Se implementó una prueba de carga transversal para validar el comportamiento de
+la plataforma completa bajo concurrencia. El script se encuentra en:
+
+k6/full-project.js
+
+La prueba cubre los módulos de:
+
+autenticación;
+administración y auditoría;
+cursos y autoría;
+catálogo e inscripciones;
+multimedia;
+quizzes;
+progreso;
+insignias.
+
+Dentro de la carpeta k6/ se incluyen varios scripts de PowerShell (.ps1) para facilitar la ejecución de las pruebas desde Windows sin tener que escribir manualmente todos los parámetros de Docker y k6 en cada corrida.
+
+Las pruebas se ejecutaron con k6 desde Docker y se realizaron corridas independientes con 100, 250, 500, 1000 y 2000 usuarios virtuales (VUs).
+
+Resultados obtenidos:
+
+VUs	Requests	Checks correctos	Error HTTP	p95 global
+100	 11,990	  100.00%	          0.000%    	1.29 s
+250	 3,991	  97.54%	          2.36%	      57.42 s
+500	 6,406	  99.95%	          0.047%	    10.70 s
+1000	8,156	  99.93%	          0.061%	    21.48 s
+2000	5,211	  74.41%	          26.60%	    44.40 s
+
+Con 100 VUs la plataforma se mantuvo estable funcionalmente, con 100% de checks correctos y sin errores HTTP.
+
+Entre 500 y 1000 VUs la tasa de errores continuó siendo muy baja, aunque se observó una degradación importante en los tiempos de respuesta. El módulo de quizzes fue el principal cuello de botella observado.
+
+Con 2000 VUs la configuración local presentó degradación crítica, alcanzando aproximadamente 26.6% de errores HTTP y un p95 global de 44.4 segundos.
+
+La corrida de 250 VUs presentó un comportamiento atípico frente a las corridas de 500 y 1000 VUs, por lo que se considera susceptible a ruido del entorno local y debería repetirse para obtener una medición más robusta.
+
+Durante las pruebas también se monitorearon los servicios mediante docker stats. Redis, PostgreSQL y MinIO mantuvieron un uso de memoria bajo, mientras que ClamAV fue el principal consumidor de memoria del entorno, utilizando aproximadamente entre 0.8 GiB y 1.0 GiB.
+
+Los resultados indican que la degradación bajo cargas elevadas no puede atribuirse únicamente al agotamiento de memoria de los servicios de infraestructura. También deben considerarse la API, el pool de conexiones, consultas a base de datos, bloqueos y las limitaciones del entorno local con Docker Desktop.
+
+Los archivos JSON generados por k6 se conservan en:
+
+k6/results/
+
+Estos archivos permiten reproducir y auditar las métricas obtenidas.
+
 
 ## OpenAPI
 
