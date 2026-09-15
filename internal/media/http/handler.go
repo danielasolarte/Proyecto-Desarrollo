@@ -237,11 +237,34 @@ func (h *Handler) CompleteUpload(c echo.Context) error {
 
 // ---------- estado del asset ----------
 
+// ensureViewAccess replica el mismo control de acceso para ambos
+// endpoints de lectura de este módulo (estado y reproducción): un
+// estudiante solo puede consultarlos si está inscrito y activo en el
+// curso dueño del recurso (sección 6, "control de acceso"). Profesores y
+// admins no tienen esta restricción.
+func (h *Handler) ensureViewAccess(user authctx.User, resourceID string) (*coursesdomain.Course, error) {
+	course, _, err := h.ownerOfResource(resourceID)
+	if err != nil {
+		return nil, err
+	}
+	if user.Role == authctx.RoleStudent {
+		enrollment, err := h.catalogRepo.FindEnrollment(user.ID, course.ID)
+		if err != nil || enrollment.Status != catalogDomain.EnrollmentActive {
+			return nil, mediadomain.ErrForbidden
+		}
+	}
+	return course, nil
+}
+
 func (h *Handler) GetMediaStatus(c echo.Context) error {
-	if _, err := currentUser(c); err != nil {
+	user, err := currentUser(c)
+	if err != nil {
 		return respondError(c, err)
 	}
 	resourceID := c.Param("resourceID")
+	if _, err := h.ensureViewAccess(user, resourceID); err != nil {
+		return respondError(c, err)
+	}
 	asset, err := h.mediaRepo.FindAssetByResourceID(resourceID)
 	if err != nil {
 		return respondError(c, err)
@@ -253,34 +276,18 @@ func (h *Handler) GetMediaStatus(c echo.Context) error {
 
 // GetPlaybackURL devuelve una URL prefirmada de lectura hacia el derivado
 // correcto (manifest HLS para video/audio, el propio original para PDF).
-// El control de acceso por inscripción ("¿este estudiante puede ver este
-// curso?") se aplica en el módulo de catálogo/progreso antes de llegar
-// aquí; este endpoint asume que quien llama ya tiene derecho a ver el
-// recurso (sección 6, "control de acceso").
 func (h *Handler) GetPlaybackURL(c echo.Context) error {
 	user, err := currentUser(c)
 	if err != nil {
-		return respondError(c, err)	
+		return respondError(c, err)
 	}
 	resourceID := c.Param("resourceID")
-	course, _, err := h.ownerOfResource(resourceID)
-	if err != nil {
+	if _, err := h.ensureViewAccess(user, resourceID); err != nil {
 		return respondError(c, err)
 	}
 	asset, err := h.mediaRepo.FindAssetByResourceID(resourceID)
 	if err != nil {
 		return respondError(c, err)
-	}
-
-	if user.Role == authctx.RoleStudent {
-		enrollment, err := h.catalogRepo.FindEnrollment(
-			user.ID,
-			course.ID,
-		)
-		if err != nil ||
-			enrollment.Status != catalogDomain.EnrollmentActive {
-			return respondError(c, mediadomain.ErrForbidden)
-		}
 	}
 
 	key := asset.OriginalStorageKey
