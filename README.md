@@ -519,7 +519,9 @@ $env:GOCACHE = (Resolve-Path .).Path + '\.gocache'
 go test ./...
 ```
 
-Para poder ejecutar las pruebas desde postman es necesario volver a ejecutar las migraciones y volver a levantar el back, para evitar errores de repeticion de variables de pruebas previamente hechas. 
+Para ejecutar las colecciones desde Postman se recomienda levantar el backend
+desde una base limpia cuando se quiera repetir una demo completa de todo el
+equipo:
 
 Se hace con los siguientes comandos:
 
@@ -539,9 +541,41 @@ Actualmente hay pruebas automaticas para Auth/Admin:
 - endpoint HTTP de registro;
 - middleware HTTP con ruta sin token, token de estudiante y token de admin.
 
-Adicionalmente, se cuenta con una coleccion reproducible de Postman para validar de punta a punta los modulos de quizzes, progreso e insignias.
+Colecciones Postman disponibles:
 
-La coleccion cubre:
+- `postman/MOOC_Persona1.postman_collection.json`: cursos, autoria y catalogo.
+- `postman/MOOC_Persona2_Auth_Admin.postman_collection.json`: identidad y administracion.
+- `postman/persona_3_collection.json`: multimedia.
+- `postman/MOOC_Persona4_Postman.json`: quizzes, progreso e insignias.
+
+La coleccion de Persona 2 cubre:
+
+- healthcheck de la API;
+- bootstrap del primer administrador;
+- login de administrador;
+- rutas administrativas protegidas;
+- creacion de profesor desde admin;
+- login de profesor;
+- creacion de segundo administrador desde admin;
+- registro publico de estudiante;
+- verificacion de correo;
+- login de estudiante;
+- consulta del usuario autenticado;
+- rechazo de estudiante en rutas admin;
+- rechazo de rutas sin token;
+- consulta administrativa de usuario por ID;
+- listado de sesiones de usuario;
+- revocacion individual de sesion;
+- confirmacion de token revocado;
+- suspension y reactivacion de estudiante;
+- bloqueo de login para estudiante suspendido;
+- solicitud de recuperacion de contrasena;
+- lectura del token de recuperacion desde Mailpit;
+- cambio de contrasena;
+- login con nueva contrasena;
+- consulta de auditoria.
+
+La coleccion de Persona 4 cubre:
 
 - creacion de quizzes, preguntas y opciones;
 - inicio de intentos;
