@@ -75,6 +75,16 @@ func main() {
 
 	// ---------- servidor de asynq ----------
 
+	concurrency := 5 // valor por defecto: el mismo que había antes
+	if v := os.Getenv("WORKER_CONCURRENCY"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			log.Fatalf("WORKER_CONCURRENCY inválida %q: debe ser un entero >= 1", v)
+		}
+		concurrency = n
+	}
+	log.Printf("worker de multimedia con concurrencia %d", concurrency)
+
 	srv := asynq.NewServer(
 		asynq.RedisClientOpt{Addr: redisAddr},
 		asynq.Config{
