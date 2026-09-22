@@ -71,14 +71,28 @@ type S3Storage struct {
 	publicClient *minio.Client
 }
 
+// s3Credentials elige el proveedor de credenciales de minio-go. Con
+// AccessKey/SecretKey vacíos (el caso de la VM en AWS: no hay llaves en el
+// .env ni en la imagen) se asume el rol IAM de la instancia EC2 y se piden
+// credenciales temporales al servicio de metadatos; NewIAM("") las
+// refresca sola antes de que expiren. Si se definieron llaves estáticas
+// (el caso de MinIO en docker-compose), se usan tal cual.
+func s3Credentials(accessKey, secretKey string) *credentials.Credentials {
+	if accessKey == "" && secretKey == "" {
+		return credentials.NewIAM("")
+	}
+	return credentials.NewStaticV4(accessKey, secretKey, "")
+}
+
 func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 	region := cfg.Region
 	if region == "" {
 		region = "us-east-1"
 	}
+	creds := s3Credentials(cfg.AccessKey, cfg.SecretKey)
 
 	opts := &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+		Creds:  creds,
 		Secure: cfg.UseSSL,
 		Region: region,
 	}
@@ -98,7 +112,7 @@ func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 		publicUseSSL = cfg.UseSSL
 	}
 	publicClient, err := minio.New(publicEndpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+		Creds:  creds,
 		Secure: publicUseSSL,
 		Region: region,
 	})

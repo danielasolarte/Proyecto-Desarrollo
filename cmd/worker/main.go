@@ -49,11 +49,15 @@ func main() {
 
 	useSSL, _ := strconv.ParseBool(os.Getenv("S3_USE_SSL"))
 	storage, err := mediaplatform.NewS3Storage(mediaplatform.S3Config{
-		Endpoint:  mustEnv("S3_ENDPOINT"),
-		AccessKey: mustEnv("S3_ACCESS_KEY"),
-		SecretKey: mustEnv("S3_SECRET_KEY"),
+		Endpoint: mustEnv("S3_ENDPOINT"),
+		// S3_ACCESS_KEY/S3_SECRET_KEY son opcionales a propósito: en AWS el
+		// Worker Server no los define y NewS3Storage usa el rol IAM de la
+		// instancia en su lugar (ver s3Credentials en s3storage.go).
+		AccessKey: os.Getenv("S3_ACCESS_KEY"),
+		SecretKey: os.Getenv("S3_SECRET_KEY"),
 		Bucket:    mustEnv("S3_BUCKET"),
 		UseSSL:    useSSL,
+		Region:    os.Getenv("S3_REGION"),
 	})
 	if err != nil {
 		log.Fatalf("conectando a minio/s3: %v", err)
