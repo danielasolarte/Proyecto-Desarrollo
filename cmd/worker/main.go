@@ -50,6 +50,10 @@ func main() {
 	}
 	defer dbPool.Close()
 
+	if err := dbPool.Ping(ctx); err != nil {
+		log.Fatalf("no se pudo conectar a postgres: %v", err)
+	}
+
 	mediaRepo := mediapostgres.NewMediaRepository(dbPool)
 	// NewCourseRepository ya existe en internal/courses/postgres — se
 	// reusa tal cual, el worker necesita leer/escribir resources.
@@ -150,4 +154,18 @@ func taskHandler(repo mediadomain.MediaRepository, processor *mediaworker.Proces
 
 		return processor.HandleJob(job)
 	}
+}
+
+func intEnv(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
 }

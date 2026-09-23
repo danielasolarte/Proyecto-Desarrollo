@@ -45,14 +45,18 @@ func main() {
 		log.Fatalf("configuración inválida de postgres: %v", err)
 	}
 
-	dbConfig.MaxConns = 5
-	dbConfig.MinConns = 0
+	dbConfig.MaxConns = int32(intEnv("DB_MAX_CONNS", 5))
+	dbConfig.MinConns = int32(intEnv("DB_MIN_CONNS", 0))
 
 	db, err := pgxpool.NewWithConfig(context.Background(), dbConfig)
 	if err != nil {
 		log.Fatalf("no se pudo conectar a postgres: %v", err)
 	}
 	defer db.Close()
+
+	if err := db.Ping(context.Background()); err != nil {
+		log.Fatalf("no se pudo conectar a postgres: %v", err)
+	}
 
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
@@ -182,4 +186,17 @@ func main() {
 		port = "8080"
 	}
 	e.Logger.Fatal(e.Start(":" + port))
+}
+func intEnv(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
 }

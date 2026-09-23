@@ -443,25 +443,24 @@ func (s *Service) SubmitAttempt(
 	attempt.SubmittedAt = &now
 	attempt.IdempotencyKey = &idempotencyKey
 
-	submitted, err := s.repo.SubmitAttemptIfInProgress(ctx, attempt)
+	_, err = s.repo.SubmitAttemptIfInProgress(ctx, attempt)
 	if err != nil {
 		return nil, err
 	}
 
-	if !submitted {
-		existingAttempt, err := s.repo.GetAttemptByID(ctx, attemptID)
-		if err != nil {
-			return nil, err
-		}
-
-		if existingAttempt.StudentID != studentID {
-			return nil, domain.ErrForbidden
-		}
-
-		return existingAttempt, nil
+	// Siempre devolver el estado realmente persistido en PostgreSQL.
+	// Esto hace que tanto el request ganador como los retries concurrentes
+	// reciban exactamente el mismo resultado.
+	persistedAttempt, err := s.repo.GetAttemptByID(ctx, attemptID)
+	if err != nil {
+		return nil, err
 	}
 
-	return attempt, nil
+	if persistedAttempt.StudentID != studentID {
+		return nil, domain.ErrForbidden
+	}
+
+	return persistedAttempt, nil
 }
 
 func (s *Service) GetAttemptForStudent(
