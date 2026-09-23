@@ -36,7 +36,15 @@ func main() {
 
 	// ---------- conexiones ----------
 
-	dbPool, err := pgxpool.New(ctx, mustEnv("DATABASE_URL"))
+	dbConfig, err := pgxpool.ParseConfig(mustEnv("DATABASE_URL"))
+	if err != nil {
+		log.Fatalf("configuración inválida de postgres: %v", err)
+	}
+
+	dbConfig.MaxConns = 5
+	dbConfig.MinConns = 0
+
+	dbPool, err := pgxpool.NewWithConfig(ctx, dbConfig)
 	if err != nil {
 		log.Fatalf("conectando a postgres: %v", err)
 	}

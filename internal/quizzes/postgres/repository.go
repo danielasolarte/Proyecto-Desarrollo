@@ -2,9 +2,9 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -923,5 +923,44 @@ func (r *Repository) UpdateAttempt(
 	return err
 }
 
+func (r *Repository) SubmitAttemptIfInProgress(
+	ctx context.Context,
+	attempt *domain.Attempt,
+) (bool, error) {
+	query := `
+		UPDATE attempts
+		SET
+			status = $2,
+			score = $3,
+			percentage = $4,
+			passed = $5,
+			idempotency_key = $6,
+			submitted_at = $7,
+			updated_at = now()
+		WHERE id = $1
+		  AND status = 'in_progress'
+		RETURNING updated_at
+	`
 
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		attempt.ID,
+		attempt.Status,
+		attempt.Score,
+		attempt.Percentage,
+		attempt.Passed,
+		attempt.IdempotencyKey,
+		attempt.SubmittedAt,
+	).Scan(&attempt.UpdatedAt)
 
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
