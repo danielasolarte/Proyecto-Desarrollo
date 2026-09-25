@@ -36,11 +36,23 @@ func main() {
 
 	// ---------- conexiones ----------
 
-	dbPool, err := pgxpool.New(ctx, mustEnv("DATABASE_URL"))
+	dbConfig, err := pgxpool.ParseConfig(mustEnv("DATABASE_URL"))
+	if err != nil {
+		log.Fatalf("configuración inválida de postgres: %v", err)
+	}
+
+	dbConfig.MaxConns = 5
+	dbConfig.MinConns = 0
+
+	dbPool, err := pgxpool.NewWithConfig(ctx, dbConfig)
 	if err != nil {
 		log.Fatalf("conectando a postgres: %v", err)
 	}
 	defer dbPool.Close()
+
+	if err := dbPool.Ping(ctx); err != nil {
+		log.Fatalf("no se pudo conectar a postgres: %v", err)
+	}
 
 	mediaRepo := mediapostgres.NewMediaRepository(dbPool)
 	// NewCourseRepository ya existe en internal/courses/postgres — se
@@ -78,6 +90,16 @@ func main() {
 	processor := mediaworker.NewProcessor(mediaRepo, coursesRepo, storage, queue, workDir)
 
 	// ---------- servidor de asynq ----------
+
+	concurrency := 5 // valor por defecto: el mismo que había antes
+	if v := os.Getenv("WORKER_CONCURRENCY"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			log.Fatalf("WORKER_CONCURRENCY inválida %q: debe ser un entero >= 1", v)
+		}
+		concurrency = n
+	}
+	log.Printf("worker de multimedia con concurrencia %d", concurrency)
 
 	srv := asynq.NewServer(
 		asynq.RedisClientOpt{Addr: redisAddr},
@@ -136,4 +158,18 @@ func taskHandler(repo mediadomain.MediaRepository, processor *mediaworker.Proces
 
 		return processor.HandleJob(job)
 	}
+}
+
+func intEnv(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
 }

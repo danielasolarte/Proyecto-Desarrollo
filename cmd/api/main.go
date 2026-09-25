@@ -15,23 +15,23 @@ import (
 	adminHTTP "github.com/equipo-mooc/plataforma-mooc/internal/admin/http"
 	authHTTP "github.com/equipo-mooc/plataforma-mooc/internal/auth/http"
 	authPG "github.com/equipo-mooc/plataforma-mooc/internal/auth/postgres"
+	badgesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/badges/http"
+	badgesPG "github.com/equipo-mooc/plataforma-mooc/internal/badges/postgres"
+	badgesUC "github.com/equipo-mooc/plataforma-mooc/internal/badges/usecase"
 	catalogHTTP "github.com/equipo-mooc/plataforma-mooc/internal/catalog/http"
 	catalogPG "github.com/equipo-mooc/plataforma-mooc/internal/catalog/postgres"
 	coursesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/courses/http"
 	coursesPG "github.com/equipo-mooc/plataforma-mooc/internal/courses/postgres"
-	quizzesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/http"
-	quizzesPG "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/postgres"
-	quizzesUC "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/usecase"
+	mediaHTTP "github.com/equipo-mooc/plataforma-mooc/internal/media/http"
+	mediaPlatform "github.com/equipo-mooc/plataforma-mooc/internal/media/platform"
+	mediaPG "github.com/equipo-mooc/plataforma-mooc/internal/media/postgres"
+	"github.com/equipo-mooc/plataforma-mooc/internal/platform/mailer"
 	progressHTTP "github.com/equipo-mooc/plataforma-mooc/internal/progress/http"
 	progressPG "github.com/equipo-mooc/plataforma-mooc/internal/progress/postgres"
 	progressUC "github.com/equipo-mooc/plataforma-mooc/internal/progress/usecase"
-	badgesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/badges/http"
-	badgesPG "github.com/equipo-mooc/plataforma-mooc/internal/badges/postgres"
-	badgesUC "github.com/equipo-mooc/plataforma-mooc/internal/badges/usecase"
-	mediaHTTP "github.com/equipo-mooc/plataforma-mooc/internal/media/http"
-	mediaPG "github.com/equipo-mooc/plataforma-mooc/internal/media/postgres"
-	mediaPlatform "github.com/equipo-mooc/plataforma-mooc/internal/media/platform"
-	"github.com/equipo-mooc/plataforma-mooc/internal/platform/mailer"
+	quizzesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/http"
+	quizzesPG "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/postgres"
+	quizzesUC "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/usecase"
 )
 
 func main() {
@@ -40,11 +40,23 @@ func main() {
 		dbURL = "postgres://mooc:mooc@localhost:5432/mooc?sslmode=disable"
 	}
 
-	db, err := pgxpool.New(context.Background(), dbURL)
+	dbConfig, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		log.Fatalf("configuración inválida de postgres: %v", err)
+	}
+
+	dbConfig.MaxConns = int32(intEnv("DB_MAX_CONNS", 5))
+	dbConfig.MinConns = int32(intEnv("DB_MIN_CONNS", 0))
+
+	db, err := pgxpool.NewWithConfig(context.Background(), dbConfig)
 	if err != nil {
 		log.Fatalf("no se pudo conectar a postgres: %v", err)
 	}
 	defer db.Close()
+
+	if err := db.Ping(context.Background()); err != nil {
+		log.Fatalf("no se pudo conectar a postgres: %v", err)
+	}
 
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
@@ -94,7 +106,6 @@ func main() {
 
 	// Media repository
 	mediaRepo := mediaPG.NewMediaRepository(db)
-
 
 	// Badges
 	badgeRepo := badgesPG.NewRepository(db)
@@ -177,4 +188,17 @@ func main() {
 		port = "8080"
 	}
 	e.Logger.Fatal(e.Start(":" + port))
+}
+func intEnv(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
 }

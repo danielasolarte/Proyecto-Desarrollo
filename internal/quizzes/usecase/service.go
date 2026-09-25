@@ -3,9 +3,9 @@ package usecase
 import (
 	"context"
 	"encoding/json"
-	"time"
 	"errors"
 	"github.com/google/uuid"
+	"time"
 
 	"github.com/equipo-mooc/plataforma-mooc/internal/quizzes/domain"
 )
@@ -205,7 +205,7 @@ func (s *Service) StartAttempt(
 	if len(questions) == 0 {
 		return nil, domain.ErrInvalidQuiz
 	}
-		snapshot := quizSnapshot{
+	snapshot := quizSnapshot{
 		QuizID:    quiz.ID,
 		Questions: make([]snapshotQuestion, 0, len(questions)),
 	}
@@ -306,13 +306,13 @@ func (s *Service) SaveAnswer(
 	}
 
 	if selectedOptionID != nil {
-	option, err := s.repo.GetOptionByID(ctx, *selectedOptionID)
-	if err != nil {
-		return nil, err
+		option, err := s.repo.GetOptionByID(ctx, *selectedOptionID)
+		if err != nil {
+			return nil, err
 		}
 
-	if option.QuestionID != questionID {
-		return nil, domain.ErrInvalidAnswer
+		if option.QuestionID != questionID {
+			return nil, domain.ErrInvalidAnswer
 		}
 	}
 
@@ -352,10 +352,6 @@ func (s *Service) SubmitAttempt(
 		}
 
 		return existing, nil
-	}
-
-	if !errors.Is(err, domain.ErrAttemptNotFound) {
-		return nil, err
 	}
 
 	if !errors.Is(err, domain.ErrAttemptNotFound) {
@@ -404,7 +400,7 @@ func (s *Service) SubmitAttempt(
 		return nil, err
 	}
 
-		answerMap := make(map[uuid.UUID]uuid.UUID)
+	answerMap := make(map[uuid.UUID]uuid.UUID)
 
 	for _, answer := range answers {
 		if answer.SelectedOptionID != nil {
@@ -412,7 +408,7 @@ func (s *Service) SubmitAttempt(
 		}
 	}
 
-		var totalPoints float64
+	var totalPoints float64
 	var earnedPoints float64
 
 	for _, question := range questions {
@@ -431,7 +427,7 @@ func (s *Service) SubmitAttempt(
 		}
 	}
 
-		if totalPoints <= 0 {
+	if totalPoints <= 0 {
 		return nil, domain.ErrInvalidQuiz
 	}
 
@@ -447,11 +443,24 @@ func (s *Service) SubmitAttempt(
 	attempt.SubmittedAt = &now
 	attempt.IdempotencyKey = &idempotencyKey
 
-	if err := s.repo.UpdateAttempt(ctx, attempt); err != nil {
+	_, err = s.repo.SubmitAttemptIfInProgress(ctx, attempt)
+	if err != nil {
 		return nil, err
 	}
 
-	return attempt, nil
+	// Siempre devolver el estado realmente persistido en PostgreSQL.
+	// Esto hace que tanto el request ganador como los retries concurrentes
+	// reciban exactamente el mismo resultado.
+	persistedAttempt, err := s.repo.GetAttemptByID(ctx, attemptID)
+	if err != nil {
+		return nil, err
+	}
+
+	if persistedAttempt.StudentID != studentID {
+		return nil, domain.ErrForbidden
+	}
+
+	return persistedAttempt, nil
 }
 
 func (s *Service) GetAttemptForStudent(
