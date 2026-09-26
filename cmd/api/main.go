@@ -135,12 +135,11 @@ func main() {
 	if s3Endpoint == "" {
 		s3Endpoint = "localhost:9000"
 	}
-	// S3_ACCESS_KEY/S3_SECRET_KEY quedan vacíos a propósito si no están
-	// definidos: NewS3Storage entonces asume el rol IAM de la instancia
-	// EC2 en vez de llaves estáticas (ver s3Credentials en
-	// internal/media/platform/s3storage.go). No se rellena un valor por
-	// defecto aquí porque en AWS un fallback local (MinIO) terminaría
-	// intentando autenticarse contra S3 real con credenciales inválidas.
+	// S3_ACCESS_KEY/S3_SECRET_KEY son las llaves HMAC de la cuenta de
+	// servicio de Cloud Storage (ver comentario en NewS3Storage). No se
+	// rellena un valor por defecto aquí a propósito: un fallback local
+	// (las credenciales de MinIO) terminaría intentando autenticarse
+	// contra Cloud Storage real con credenciales inválidas.
 	s3AccessKey := os.Getenv("S3_ACCESS_KEY")
 	s3SecretKey := os.Getenv("S3_SECRET_KEY")
 	s3Bucket := os.Getenv("S3_BUCKET")

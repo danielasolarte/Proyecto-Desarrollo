@@ -71,25 +71,18 @@ type S3Storage struct {
 	publicClient *minio.Client
 }
 
-// s3Credentials elige el proveedor de credenciales de minio-go. Con
-// AccessKey/SecretKey vacíos (el caso de la VM en AWS: no hay llaves en el
-// .env ni en la imagen) se asume el rol IAM de la instancia EC2 y se piden
-// credenciales temporales al servicio de metadatos; NewIAM("") las
-// refresca sola antes de que expiren. Si se definieron llaves estáticas
-// (el caso de MinIO en docker-compose), se usan tal cual.
-func s3Credentials(accessKey, secretKey string) *credentials.Credentials {
-	if accessKey == "" && secretKey == "" {
-		return credentials.NewIAM("")
-	}
-	return credentials.NewStaticV4(accessKey, secretKey, "")
-}
-
 func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 	region := cfg.Region
 	if region == "" {
 		region = "us-east-1"
 	}
-	creds := s3Credentials(cfg.AccessKey, cfg.SecretKey)
+	// Cloud Storage, a través de su endpoint de interoperabilidad S3
+	// (storage.googleapis.com), solo acepta firmar peticiones con llaves
+	// HMAC estáticas -- no existe un equivalente al rol IAM de instancia de
+	// AWS para este protocolo de firma. Las llaves HMAC se generan para una
+	// cuenta de servicio (gcloud storage hmac create) y viven únicamente en
+	// el .env real de cada VM, nunca en el repositorio ni en la imagen.
+	creds := credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, "")
 
 	opts := &minio.Options{
 		Creds:  creds,

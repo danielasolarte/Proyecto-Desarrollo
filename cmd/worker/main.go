@@ -62,9 +62,9 @@ func main() {
 	useSSL, _ := strconv.ParseBool(os.Getenv("S3_USE_SSL"))
 	storage, err := mediaplatform.NewS3Storage(mediaplatform.S3Config{
 		Endpoint: mustEnv("S3_ENDPOINT"),
-		// S3_ACCESS_KEY/S3_SECRET_KEY son opcionales a propósito: en AWS el
-		// Worker Server no los define y NewS3Storage usa el rol IAM de la
-		// instancia en su lugar (ver s3Credentials en s3storage.go).
+		// S3_ACCESS_KEY/S3_SECRET_KEY son las llaves HMAC de la cuenta de
+		// servicio de GCS (ver comentario en NewS3Storage); solo existen en
+		// el .env real de la VM, nunca en *.env.example ni en el repo.
 		AccessKey: os.Getenv("S3_ACCESS_KEY"),
 		SecretKey: os.Getenv("S3_SECRET_KEY"),
 		Bucket:    mustEnv("S3_BUCKET"),
@@ -108,7 +108,7 @@ func main() {
 			// instancias del contenedor (docker compose --scale worker=3)
 			// es la forma de escalar horizontalmente; esto es concurrencia
 			// DENTRO de una sola instancia.
-			Concurrency: 5,
+			Concurrency: concurrency,
 			Queues: map[string]int{
 				"media": 1,
 			},
