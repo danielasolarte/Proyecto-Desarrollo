@@ -76,9 +76,16 @@ func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 	if region == "" {
 		region = "us-east-1"
 	}
+	// Cloud Storage, a través de su endpoint de interoperabilidad S3
+	// (storage.googleapis.com), solo acepta firmar peticiones con llaves
+	// HMAC estáticas -- no existe un equivalente al rol IAM de instancia de
+	// AWS para este protocolo de firma. Las llaves HMAC se generan para una
+	// cuenta de servicio (gcloud storage hmac create) y viven únicamente en
+	// el .env real de cada VM, nunca en el repositorio ni en la imagen.
+	creds := credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, "")
 
 	opts := &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+		Creds:  creds,
 		Secure: cfg.UseSSL,
 		Region: region,
 	}
@@ -98,7 +105,7 @@ func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 		publicUseSSL = cfg.UseSSL
 	}
 	publicClient, err := minio.New(publicEndpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+		Creds:  creds,
 		Secure: publicUseSSL,
 		Region: region,
 	})
