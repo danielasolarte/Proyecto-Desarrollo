@@ -16,6 +16,8 @@ Responsable: Samara Martinez.
 | VPC | `mooc-e2-vpc` | Red privada del despliegue |
 | Subred | `mooc-e2-subnet` | Subred regional para Web Server y Worker Server |
 | Rango privado | `mooc-e2-private-services` | Private Service Access para Cloud SQL con IP privada |
+| Cloud Router | `mooc-e2-router` | Router regional requerido por Cloud NAT |
+| Cloud NAT | `mooc-e2-nat` | Salida a Internet para Worker Server sin IP publica |
 | IP estatica | `mooc-e2-web-ip` | IP publica fija del Web Server |
 | Etiqueta web | `web-server` | Target de reglas publicas y origen permitido hacia Redis |
 | Etiqueta worker | `worker-server` | Target de Redis interno |
@@ -86,16 +88,16 @@ Debe responder `200 OK` con certificado valido.
 
 ## Worker Server
 
-La decision documentada para esta entrega es Worker Server sin IP publica.
+La decision documentada para esta entrega es Worker Server sin IP publica, con salida mediante Cloud NAT.
 
 Motivo:
 
 - Redis no soporta password en el cliente actual del proyecto.
 - ClamAV y Redis no deben exponerse a Internet.
 - La API accede a Redis por IP interna.
-- La salida a Internet se resuelve con Cloud NAT si la subred no tiene IP publica y se necesita descargar imagenes o firmas.
+- La salida a Internet se resuelve con Cloud NAT para descargar imagenes, paquetes y firmas de ClamAV.
 
-Si por presupuesto no se usa Cloud NAT, alternativa aceptada y documentada: VM con IP publica temporal para bootstrap, sin reglas de entrada desde Internet, y luego remover o restringir la IP.
+Si por presupuesto no se usa Cloud NAT, alternativa aceptada y documentada: VM con IP publica temporal para bootstrap, sin reglas de entrada desde Internet, y luego remover o restringir la IP. Esa alternativa debe registrarse como desviacion de la configuracion recomendada.
 
 ## Comandos reproducibles
 

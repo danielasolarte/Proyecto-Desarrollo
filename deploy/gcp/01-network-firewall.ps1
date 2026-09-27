@@ -8,6 +8,8 @@ gcloud config set project $env:GCP_PROJECT
 gcloud config set compute/region $env:GCP_REGION
 gcloud config set compute/zone $env:GCP_ZONE
 
+gcloud services enable compute.googleapis.com servicenetworking.googleapis.com
+
 gcloud compute networks create $env:NETWORK `
     --subnet-mode=custom `
     --bgp-routing-mode=regional
@@ -28,6 +30,19 @@ gcloud services vpc-peerings connect `
     --service=servicenetworking.googleapis.com `
     --ranges=$env:PRIVATE_SERVICE_RANGE `
     --network=$env:NETWORK
+
+# Worker Server is created without public IP. Cloud NAT gives it outbound
+# internet for Docker images, ClamAV signatures and package updates, without
+# opening inbound ports from the internet.
+gcloud compute routers create $env:CLOUD_ROUTER `
+    --network=$env:NETWORK `
+    --region=$env:GCP_REGION
+
+gcloud compute routers nats create $env:CLOUD_NAT `
+    --router=$env:CLOUD_ROUTER `
+    --region=$env:GCP_REGION `
+    --nat-all-subnet-ip-ranges `
+    --auto-allocate-nat-external-ips
 
 gcloud compute addresses create $env:WEB_STATIC_IP `
     --region=$env:GCP_REGION
@@ -62,4 +77,4 @@ if ($env:ADMIN_SOURCE_RANGES) {
         --description="SSH through Identity-Aware Proxy"
 }
 
-Write-Host "Network, subnet, private service access, static IP and firewall rules created."
+Write-Host "Network, subnet, Private Service Access, Cloud NAT, static IP and firewall rules created."

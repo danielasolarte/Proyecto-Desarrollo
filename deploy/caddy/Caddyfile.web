@@ -1,8 +1,8 @@
 {
-	email {$ACME_EMAIL}
+	email __ACME_EMAIL__
 }
 
-{$MOOC_DOMAIN} {
+__MOOC_DOMAIN__ {
 	encode zstd gzip
 
 	header {

@@ -6,6 +6,8 @@ $env:NETWORK = "mooc-e2-vpc"
 $env:SUBNET = "mooc-e2-subnet"
 $env:SUBNET_CIDR = "10.20.0.0/24"
 $env:PRIVATE_SERVICE_RANGE = "mooc-e2-private-services"
+$env:CLOUD_ROUTER = "mooc-e2-router"
+$env:CLOUD_NAT = "mooc-e2-nat"
 
 $env:WEB_VM = "mooc-e2-web"
 $env:WORKER_VM = "mooc-e2-worker"
