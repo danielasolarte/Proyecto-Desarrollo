@@ -2,23 +2,173 @@
 
 ## Objetivo
 
-Este documento describe los procedimientos utilizados para operar, respaldar y recuperar la base de datos PostgreSQL administrada en Cloud SQL.
+Este documento describe los procedimientos utilizados para operar, respaldar y
+recuperar la base de datos PostgreSQL administrada en Cloud SQL, así como para
+desplegar, reiniciar y reconstruir los servicios en las VMs del Web Server y
+del Worker Server.
 
 La configuración documentada corresponde al entorno de la Entrega 2.
 
 ## Cloud SQL
 
-Proveedor: Google Cloud Platform  
-Servicio: Cloud SQL for PostgreSQL  
-Región: us-central1  
-Versión mayor: PostgreSQL 16  
-Tipo de máquina: db-g1-small  
-Alta disponibilidad: deshabilitada  
-SSL: requerido  
+Proveedor: Google Cloud Platform
+Servicio: Cloud SQL for PostgreSQL
+Región: us-central1
+Versión mayor: PostgreSQL 16
+Tipo de máquina: db-g1-small
+Alta disponibilidad: deshabilitada
+SSL: requerido
+Instancia: `mooc-postgres`
+Redes autorizadas: la IP externa del Web Server (`mooc-e2-web`) debe estar en
+la lista de redes autorizadas de la instancia (Cloud SQL > `mooc-postgres` >
+Conexiones > Redes autorizadas); sin esto, las conexiones desde el Web Server
+se cuelgan (no se rechazan, simplemente no responden) hasta agotar el
+timeout del cliente.
 
 ## Migraciones
 
 Las migraciones se encuentran en:
 
 ```text
-migrations/ 
+migrations/
+```
+
+y se aplican con `golang-migrate`. Si no está instalado:
+
+```bash
+go install -tags "postgres" github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+```
+
+Para aplicar todas las migraciones pendientes contra la base de la Entrega 2
+(ajustar usuario, clave, host e IP a los reales de `mooc-postgres`):
+
+```bash
+migrate -database "postgres://mooc-postgres:<clave>@<IP_publica_cloud_sql>:5432/mooc?sslmode=require" -path migrations up
+```
+
+Para revertir la última migración aplicada, cambiar `up` por `down 1`.
+
+## Secretos y variables de entorno
+
+Ningún archivo `.env` real se sube al repositorio (ver `.gitignore`). Los
+archivos versionados son solo plantillas:
+
+- `deploy/web.env.example` -> se copia como `.env` en `mooc-e2-web`, en
+  `/opt/mooc/deploy/.env`.
+- `deploy/worker.env.example` -> se copia como `.env` en `mooc-e2-worker`, en
+  `/opt/mooc/deploy/.env`.
+
+Ambos contienen, entre otros: la cadena de conexión a Cloud SQL
+(`DATABASE_URL`), la dirección de Redis (`REDIS_ADDR`), las credenciales HMAC
+del bucket de Cloud Storage (`S3_ACCESS_KEY`/`S3_SECRET_KEY`) y los parámetros
+del pool de conexiones (`DB_MAX_CONNS`/`DB_MIN_CONNS`). Estos valores reales
+solo existen en el `.env` de cada VM (creado manualmente por SSH) y no deben
+compartirse fuera del equipo ni commitearse.
+
+## Despliegue y reinicio: Web Server (`mooc-e2-web`)
+
+Conectarse por SSH (Consola de GCP > Compute Engine > `mooc-e2-web` > SSH, o
+`gcloud compute ssh mooc-e2-web --zone us-central1-a`).
+
+Primer despliegue (si `/opt/mooc/deploy` no existe o está vacío):
+
+1. Crear `/opt/mooc/deploy/docker-compose.web.yml` con el contenido de
+   `deploy/docker-compose.web.yml` del repo.
+2. Crear `/opt/mooc/deploy/.env` a partir de `deploy/web.env.example`, con los
+   valores reales de la Entrega 2.
+3. Autenticar Docker contra Artifact Registry. Si `gcloud auth configure-docker`
+   falla con `Unauthenticated request` (la cuenta de servicio de la VM no
+   tiene permisos suficientes), generar un token desde una identidad con
+   permisos (por ejemplo desde Cloud Shell, `gcloud auth print-access-token`)
+   y usarlo así en la VM:
+
+   ```bash
+   echo "<token>" | sudo docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
+   ```
+
+4. Levantar los servicios:
+
+   ```bash
+   cd /opt/mooc/deploy
+   sudo docker compose -f docker-compose.web.yml --env-file .env up -d
+   ```
+
+Caddy corre como servicio systemd nativo (no en Docker), configurado en
+`/etc/caddy/Caddyfile` con el dominio `sslip.io` correspondiente a la IP
+externa de la VM (formato con puntos, ej. `35.254.78.215.sslip.io`, no con
+guiones). Para recargarlo tras un cambio de configuración:
+
+```bash
+sudo systemctl reload caddy
+```
+
+Reinicio simple (sin reconstruir):
+
+```bash
+cd /opt/mooc/deploy && sudo docker compose restart
+```
+
+Reconstrucción completa (por ejemplo tras publicar una imagen nueva):
+
+```bash
+cd /opt/mooc/deploy
+sudo docker compose pull
+sudo docker compose up -d --force-recreate
+```
+
+Verificación de salud:
+
+```bash
+curl -s http://127.0.0.1:8080/health   # API directamente, dentro de la VM
+curl -s https://<dominio-sslip>/health # a través de Caddy, desde afuera
+```
+
+## Despliegue y reinicio: Worker Server (`mooc-e2-worker`)
+
+El script `deploy/gcp/03-worker-server.ps1` solo crea la VM (instala Docker y
+prepara `/opt/mooc/deploy`); a diferencia del Web Server, no existe todavía un
+script equivalente a `04-deploy-web.ps1` que copie
+`deploy/docker-compose.worker.yml` y `deploy/worker.env.example` y levante los
+contenedores. Ese paso debe completarse manualmente por SSH, siguiendo el
+mismo patrón que el Web Server:
+
+1. Copiar `deploy/docker-compose.worker.yml` a `/opt/mooc/deploy/`.
+2. Crear `/opt/mooc/deploy/.env` a partir de `deploy/worker.env.example`, con
+   los valores reales (`DATABASE_URL`, `S3_*`, etc.).
+3. Autenticar Docker igual que en el Web Server (paso 3 de la sección
+   anterior).
+4. Levantar los servicios:
+
+   ```bash
+   cd /opt/mooc/deploy
+   sudo docker compose -f docker-compose.worker.yml --env-file .env up -d
+   ```
+
+Este compose levanta tres servicios: `worker` (proceso Go), `redis` (cola
+asynq y sesiones) y `clamav` (escaneo de archivos subidos). Verificación:
+
+```bash
+sudo docker compose ps
+sudo docker compose logs worker --tail=50
+redis-cli -h 127.0.0.1 ping   # debe responder PONG
+```
+
+**Nota de red:** el diseño documentado en
+`docs/entrega2/modelo-despliegue-samara.md` especifica que el Worker Server no
+debe tener IP pública (egreso solo por Cloud NAT). En el despliegue actual
+`mooc-e2-worker` sí tiene IP externa; esto está registrado como desviación en
+`docs/costos-entrega2.md` y no debe usarse para exponer los puertos 6379
+(Redis) ni ningún otro puerto hacia Internet.
+
+## Respaldo de Cloud SQL
+
+Cloud SQL realiza respaldos automáticos diarios por defecto para la instancia
+`mooc-postgres` (configurable en Cloud SQL > `mooc-postgres` > Copias de
+seguridad). Para un respaldo manual antes de un cambio riesgoso:
+
+```bash
+gcloud sql backups create --instance=mooc-postgres
+```
+
+Para restaurar, usar Cloud SQL > `mooc-postgres` > Copias de seguridad >
+Restaurar, seleccionando el respaldo deseado.
