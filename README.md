@@ -1,5 +1,62 @@
 # Plataforma MOOC - Backend
 
+## Entrega 2: Despliegue basico en la nube (GCP)
+
+Despliegue de la plataforma MOOC en Google Cloud, con dos maquinas virtuales fijas
+(Web Server y Worker Server), PostgreSQL administrado (Cloud SQL), almacenamiento
+de objetos administrado (Cloud Storage) y una red privada con firewall.
+
+Artefactos principales de la entrega:
+
+- Arquitectura: `docs/entrega2/arquitectura_entrega2.md`.
+- Modelo de despliegue, red, Web Server y HTTPS: `docs/entrega2/modelo-despliegue-samara.md`.
+- Secretos, cookies seguras y contrato CSRF: `docs/entrega2/secretos-y-seguridad.md`.
+- Proxy HTTPS: `deploy/caddy/Caddyfile.web`.
+- Scripts reproducibles de red y VMs en GCP: `deploy/gcp/`.
+- Compose por VM: `deploy/docker-compose.web.yml` y `deploy/docker-compose.worker.yml`.
+- Migraciones contra Cloud SQL: `deploy/run-migrations.ps1`.
+- Pruebas de carga: `k6/` y resultados en `k6/results/`.
+
+### Ejecutar en local
+
+```
+Copy-Item .env.example .env
+docker compose up -d --build
+```
+
+### Empaquetado
+
+- Imagenes: `mooc-e2-api` y `mooc-e2-worker`, construidas para `linux/amd64`.
+- Publicadas en Artifact Registry: `us-central1-docker.pkg.dev/proyecto1-entrega2-desarrollo/mooc-e2/`.
+- Un compose por maquina virtual en `deploy/` (`docker-compose.web.yml` y
+  `docker-compose.worker.yml`), con sus propios `web.env.example` y
+  `worker.env.example`.
+
+### Contrato CSRF para clientes web con cookies
+
+- Activar `AUTH_COOKIE_ENABLED=true` y `CSRF_ENABLED=true` en Web Server.
+- `POST /api/v1/auth/login` devuelve `csrf_token` y setea cookies `mooc_session` y `mooc_csrf`.
+- Las peticiones autenticadas por cookie con metodos no seguros envian `X-CSRF-Token`.
+- Los clientes HTTP y k6 pueden seguir usando `Authorization: Bearer <token>` sin CSRF.
+
+### Analisis de capacidad
+
+- Escenario 1 (actividad academica concurrente): script de k6 en `k6/escenario1.js`,
+  runner en `k6/run-escenario1.ps1`. Informe: `capacity-planning/pruebas_de_carga_entrega2.md`
+  (pendiente).
+- Escenario 2 (carga y procesamiento multimedia): a cargo de Andres.
+
+### Aplicacion desplegada
+
+- URL: _pendiente_
+- Video de sustentacion: _pendiente_
+- Tag evaluado: `entrega-2` (pendiente de crear)
+
+### Secretos
+
+Ningun archivo `.env` real, llave ni credencial esta en este repositorio. Los
+ejemplos (`*.env.example`) no contienen valores secretos.
+
 Backend para una plataforma web de cursos masivos abiertos en linea, construido
 como monolito modular en Go. El sistema expone una API REST bajo `/api/v1`,
 usa PostgreSQL como fuente transaccional, Redis para sesiones/cache/colas,
@@ -681,47 +738,3 @@ La especificacion usa OpenAPI 3.1 y define los esquemas de request/response, par
 - Las sesiones se revocan en Postgres y se eliminan de Redis cuando aplica.
 - La auditoria es minima, persistente, consultable por admin y append-only a
   nivel de base de datos mediante triggers.
-
-## Entrega 2: Despliegue en la nube (GCP)
-
-Despliegue de la plataforma MOOC en Google Cloud, con dos maquinas virtuales fijas (Web Server y Worker Server), PostgreSQL administrado (Cloud SQL), almacenamiento de objetos administrado (Cloud Storage) y una red privada con firewall.
-
-### Arquitectura
-
-Ver `docs/entrega2/` para el documento completo (modelo de componentes, modelo de despliegue, decisiones y adaptaciones, operacion y recuperacion, capacidad y costos).
-
-### Ejecutar en local
-
-```
-Copy-Item .env.example .env
-docker compose up -d --build
-```
-
-### Empaquetado
-
-- Imagenes: `mooc-e2-api` y `mooc-e2-worker`, construidas para `linux/amd64`.
-- Publicadas en Artifact Registry: `us-central1-docker.pkg.dev/proyecto1-entrega2-desarrollo/mooc-e2/`.
-- Un compose por maquina virtual en `deploy/` (`docker-compose.web.yml` y `docker-compose.worker.yml`), con sus propios `web.env.example` y `worker.env.example`.
-
-### Migraciones
-
-Se aplican con la herramienta `migrate`, apuntando a la base de datos administrada:
-
-```
-.\deploy\run-migrations.ps1 -DatabaseUrl "<cadena de conexion a Cloud SQL>"
-```
-
-### Analisis de capacidad
-
-- Escenario 1 (actividad academica concurrente): script de k6 en `k6/escenario1.js`, runner en `k6/run-escenario1.ps1`. Informe: `capacity-planning/pruebas_de_carga_entrega2.md` (pendiente).
-- Escenario 2 (carga y procesamiento multimedia): a cargo de Andres.
-
-### Aplicacion desplegada
-
-- URL: _pendiente_
-- Video de sustentacion: _pendiente_
-- Tag evaluado: `entrega-2` (pendiente de crear)
-
-### Secretos
-
-Ningun archivo `.env` real, llave ni credencial esta en este repositorio. Los ejemplos (`*.env.example`) no contienen valores secretos.

@@ -179,6 +179,14 @@ func (r *Repository) CreateProgressEvent(
 			$1, $2, $3, $4, $5,
 			$6, $7, $8, now()
 		)
+		ON CONFLICT (
+			student_id,
+			enrollment_id,
+			resource_stable_id,
+			event_type
+		)
+		WHERE event_type IN ('quiz_submitted', 'quiz_passed')
+		DO NOTHING
 		RETURNING created_at
 	`
 
@@ -186,7 +194,7 @@ func (r *Repository) CreateProgressEvent(
 		event.ID = uuid.New()
 	}
 
-	return r.db.QueryRow(
+	err := r.db.QueryRow(
 		ctx,
 		query,
 		event.ID,
@@ -198,7 +206,16 @@ func (r *Repository) CreateProgressEvent(
 		event.PositionSeconds,
 		event.ClientTimestamp,
 	).Scan(&event.CreatedAt)
+
+	// Si otra request creó el mismo quiz_submitted o quiz_passed
+	// simultáneamente, la operación sigue siendo exitosa.
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+
+	return err
 }
+
 
 func (r *Repository) GetCourseProgress(
 	ctx context.Context,

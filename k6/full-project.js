@@ -719,18 +719,76 @@ export function studentLearning(data) {
 
   const idempotencyKey = `k6-${data.runId}-${__VU}-${__ITER}-${Date.now()}`;
 
-  const submitRes = http.post(
-    `${BASE_URL}/attempts/${attemptId}/submit`,
-    null,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Idempotency-Key': idempotencyKey,
-      },
-      tags: { module: 'quizzes' },
+  const submitParams = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Idempotency-Key': idempotencyKey,
     },
+    tags: {
+      module: 'quizzes',
+      test: 'concurrent-idempotency',
+    },
+  };
+
+  const submitUrl = `${BASE_URL}/attempts/${attemptId}/submit`;
+
+  // Dos requests simultáneos contra el mismo attempt y con la misma key.
+  const [submitRes1, submitRes2] = http.batch([
+    {
+      method: 'POST',
+      url: submitUrl,
+      body: null,
+      params: submitParams,
+    },
+    {
+      method: 'POST',
+      url: submitUrl,
+      body: null,
+      params: submitParams,
+    },
+  ]);
+
+  assertStatus(
+    submitRes1,
+    [200],
+    'quizzes concurrent submit 1',
   );
-  assertStatus(submitRes, [200], 'quizzes submit');
+
+  assertStatus(
+    submitRes2,
+    [200],
+    'quizzes concurrent submit 2',
+  );
+
+  const submittedAttempt1 = json(submitRes1);
+  const submittedAttempt2 = json(submitRes2);
+
+  const submittedAt1 = pick(
+    submittedAttempt1,
+    'submitted_at',
+    'submittedAt',
+    'SubmittedAt',
+  );
+
+  const submittedAt2 = pick(
+    submittedAttempt2,
+    'submitted_at',
+    'submittedAt',
+    'SubmittedAt',
+  );
+
+  if (
+    submittedAt1 &&
+    submittedAt2 &&
+    submittedAt1 !== submittedAt2
+  ) {
+    functionalErrors.add(true);
+
+    console.error(
+      `Concurrent idempotency failed for attempt ${attemptId}: ` +
+      `submitted_at differs (${submittedAt1} != ${submittedAt2})`,
+    );
+  }
 
   // Repetición inmediata con la misma clave: carga también el camino
   // idempotente, sin crear un segundo resultado.

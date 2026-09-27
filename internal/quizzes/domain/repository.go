@@ -25,8 +25,8 @@ type Repository interface {
 	GetAttemptByID(ctx context.Context, id uuid.UUID) (*Attempt, error)
 	CountAttemptsByStudent(ctx context.Context, quizID, studentID uuid.UUID) (int, error)
 	UpdateAttempt(ctx context.Context, attempt *Attempt) error
+	SubmitAttemptIfInProgress(ctx context.Context, attempt *Attempt) (bool, error)
 	SaveAnswer(ctx context.Context, answer *AttemptAnswer) error
 	GetAnswersByAttemptID(ctx context.Context, attemptID uuid.UUID) ([]AttemptAnswer, error)
-	GetAttemptByIdempotencyKey(ctx context.Context, studentID uuid.UUID, key string, ) (*Attempt, error)
-
+	GetAttemptByIdempotencyKey(ctx context.Context, studentID uuid.UUID, key string) (*Attempt, error)
 }

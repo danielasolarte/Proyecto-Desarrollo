@@ -36,11 +36,23 @@ func main() {
 
 	// ---------- conexiones ----------
 
-	dbPool, err := pgxpool.New(ctx, mustEnv("DATABASE_URL"))
+	dbConfig, err := pgxpool.ParseConfig(mustEnv("DATABASE_URL"))
+	if err != nil {
+		log.Fatalf("configuración inválida de postgres: %v", err)
+	}
+
+	dbConfig.MaxConns = int32(intEnv("DB_MAX_CONNS", 5))
+	dbConfig.MinConns = int32(intEnv("DB_MIN_CONNS", 0))
+
+	dbPool, err := pgxpool.NewWithConfig(ctx, dbConfig)
 	if err != nil {
 		log.Fatalf("conectando a postgres: %v", err)
 	}
 	defer dbPool.Close()
+
+	if err := dbPool.Ping(ctx); err != nil {
+		log.Fatalf("no se pudo conectar a postgres: %v", err)
+	}
 
 	mediaRepo := mediapostgres.NewMediaRepository(dbPool)
 	// NewCourseRepository ya existe en internal/courses/postgres — se
@@ -49,11 +61,15 @@ func main() {
 
 	useSSL, _ := strconv.ParseBool(os.Getenv("S3_USE_SSL"))
 	storage, err := mediaplatform.NewS3Storage(mediaplatform.S3Config{
-		Endpoint:  mustEnv("S3_ENDPOINT"),
-		AccessKey: mustEnv("S3_ACCESS_KEY"),
-		SecretKey: mustEnv("S3_SECRET_KEY"),
+		Endpoint: mustEnv("S3_ENDPOINT"),
+		// S3_ACCESS_KEY/S3_SECRET_KEY son las llaves HMAC de la cuenta de
+		// servicio de GCS (ver comentario en NewS3Storage); solo existen en
+		// el .env real de la VM, nunca en *.env.example ni en el repo.
+		AccessKey: os.Getenv("S3_ACCESS_KEY"),
+		SecretKey: os.Getenv("S3_SECRET_KEY"),
 		Bucket:    mustEnv("S3_BUCKET"),
 		UseSSL:    useSSL,
+		Region:    os.Getenv("S3_REGION"),
 	})
 	if err != nil {
 		log.Fatalf("conectando a minio/s3: %v", err)
@@ -92,7 +108,7 @@ func main() {
 			// instancias del contenedor (docker compose --scale worker=3)
 			// es la forma de escalar horizontalmente; esto es concurrencia
 			// DENTRO de una sola instancia.
-			Concurrency: 5,
+			Concurrency: concurrency,
 			Queues: map[string]int{
 				"media": 1,
 			},
@@ -142,4 +158,18 @@ func taskHandler(repo mediadomain.MediaRepository, processor *mediaworker.Proces
 
 		return processor.HandleJob(job)
 	}
+}
+
+func intEnv(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
 }

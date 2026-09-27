@@ -15,23 +15,23 @@ import (
 	adminHTTP "github.com/equipo-mooc/plataforma-mooc/internal/admin/http"
 	authHTTP "github.com/equipo-mooc/plataforma-mooc/internal/auth/http"
 	authPG "github.com/equipo-mooc/plataforma-mooc/internal/auth/postgres"
+	badgesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/badges/http"
+	badgesPG "github.com/equipo-mooc/plataforma-mooc/internal/badges/postgres"
+	badgesUC "github.com/equipo-mooc/plataforma-mooc/internal/badges/usecase"
 	catalogHTTP "github.com/equipo-mooc/plataforma-mooc/internal/catalog/http"
 	catalogPG "github.com/equipo-mooc/plataforma-mooc/internal/catalog/postgres"
 	coursesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/courses/http"
 	coursesPG "github.com/equipo-mooc/plataforma-mooc/internal/courses/postgres"
-	quizzesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/http"
-	quizzesPG "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/postgres"
-	quizzesUC "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/usecase"
+	mediaHTTP "github.com/equipo-mooc/plataforma-mooc/internal/media/http"
+	mediaPlatform "github.com/equipo-mooc/plataforma-mooc/internal/media/platform"
+	mediaPG "github.com/equipo-mooc/plataforma-mooc/internal/media/postgres"
+	"github.com/equipo-mooc/plataforma-mooc/internal/platform/mailer"
 	progressHTTP "github.com/equipo-mooc/plataforma-mooc/internal/progress/http"
 	progressPG "github.com/equipo-mooc/plataforma-mooc/internal/progress/postgres"
 	progressUC "github.com/equipo-mooc/plataforma-mooc/internal/progress/usecase"
-	badgesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/badges/http"
-	badgesPG "github.com/equipo-mooc/plataforma-mooc/internal/badges/postgres"
-	badgesUC "github.com/equipo-mooc/plataforma-mooc/internal/badges/usecase"
-	mediaHTTP "github.com/equipo-mooc/plataforma-mooc/internal/media/http"
-	mediaPG "github.com/equipo-mooc/plataforma-mooc/internal/media/postgres"
-	mediaPlatform "github.com/equipo-mooc/plataforma-mooc/internal/media/platform"
-	"github.com/equipo-mooc/plataforma-mooc/internal/platform/mailer"
+	quizzesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/http"
+	quizzesPG "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/postgres"
+	quizzesUC "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/usecase"
 )
 
 func main() {
@@ -40,11 +40,23 @@ func main() {
 		dbURL = "postgres://mooc:mooc@localhost:5432/mooc?sslmode=disable"
 	}
 
-	db, err := pgxpool.New(context.Background(), dbURL)
+	dbConfig, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		log.Fatalf("configuración inválida de postgres: %v", err)
+	}
+
+	dbConfig.MaxConns = int32(intEnv("DB_MAX_CONNS", 5))
+	dbConfig.MinConns = int32(intEnv("DB_MIN_CONNS", 0))
+
+	db, err := pgxpool.NewWithConfig(context.Background(), dbConfig)
 	if err != nil {
 		log.Fatalf("no se pudo conectar a postgres: %v", err)
 	}
 	defer db.Close()
+
+	if err := db.Ping(context.Background()); err != nil {
+		log.Fatalf("no se pudo conectar a postgres: %v", err)
+	}
 
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
@@ -70,6 +82,7 @@ func main() {
 	sessionStore := authPG.NewRedisSessionStore(redisClient)
 	mailerClient := mailer.NewSMTPMailer(smtpAddr, mailFrom)
 	e.Use(authHTTP.AuthMiddleware(userRepo, sessionStore))
+	e.Use(authHTTP.CSRFMiddleware())
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
@@ -94,7 +107,6 @@ func main() {
 
 	// Media repository
 	mediaRepo := mediaPG.NewMediaRepository(db)
-
 
 	// Badges
 	badgeRepo := badgesPG.NewRepository(db)
@@ -124,19 +136,19 @@ func main() {
 	if s3Endpoint == "" {
 		s3Endpoint = "localhost:9000"
 	}
+	// S3_ACCESS_KEY/S3_SECRET_KEY son las llaves HMAC de la cuenta de
+	// servicio de Cloud Storage (ver comentario en NewS3Storage). No se
+	// rellena un valor por defecto aquí a propósito: un fallback local
+	// (las credenciales de MinIO) terminaría intentando autenticarse
+	// contra Cloud Storage real con credenciales inválidas.
 	s3AccessKey := os.Getenv("S3_ACCESS_KEY")
-	if s3AccessKey == "" {
-		s3AccessKey = "mooc"
-	}
 	s3SecretKey := os.Getenv("S3_SECRET_KEY")
-	if s3SecretKey == "" {
-		s3SecretKey = "mooc12345"
-	}
 	s3Bucket := os.Getenv("S3_BUCKET")
 	if s3Bucket == "" {
 		s3Bucket = "mooc-media"
 	}
 	s3UseSSL, _ := strconv.ParseBool(os.Getenv("S3_USE_SSL"))
+	s3Region := os.Getenv("S3_REGION")
 
 	// S3_PUBLIC_ENDPOINT es el host:puerto que queda firmado dentro de las
 	// URLs prefirmadas que recibe un cliente externo (navegador, Postman,
@@ -159,6 +171,7 @@ func main() {
 		UseSSL:         s3UseSSL,
 		PublicEndpoint: s3PublicEndpoint,
 		PublicUseSSL:   s3PublicUseSSL,
+		Region:         s3Region,
 	})
 	if err != nil {
 		log.Fatalf("no se pudo conectar a minio/s3: %v", err)
@@ -175,4 +188,17 @@ func main() {
 		port = "8080"
 	}
 	e.Logger.Fatal(e.Start(":" + port))
+}
+func intEnv(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
 }

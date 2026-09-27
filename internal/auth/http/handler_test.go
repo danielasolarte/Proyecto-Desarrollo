@@ -77,6 +77,54 @@ func TestProtectedRouteRequiresTokenAndRole(t *testing.T) {
 	assertStatus("admin token", adminToken, http.StatusOK)
 }
 
+func TestCSRFMiddlewareRequiresTokenOnlyForCookieAuth(t *testing.T) {
+	t.Setenv("CSRF_ENABLED", "true")
+	t.Setenv("SESSION_COOKIE_NAME", "mooc_session")
+	t.Setenv("CSRF_COOKIE_NAME", "mooc_csrf")
+	t.Setenv("CSRF_HEADER_NAME", "X-CSRF-Token")
+
+	repo := newHTTPRepo()
+	store := newHTTPStore()
+	admin := repo.mustUser(domain.RoleAdmin)
+	token := "admin-token"
+	store.Save(usecase.HashToken(token), *admin, time.Now().Add(time.Hour))
+
+	e := echo.New()
+	e.Use(AuthMiddleware(repo, store))
+	e.Use(CSRFMiddleware())
+	e.GET("/admin-only", func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
+	}, authctx.RequireRole(authctx.RoleAdmin))
+	e.POST("/admin-only", func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
+	}, authctx.RequireRole(authctx.RoleAdmin))
+
+	assert := func(name, method string, withBearer bool, csrfHeader string, want int) {
+		t.Helper()
+		req := httptest.NewRequest(method, "/admin-only", nil)
+		if withBearer {
+			req.Header.Set("Authorization", "Bearer "+token)
+		} else {
+			req.AddCookie(&http.Cookie{Name: "mooc_session", Value: token})
+			req.AddCookie(&http.Cookie{Name: "mooc_csrf", Value: "csrf-token"})
+		}
+		if csrfHeader != "" {
+			req.Header.Set("X-CSRF-Token", csrfHeader)
+		}
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		if rec.Code != want {
+			t.Fatalf("%s: status = %d, want %d, body = %s", name, rec.Code, want, rec.Body.String())
+		}
+	}
+
+	assert("safe method with cookie", http.MethodGet, false, "", http.StatusOK)
+	assert("unsafe method with bearer", http.MethodPost, true, "", http.StatusOK)
+	assert("unsafe method with cookie missing csrf", http.MethodPost, false, "", http.StatusForbidden)
+	assert("unsafe method with cookie invalid csrf", http.MethodPost, false, "wrong", http.StatusForbidden)
+	assert("unsafe method with cookie valid csrf", http.MethodPost, false, "csrf-token", http.StatusOK)
+}
+
 type httpRepo struct {
 	users        map[string]*domain.User
 	sessions     map[string]*domain.Session
