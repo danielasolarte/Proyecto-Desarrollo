@@ -46,14 +46,32 @@ Decisiones y adaptaciones de empaquetado y configuración:
 - Redis queda en Worker Server y se protege por firewall.
 - Los secretos salen del repositorio y se inyectan con archivos `.env` protegidos.
 
-## Evidencias pendientes de completar
+## Evidencias del despliegue real (2026-09-27)
 
-Cuando los recursos reales esten activos, registrar:
+- Dominio HTTPS: `https://35.254.78.215.sslip.io` (Caddy con certificado
+  Let's Encrypt).
+- IP estatica del Web Server (`mooc-e2-web`): `35.254.78.215` (interna
+  `10.128.0.3`).
+- IP interna del Worker Server (`mooc-e2-worker`): `10.128.0.2` (tambien
+  tiene IP externa `34.61.4.185`, desviacion registrada; ver
+  `docs/costos-entrega2.md`).
+- Instancia Cloud SQL: `mooc-postgres` (IP publica `34.42.6.180`).
+- Bucket de Cloud Storage: `mooc-e2-media-proyecto1-entrega2`.
+- Evidencia de `curl`:
 
-- dominio HTTPS final;
-- IP estatica del Web Server;
-- IP interna del Worker Server;
-- nombre de instancia Cloud SQL;
-- bucket de Cloud Storage;
-- capturas o salidas de `curl https://<dominio>/health`;
-- resultado de pruebas Postman/k6 sobre la URL cloud.
+```text
+$ curl -v https://35.254.78.215.sslip.io/health
+HTTP/1.1 200 OK
+Content-Type: application/json
+{"status":"ok"}
+```
+
+- Resultado de pruebas Postman/k6 sobre la URL cloud: ver
+  `capacity-planning/pruebas_de_carga_entrega2.md` (Escenario 1).
+
+## Desviaciones frente al diseno de red original
+
+Se desplego sobre la red `default` (modo automatico) en vez de la VPC
+personalizada `mooc-e2-vpc`, y el Worker Server quedo con IP externa en vez
+de solo salida por Cloud NAT. Detalle completo en
+`docs/costos-entrega2.md`.

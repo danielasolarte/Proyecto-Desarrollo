@@ -44,15 +44,15 @@ docker compose up -d --build
 ### Analisis de capacidad
 
 - Escenario 1 (actividad academica concurrente): script de k6 en `k6/escenario1.js`,
-  runner en `k6/run-escenario1.ps1`. Informe: `capacity-planning/pruebas_de_carga_entrega2.md`
-  (pendiente).
+  runner en `k6/run-escenario1.ps1`. Informe: `capacity-planning/pruebas_de_carga_entrega2.md`.
+  Corrida real contra la URL de GCP en `k6/results/e1-gcp-*.json`.
 - Escenario 2 (carga y procesamiento multimedia): a cargo de Andres.
 
 ### Aplicacion desplegada
 
-- URL: _pendiente_
+- URL: https://35.254.78.215.sslip.io
 - Video de sustentacion: _pendiente_
-- Tag evaluado: `entrega-2` (pendiente de crear)
+- Tag evaluado: `entrega-2` (pendiente de crear, se crea al final sobre el commit final)
 
 ### Secretos
 
