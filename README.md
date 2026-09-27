@@ -1,5 +1,25 @@
 # Plataforma MOOC - Backend
 
+## Entrega 2 - Despliegue basico en GCP
+
+Artefactos principales de la entrega:
+
+- Arquitectura: `docs/entrega2/arquitectura_entrega2.md`.
+- Modelo de despliegue, red, Web Server y HTTPS: `docs/entrega2/modelo-despliegue-samara.md`.
+- Secretos, cookies seguras y contrato CSRF: `docs/entrega2/secretos-y-seguridad.md`.
+- Proxy HTTPS: `deploy/caddy/Caddyfile.web`.
+- Scripts reproducibles de red y VMs en GCP: `deploy/gcp/`.
+- Compose por VM: `deploy/docker-compose.web.yml` y `deploy/docker-compose.worker.yml`.
+- Migraciones contra Cloud SQL: `deploy/run-migrations.ps1`.
+- Pruebas de carga: `k6/` y resultados en `k6/results/`.
+
+Contrato CSRF para clientes web con cookies:
+
+- Activar `AUTH_COOKIE_ENABLED=true` y `CSRF_ENABLED=true` en Web Server.
+- `POST /api/v1/auth/login` devuelve `csrf_token` y setea cookies `mooc_session` y `mooc_csrf`.
+- Las peticiones autenticadas por cookie con metodos no seguros envian `X-CSRF-Token`.
+- Los clientes HTTP y k6 pueden seguir usando `Authorization: Bearer <token>` sin CSRF.
+
 Backend para una plataforma web de cursos masivos abiertos en linea, construido
 como monolito modular en Go. El sistema expone una API REST bajo `/api/v1`,
 usa PostgreSQL como fuente transaccional, Redis para sesiones/cache/colas,

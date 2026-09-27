@@ -82,6 +82,7 @@ func main() {
 	sessionStore := authPG.NewRedisSessionStore(redisClient)
 	mailerClient := mailer.NewSMTPMailer(smtpAddr, mailFrom)
 	e.Use(authHTTP.AuthMiddleware(userRepo, sessionStore))
+	e.Use(authHTTP.CSRFMiddleware())
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})

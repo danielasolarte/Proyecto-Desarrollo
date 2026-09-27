@@ -1,7 +1,12 @@
 package http
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"net/http"
+	"os"
+	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -90,6 +95,18 @@ func (h *Handler) Login(c echo.Context) error {
 	if err != nil {
 		return respondError(c, err)
 	}
+	if boolEnv("AUTH_COOKIE_ENABLED", false) {
+		csrfToken, err := randomURLToken(32)
+		if err != nil {
+			return respondError(c, err)
+		}
+		setAuthCookies(c, result.Token, csrfToken)
+		return c.JSON(http.StatusOK, map[string]any{
+			"token":      result.Token,
+			"user":       result.User,
+			"csrf_token": csrfToken,
+		})
+	}
 	return c.JSON(http.StatusOK, result)
 }
 
@@ -99,10 +116,18 @@ func (h *Handler) Logout(c echo.Context) error {
 		token = c.Request().Header.Get("X-Session-Token")
 	}
 	if token == "" {
+		if cookie, err := c.Cookie(sessionCookieName()); err == nil {
+			token = cookie.Value
+		}
+	}
+	if token == "" {
 		return respondError(c, domain.ErrUnauthorized)
 	}
 	if err := usecase.Logout(h.repo, h.store, token); err != nil {
 		return respondError(c, err)
+	}
+	if boolEnv("AUTH_COOKIE_ENABLED", false) {
+		clearAuthCookies(c)
 	}
 	return c.NoContent(http.StatusNoContent)
 }
@@ -153,4 +178,77 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 	authenticated := g.Group("", authctx.RequireRole(authctx.RoleStudent, authctx.RoleTeacher, authctx.RoleAdmin))
 	authenticated.GET("/me", h.Me)
 	authenticated.POST("/auth/logout", h.Logout)
+}
+
+func setAuthCookies(c echo.Context, sessionToken string, csrfToken string) {
+	secure := boolEnv("SESSION_COOKIE_SECURE", true)
+	sameSite := sameSiteMode(os.Getenv("SESSION_COOKIE_SAMESITE"))
+	maxAge := intEnv("SESSION_COOKIE_MAX_AGE_SECONDS", 86400)
+
+	c.SetCookie(&http.Cookie{
+		Name:     sessionCookieName(),
+		Value:    sessionToken,
+		Path:     "/",
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: sameSite,
+	})
+	c.SetCookie(&http.Cookie{
+		Name:     csrfCookieName(),
+		Value:    csrfToken,
+		Path:     "/",
+		MaxAge:   maxAge,
+		HttpOnly: false,
+		Secure:   secure,
+		SameSite: sameSite,
+	})
+}
+
+func clearAuthCookies(c echo.Context) {
+	secure := boolEnv("SESSION_COOKIE_SECURE", true)
+	sameSite := sameSiteMode(os.Getenv("SESSION_COOKIE_SAMESITE"))
+	for _, name := range []string{sessionCookieName(), csrfCookieName()} {
+		c.SetCookie(&http.Cookie{
+			Name:     name,
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
+			HttpOnly: name == sessionCookieName(),
+			Secure:   secure,
+			SameSite: sameSite,
+			Expires:  time.Unix(0, 0),
+		})
+	}
+}
+
+func sameSiteMode(value string) http.SameSite {
+	switch value {
+	case "Strict", "strict":
+		return http.SameSiteStrictMode
+	case "None", "none":
+		return http.SameSiteNoneMode
+	default:
+		return http.SameSiteLaxMode
+	}
+}
+
+func randomURLToken(size int) (string, error) {
+	buf := make([]byte, size)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+func intEnv(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
 }
