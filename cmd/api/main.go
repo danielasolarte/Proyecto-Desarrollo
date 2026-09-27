@@ -135,19 +135,19 @@ func main() {
 	if s3Endpoint == "" {
 		s3Endpoint = "localhost:9000"
 	}
+	// S3_ACCESS_KEY/S3_SECRET_KEY son las llaves HMAC de la cuenta de
+	// servicio de Cloud Storage (ver comentario en NewS3Storage). No se
+	// rellena un valor por defecto aquí a propósito: un fallback local
+	// (las credenciales de MinIO) terminaría intentando autenticarse
+	// contra Cloud Storage real con credenciales inválidas.
 	s3AccessKey := os.Getenv("S3_ACCESS_KEY")
-	if s3AccessKey == "" {
-		s3AccessKey = "mooc"
-	}
 	s3SecretKey := os.Getenv("S3_SECRET_KEY")
-	if s3SecretKey == "" {
-		s3SecretKey = "mooc12345"
-	}
 	s3Bucket := os.Getenv("S3_BUCKET")
 	if s3Bucket == "" {
 		s3Bucket = "mooc-media"
 	}
 	s3UseSSL, _ := strconv.ParseBool(os.Getenv("S3_USE_SSL"))
+	s3Region := os.Getenv("S3_REGION")
 
 	// S3_PUBLIC_ENDPOINT es el host:puerto que queda firmado dentro de las
 	// URLs prefirmadas que recibe un cliente externo (navegador, Postman,
@@ -170,6 +170,7 @@ func main() {
 		UseSSL:         s3UseSSL,
 		PublicEndpoint: s3PublicEndpoint,
 		PublicUseSSL:   s3PublicUseSSL,
+		Region:         s3Region,
 	})
 	if err != nil {
 		log.Fatalf("no se pudo conectar a minio/s3: %v", err)
