@@ -67,31 +67,25 @@ compartirse fuera del equipo ni commitearse.
 
 ## Despliegue y reinicio: Web Server (`mooc-e2-web`)
 
-Conectarse por SSH (Consola de GCP > Compute Engine > `mooc-e2-web` > SSH, o
-`gcloud compute ssh mooc-e2-web --zone us-central1-a`).
+El primer despliegue está automatizado en `deploy/gcp/04-deploy-web.ps1`
+(cargar antes `deploy/gcp/00-variables.example.ps1`):
 
-Primer despliegue (si `/opt/mooc/deploy` no existe o está vacío):
+```powershell
+. deploy/gcp/00-variables.example.ps1
+./deploy/gcp/04-deploy-web.ps1 -Domain "<ip-externa-con-guiones-o-puntos>.sslip.io" -AcmeEmail "<correo>"
+```
 
-1. Crear `/opt/mooc/deploy/docker-compose.web.yml` con el contenido de
-   `deploy/docker-compose.web.yml` del repo.
-2. Crear `/opt/mooc/deploy/.env` a partir de `deploy/web.env.example`, con los
-   valores reales de la Entrega 2.
-3. Autenticar Docker contra Artifact Registry. Si `gcloud auth configure-docker`
-   falla con `Unauthenticated request` (la cuenta de servicio de la VM no
-   tiene permisos suficientes), generar un token desde una identidad con
-   permisos (por ejemplo desde Cloud Shell, `gcloud auth print-access-token`)
-   y usarlo así en la VM:
+El script copia el compose y la plantilla de `.env` a la VM, instala el
+`Caddyfile` con el dominio indicado, autentica Docker contra Artifact
+Registry con un token de la cuenta que ejecuta el script (evita depender de
+los permisos de la cuenta de servicio de la VM, que causó
+`Unauthenticated request` la primera vez que se probó a mano) y levanta los
+servicios. Tras la primera corrida, `/opt/mooc/deploy/.env` en la VM queda
+con los valores de ejemplo; hay que editarlo por SSH con los valores reales
+y reiniciar (ver más abajo).
 
-   ```bash
-   echo "<token>" | sudo docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
-   ```
-
-4. Levantar los servicios:
-
-   ```bash
-   cd /opt/mooc/deploy
-   sudo docker compose -f docker-compose.web.yml --env-file .env up -d
-   ```
+Para reconectarse manualmente por SSH: Consola de GCP > Compute Engine >
+`mooc-e2-web` > SSH, o `gcloud compute ssh mooc-e2-web --zone us-central1-a`.
 
 Caddy corre como servicio systemd nativo (no en Docker), configurado en
 `/etc/caddy/Caddyfile` con el dominio `sslip.io` correspondiente a la IP
@@ -125,24 +119,29 @@ curl -s https://<dominio-sslip>/health # a través de Caddy, desde afuera
 
 ## Despliegue y reinicio: Worker Server (`mooc-e2-worker`)
 
-El script `deploy/gcp/03-worker-server.ps1` solo crea la VM (instala Docker y
-prepara `/opt/mooc/deploy`); a diferencia del Web Server, no existe todavía un
-script equivalente a `04-deploy-web.ps1` que copie
-`deploy/docker-compose.worker.yml` y `deploy/worker.env.example` y levante los
-contenedores. Ese paso debe completarse manualmente por SSH, siguiendo el
-mismo patrón que el Web Server:
+El despliegue de esta VM está automatizado en
+`deploy/gcp/05-deploy-worker.ps1` (cargar antes
+`deploy/gcp/00-variables.example.ps1`). El script copia
+`deploy/docker-compose.worker.yml` y `deploy/worker.env.example` a la VM, los
+mueve a `/opt/mooc/deploy`, autentica Docker contra Artifact Registry con un
+token de la cuenta que ejecuta el script (evita depender de los permisos de
+la cuenta de servicio de la VM, que causó `Unauthenticated request` la
+primera vez que se probó a mano) y levanta los tres servicios con
+`docker compose up -d`:
 
-1. Copiar `deploy/docker-compose.worker.yml` a `/opt/mooc/deploy/`.
-2. Crear `/opt/mooc/deploy/.env` a partir de `deploy/worker.env.example`, con
-   los valores reales (`DATABASE_URL`, `S3_*`, etc.).
-3. Autenticar Docker igual que en el Web Server (paso 3 de la sección
-   anterior).
-4. Levantar los servicios:
+```powershell
+. deploy/gcp/00-variables.example.ps1
+./deploy/gcp/05-deploy-worker.ps1
+```
 
-   ```bash
-   cd /opt/mooc/deploy
-   sudo docker compose -f docker-compose.worker.yml --env-file .env up -d
-   ```
+Tras la primera corrida, `/opt/mooc/deploy/.env` en la VM queda con los
+valores de ejemplo (`deploy/worker.env.example`); hay que editarlo por SSH
+con los valores reales (`DATABASE_URL`, `S3_*`, etc.) y reiniciar:
+
+```bash
+cd /opt/mooc/deploy
+sudo docker compose -f docker-compose.worker.yml restart
+```
 
 Este compose levanta tres servicios: `worker` (proceso Go), `redis` (cola
 asynq y sesiones) y `clamav` (escaneo de archivos subidos). Verificación:
