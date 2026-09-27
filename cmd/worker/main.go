@@ -41,8 +41,8 @@ func main() {
 		log.Fatalf("configuración inválida de postgres: %v", err)
 	}
 
-	dbConfig.MaxConns = 5
-	dbConfig.MinConns = 0
+	dbConfig.MaxConns = int32(intEnv("DB_MAX_CONNS", 5))
+	dbConfig.MinConns = int32(intEnv("DB_MIN_CONNS", 0))
 
 	dbPool, err := pgxpool.NewWithConfig(ctx, dbConfig)
 	if err != nil {
@@ -104,7 +104,7 @@ func main() {
 			// instancias del contenedor (docker compose --scale worker=3)
 			// es la forma de escalar horizontalmente; esto es concurrencia
 			// DENTRO de una sola instancia.
-			Concurrency: 5,
+			Concurrency: concurrency,
 			Queues: map[string]int{
 				"media": 1,
 			},
