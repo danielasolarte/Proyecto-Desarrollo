@@ -21,6 +21,10 @@ El despliegue usa dos maquinas virtuales fijas:
 
 PostgreSQL se ejecuta en Cloud SQL y los objetos se almacenan en Cloud Storage.
 
+Modelo de componentes (módulos, worker y comunicación síncrona/asíncrona):
+
+- [Modelo de componentes](modelo-componentes.md)
+
 Detalle de red, firewall y HTTPS:
 
 - [Modelo de despliegue de Samara](modelo-despliegue-samara.md)
@@ -29,6 +33,10 @@ Detalle de red, firewall y HTTPS:
 Seguridad y manejo de secretos:
 
 - [Secretos y seguridad](secretos-y-seguridad.md)
+
+Decisiones y adaptaciones de empaquetado y configuración:
+
+- [Decisiones y adaptaciones: empaquetado (Daniela)](decisiones-empaquetado-daniela.md)
 
 ## Diferencias frente a Entrega 1
 
