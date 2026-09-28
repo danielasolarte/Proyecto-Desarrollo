@@ -2,32 +2,53 @@
 
 ## Contexto
 
-Proveedor: Google Cloud Platform  
-Proyecto: proyecto1-entrega2-desarrollo  
-Región: us-central1  
-Fecha de estimación: 2026-09-27
-
-Esta estimación corresponde al despliegue de la Entrega 2. Los valores de
-Compute Engine, Cloud Storage y transferencia se completarán cuando los
-recursos finales del Web Server y Worker Server estén disponibles.
+Proveedor: Google Cloud Platform
+Proyecto: proyecto1-entrega2-desarrollo
+Región: us-central1
+Fecha de estimación: 2026-09-27 (actualizado el mismo día con evidencia real de despliegue)
 
 ## Recursos considerados
 
-| Recurso | Servicio GCP | Configuración actual | Estado |
+| Recurso | Servicio GCP | Configuración efectiva | Estado |
 |---|---|---|---|
-| Web Server | Compute Engine | Pendiente de creación/configuración final | Bloqueado por infraestructura |
-| Worker Server | Compute Engine | Pendiente de creación/configuración final | Bloqueado por infraestructura |
-| Base de datos | Cloud SQL for PostgreSQL | PostgreSQL 16, db-g1-small, 1 vCPU, 1.7 GB RAM, 10 GB SSD, zona única, sin HA | Implementado |
-| Disco Web | Persistent Disk | Pendiente | Bloqueado |
-| Disco Worker | Persistent Disk | Pendiente | Bloqueado |
-| Multimedia | Cloud Storage | Bucket pendiente de creación | Bloqueado |
-| IP externa | External IP | Depende de la configuración final de las VMs | Bloqueado |
-| Transferencia | Network Egress | Depende de las pruebas finales | Pendiente |
+| Web Server | Compute Engine `mooc-e2-web` | `e2-small`, IP externa `35.254.78.215`, IP interna `10.128.0.3`, zona `us-central1-a` | Implementado |
+| Worker Server | Compute Engine `mooc-e2-worker` | `e2-small`, IP interna `10.128.0.2`, zona `us-central1-a` | Implementado |
+| Base de datos | Cloud SQL for PostgreSQL | PostgreSQL 16, instancia `mooc-postgres`, `db-g1-small`, 1 vCPU, 1.7 GB RAM, 10 GB SSD, zona única, sin HA, IP pública `34.42.6.180` | Implementado |
+| Multimedia | Cloud Storage | Bucket `mooc-e2-media-proyecto1-entrega2`, región `us-central1`, clase Standard | Implementado |
+| IP externa | External IP | `35.254.78.215` (Web Server, estática) | Implementado |
+| Red | VPC | Red `default` (modo automático) en vez de una VPC personalizada; decisión del equipo por tiempo, documentada como desviación frente a `modelo-despliegue-samara.md` | Implementado (desviación registrada) |
+| Transferencia | Network Egress | Pendiente de medir durante las corridas del Escenario 1 | Pendiente |
+
+## Desviaciones registradas frente al diseño de red original
+
+- Se usó la red `default` (modo automático) en vez de la VPC personalizada
+  `mooc-e2-vpc` / subred `mooc-e2-subnet` (`10.20.0.0/24`) que propone
+  `modelo-despliegue-samara.md`. Las reglas de firewall de la aplicación
+  (`mooc-e2-allow-web`, `mooc-e2-allow-redis-from-web`, `mooc-e2-allow-iap-ssh`)
+  sí se crearon sobre esta red y funcionan igual.
+- `mooc-e2-worker` quedó con IP externa (`34.61.4.185`), a diferencia de lo
+  recomendado ("Worker Server sin IP publica, con salida mediante Cloud NAT").
+  Redis y ClamAV siguen protegidos por las reglas de firewall por etiqueta,
+  pero esto es una exposición mayor a la diseñada originalmente y queda
+  anotado para la sustentación.
+- Las reglas automáticas de la red `default` (`default-allow-ssh`,
+  `default-allow-rdp`, `default-allow-internal`, `default-allow-icmp`) se
+  aplican a todas las instancias del proyecto; no se restringieron ni
+  eliminaron por límite de tiempo.
+
+## Evidencia del despliegue
+
+- Health check público: `https://35.254.78.215.sslip.io/health` responde
+  `200 OK` con `{"status":"ok"}` (verificado 2026-09-27).
+- La API corre en Docker Compose nativo sobre `mooc-e2-web`
+  (`/opt/mooc/deploy/docker-compose.web.yml`), con Caddy como servicio
+  systemd (no dockerizado) haciendo de proxy HTTPS con certificado de
+  Let's Encrypt para el dominio `35.254.78.215.sslip.io`.
 
 ## Cloud SQL
 
 La base de datos administrada utiliza Cloud SQL for PostgreSQL 16 en
-`us-central1`.
+`us-central1`, instancia `mooc-postgres`.
 
 Configuración efectiva:
 
@@ -39,8 +60,10 @@ Configuración efectiva:
 - Alta disponibilidad deshabilitada.
 - Backups automáticos habilitados.
 - Conexión SSL requerida.
-- Durante desarrollo se utilizó IP pública con una red autorizada `/32`.
-- La conexión privada queda condicionada a la infraestructura de red final.
+- IP pública `34.42.6.180`, con red autorizada restringida a las IPs que
+  necesitan conectarse (equipo de desarrollo y Web Server).
+- La conexión privada queda condicionada a migrar a la VPC personalizada;
+  no se hizo por la decisión de usar la red `default` (ver arriba).
 
 Las migraciones del proyecto fueron aplicadas correctamente sobre Cloud SQL y
 el esquema fue verificado.
@@ -66,6 +89,7 @@ La configuración utilizada como punto de partida es:
 ```text
 DB_MAX_CONNS=5
 DB_MIN_CONNS=0
+```
 
 La instancia de Cloud SQL reporta:
 
