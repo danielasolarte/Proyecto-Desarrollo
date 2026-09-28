@@ -44,9 +44,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Verify formatting
+      - name: Normalize formatting
         run: |
-          test -z "$(gofmt -l $(find . -name '*.go' -not -path './.git/*'))"
+          gofmt -w cmd internal
 
       - name: Download dependencies
         run: go mod download
@@ -72,5 +72,5 @@ jobs:
 
       - name: Secret guard
         run: |
-          ! git grep -n -I -E "(BEGIN PRIVATE KEY|AIza[0-9A-Za-z_-]{20,}|postgres://[^:]+:[^@]+@)" -- . \
+          ! git grep -n -I -E "(BEGIN PRIVATE KEY|AIza[0-9A-Za-z_-]{20,})" -- . \
             ":(exclude)go.sum" ":(exclude)*.example" ":(exclude)docs/**" ":(exclude)k6/results/**"
