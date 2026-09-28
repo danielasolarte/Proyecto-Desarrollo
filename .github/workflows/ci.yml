@@ -44,10 +44,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Normalize formatting
-        run: |
-          gofmt -w cmd internal
-
       - name: Download dependencies
         run: go mod download
 
