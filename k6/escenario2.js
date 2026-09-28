@@ -185,11 +185,16 @@ function createCourseSkeleton(teacherToken, runId) {
     title: 'Unidad Multimedia', position: 1,
   }), { headers: headers(teacherToken), tags: { module: 'media', phase: 'setup' } }), [201], 'Crear unidad'), 'id', 'ID');
 
+  // OJO: publicar aquí (antes de crear recursos) falla -- la API exige que
+  // el curso tenga al menos un recurso visible para publicarse. El publish
+  // se hace en setup(), después de crear los recursos de video.
+  return { courseId, unitId };
+}
+
+function publishCourse(teacherToken, courseId) {
   must(http.post(`${BASE_URL}/courses/${courseId}/publish`, null, {
     headers: headers(teacherToken), tags: { module: 'media', phase: 'setup' },
   }), [200], 'Publicar curso');
-
-  return { courseId, unitId };
 }
 
 function createVideoResource(teacherToken, unitId, title, position) {
@@ -295,6 +300,9 @@ export function setup() {
     if (!ready) fail(`El recurso de referencia del perfil ${file.name} no quedó "ready" dentro del timeout de setup`);
     availableResources.push({ resourceId, profile: file.name });
   });
+
+  // Ya hay recursos visibles en el curso -- ahora sí se puede publicar.
+  publishCourse(teacher.token, courseId);
 
   const students = [];
   for (let i = 0; i < level.viewers; i += 1) {
