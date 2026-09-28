@@ -1,0 +1,36 @@
+Evidencia del colapso del Worker Server durante las pruebas del Escenario 2
+Fecha: 2026-09-28, madrugada. Instancia: mooc-e2-worker (e2-small, 2 vCPU / 2 GiB).
+
+Contexto: durante una corrida de carga con la API de pruebas y el worker
+compartiendo la misma VM (worker+redis+clamav+API temporal), la instancia
+dejó de responder por completo, incluyendo SSH.
+
+--- gcloud compute instances get-serial-port-output mooc-e2-worker ---
+
+2026-09-28T01:13:43.371455588Z dockerd: Health check for container
+  f78d1540e97f... (redis) error: timed out starting health check
+2026-09-28T01:13:40.364876101Z dockerd: Health check for container
+  247c9bde058e... (clamav) error: timed out starting health check
+2026-09-28T01:17:33.1282Z OSConfigAgent Error: network error when
+  requesting metadata, make sure your instance has an active network and
+  can reach the metadata server:
+  Get "http://169.254.169.254/computeMetadata/v1/?...": dial tcp
+  169.254.169.254:80: i/o timeout
+
+--- docker logs api-test (mismo periodo) ---
+
+{"method":"POST","uri":"/api/v1/auth/bootstrap-admin","status":409,
+ "latency":69018107837,"latency_human":"1m9.018107837s"}
+{"method":"POST","uri":"/api/v1/auth/login","status":401,
+ "latency":593248827501,"latency_human":"9m53.248827501s"}
+
+Interpretación: la VM quedó tan saturada de CPU/memoria que ni siquiera
+pudo completar una llamada local al servicio de metadatos de GCP (una
+operación normalmente instantánea). Una petición de login tardó casi 10
+minutos. Los health checks de Redis y ClamAV dejaron de responder. La
+instancia se recuperó únicamente tras un reset forzado
+(`gcloud compute instances reset`).
+
+Causa más probable: concurrencia real de ffmpeg (transcodificación HLS) +
+ClamAV + Redis, agravada por una API de pruebas corriendo en la misma VM
+(desviación temporal de la arquitectura, ver sección de limitaciones).
