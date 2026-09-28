@@ -1,4 +1,4 @@
-﻿# EstimaciÃ³n de costos
+﻿# Estimación de costos
 
 ## Contexto
 
@@ -343,3 +343,49 @@ entrega y cuáles podrían continuar generando costos.
 La eliminación de recursos constituye parte del cierre operativo de la Entrega
 2 y debe realizarse únicamente después de verificar que no se requieren más
 pruebas.
+
+### Resultados de capacidad del Escenario 2
+
+El Escenario 2 evaluó el procesamiento multimedia asíncrono mediante el
+Worker Server desplegado en GCP, utilizando los niveles `baseline` y `l1`.
+
+Los resultados observados fueron:
+
+| Métrica | Baseline | L1 |
+|---|---:|---:|
+| Peticiones HTTP | 226 | 322 |
+| Fallos HTTP | 0 % | 2.17 % |
+| Latencia HTTP p95 | 924 ms | 1 108 ms |
+| Latencia HTTP p99 | 1 898 ms | ~60 000 ms |
+| Upload → ready promedio | 38.9 s | 46.5 s |
+| Upload → ready p95 | 120.9 s | 138.9 s |
+| Errores HLS | 0 % | 3.88 % |
+
+El flujo multimedia funcionó correctamente en `baseline`, pero al aumentar la
+carga al nivel `l1` se observó degradación en los tiempos de procesamiento,
+aparición de timeouts y errores HLS.
+
+Durante estas pruebas, la VM `mooc-e2-worker` presentó una utilización de CPU
+significativamente mayor que la observada en otros componentes. Se registraron
+periodos sostenidos de alta utilización y múltiples picos durante las tareas de
+procesamiento multimedia.
+
+En contraste, Cloud SQL mantuvo un uso de CPU aproximadamente entre 8 % y 10 %
+y el número de conexiones permaneció ampliamente por debajo del límite de:
+
+```text
+max_connections = 50
+```
+
+Por lo tanto, el principal límite de capacidad observado en el Escenario 2 se
+encuentra en el Worker Server y no en Cloud SQL.
+Desde la perspectiva de costo-capacidad, esto implica que un eventual
+escalamiento debería priorizar la capa de procesamiento multimedia antes que
+aumentar el tamaño de la base de datos.
+Las alternativas a evaluar serían:
+1. ajustar WORKER_CONCURRENCY;
+2. aumentar CPU y/o memoria del Worker Server;
+3. distribuir trabajos entre múltiples workers si la cola crece de forma
+   sostenida;
+4. mantener Cloud SQL en la configuración actual mientras continúe mostrando
+   capacidad disponible.
