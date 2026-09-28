@@ -4,8 +4,8 @@ flowchart LR
 
     subgraph gcp[GCP us-central1]
       subgraph vpc[mooc-e2-vpc / mooc-e2-subnet 10.20.0.0/24]
-        web[Web Server\nCompute Engine e2-small\nCaddy HTTPS 80/443\nAPI 127.0.0.1:8080]
-        worker[Worker Server\nCompute Engine e2-small\nsin IP publica\nRedis 6379 + ClamAV + worker]
+        web[Web Server\nCompute Engine e2-small\nIP interna 10.20.0.3\nIP publica 35.254.78.215\nCaddy HTTPS 80/443\nAPI 127.0.0.1:8080]
+        worker[Worker Server\nCompute Engine e2-small\nIP interna 10.20.0.2\nIP publica 34.28.33.182\nRedis 6379 + ClamAV + worker]
       end
 
       sql[(Cloud SQL PostgreSQL)]

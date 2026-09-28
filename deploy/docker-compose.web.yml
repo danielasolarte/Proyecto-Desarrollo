@@ -1,5 +1,5 @@
 # Web Server: API en Go + Mailpit (SMTP de laboratorio).
-# El proxy HTTPS (Caddy o Nginx) lo agrega Samara.
+# El proxy HTTPS (Caddy o Nginx) se configura fuera de este compose.
 services:
   api:
     image: ${API_IMAGE}

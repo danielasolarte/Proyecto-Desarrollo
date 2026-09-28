@@ -1,6 +1,6 @@
 # Arquitectura Entrega 2
 
-Este documento consolida la arquitectura desplegada para la Entrega 2. Las secciones de red y Web Server fueron preparadas por Samara Martinez.
+Este documento consolida la arquitectura desplegada para la Entrega 2, incluyendo red, Web Server, Worker Server, servicios administrados y controles de seguridad.
 
 ## Componentes
 
@@ -27,7 +27,7 @@ Modelo de componentes (módulos, worker y comunicación síncrona/asíncrona):
 
 Detalle de red, firewall y HTTPS:
 
-- [Modelo de despliegue de Samara](modelo-despliegue-samara.md)
+- [Modelo de despliegue, red y Web Server](modelo-despliegue-red-web.md)
 - [Fuente del diagrama de red](red-gcp.mmd)
 
 Seguridad y manejo de secretos:
@@ -50,11 +50,12 @@ Decisiones y adaptaciones de empaquetado y configuración:
 
 - Dominio HTTPS: `https://35.254.78.215.sslip.io` (Caddy con certificado
   Let's Encrypt).
-- IP estatica del Web Server (`mooc-e2-web`): `35.254.78.215` (interna
-  `10.128.0.3`).
-- IP interna del Worker Server (`mooc-e2-worker`): `10.128.0.2` (tambien
-  tiene IP externa `34.61.4.185`, desviacion registrada; ver
-  `docs/costos-entrega2.md`).
+- VPC personalizada: `mooc-e2-vpc`.
+- Subred regional: `mooc-e2-subnet`.
+- Web Server (`mooc-e2-web`): zona `us-central1-a`, IP interna `10.20.0.3`,
+  IP externa estatica `35.254.78.215`.
+- Worker Server (`mooc-e2-worker`): zona `us-central1-a`, IP interna
+  `10.20.0.2`, IP externa `34.28.33.182`.
 - Instancia Cloud SQL: `mooc-postgres` (IP publica `34.42.6.180`).
 - Bucket de Cloud Storage: `mooc-e2-media-proyecto1-entrega2`.
 - Evidencia de `curl`:
@@ -69,9 +70,14 @@ Content-Type: application/json
 - Resultado de pruebas Postman/k6 sobre la URL cloud: ver
   `capacity-planning/pruebas_de_carga_entrega2.md` (Escenario 1).
 
-## Desviaciones frente al diseno de red original
+## Red y seguridad de acceso
 
-Se desplego sobre la red `default` (modo automatico) en vez de la VPC
-personalizada `mooc-e2-vpc`, y el Worker Server quedo con IP externa en vez
-de solo salida por Cloud NAT. Detalle completo en
-`docs/costos-entrega2.md`.
+El despliegue usa una VPC personalizada (`mooc-e2-vpc`) con subred regional
+`mooc-e2-subnet`. El Web Server es el unico punto de entrada publico por
+HTTP/HTTPS y Caddy termina TLS con Let's Encrypt. Redis se mantiene en el
+Worker Server y solo acepta trafico interno desde instancias con etiqueta
+`web-server`. El Worker Server conserva IP externa para poder salir hacia
+Cloud SQL por IP publica mientras no este completada la conexion privada por
+Private Service Access; aun asi, no hay regla publica hacia Redis, ClamAV ni
+puertos internos de la aplicacion. La administracion SSH se realiza por IAP
+con origen `35.235.240.0/20`.

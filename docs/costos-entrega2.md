@@ -1,44 +1,34 @@
-# Estimación de costos
+﻿# EstimaciÃ³n de costos
 
 ## Contexto
 
 Proveedor: Google Cloud Platform
 Proyecto: proyecto1-entrega2-desarrollo
-Región: us-central1
-Fecha de estimación: 2026-09-27 (actualizado el mismo día con evidencia real de despliegue)
+RegiÃ³n: us-central1
+Fecha de estimaciÃ³n: 2026-09-27 (actualizado el mismo dÃ­a con evidencia real de despliegue)
 
 ## Recursos considerados
 
-| Recurso | Servicio GCP | Configuración efectiva | Estado |
+| Recurso | Servicio GCP | ConfiguraciÃ³n efectiva | Estado |
 |---|---|---|---|
-| Web Server | Compute Engine `mooc-e2-web` | `e2-small`, IP externa `35.254.78.215`, IP interna `10.128.0.3`, zona `us-central1-a` | Implementado |
-| Worker Server | Compute Engine `mooc-e2-worker` | `e2-small`, IP interna `10.128.0.2`, zona `us-central1-a` | Implementado |
-| Base de datos | Cloud SQL for PostgreSQL | PostgreSQL 16, instancia `mooc-postgres`, `db-g1-small`, 1 vCPU, 1.7 GB RAM, 10 GB SSD, zona única, sin HA, IP pública `34.42.6.180` | Implementado |
-| Multimedia | Cloud Storage | Bucket `mooc-e2-media-proyecto1-entrega2`, región `us-central1`, clase Standard | Implementado |
-| IP externa | External IP | `35.254.78.215` (Web Server, estática) | Implementado |
-| Red | VPC | Red `default` (modo automático) en vez de una VPC personalizada; decisión del equipo por tiempo, documentada como desviación frente a `modelo-despliegue-samara.md` | Implementado (desviación registrada) |
+| Web Server | Compute Engine `mooc-e2-web` | `e2-small`, zona `us-central1-a`, IP interna `10.20.0.3`, IP externa estatica `35.254.78.215`, conectado a `mooc-e2-subnet` | Implementado |
+| Worker Server | Compute Engine `mooc-e2-worker` | `e2-small`, zona `us-central1-a`, IP interna `10.20.0.2`, IP externa `34.28.33.182`, conectado a `mooc-e2-subnet` | Implementado |
+| Base de datos | Cloud SQL for PostgreSQL | PostgreSQL 16, instancia `mooc-postgres`, `db-g1-small`, 1 vCPU, 1.7 GB RAM, 10 GB SSD, zona Ãºnica, sin HA, IP pÃºblica `34.42.6.180` | Implementado |
+| Multimedia | Cloud Storage | Bucket `mooc-e2-media-proyecto1-entrega2`, regiÃ³n `us-central1`, clase Standard | Implementado |
+| IP externa | External IP | `35.254.78.215` (Web Server, estÃ¡tica) | Implementado |
+| Red | VPC | VPC personalizada `mooc-e2-vpc` con subred `mooc-e2-subnet`; reglas de firewall por etiquetas para web, Redis e IAP | Implementado |
 | Transferencia | Network Egress | Pendiente de medir durante las corridas del Escenario 1 | Pendiente |
 
-## Desviaciones registradas frente al diseño de red original
+## Red y seguridad implementada
 
-- Se usó la red `default` (modo automático) en vez de la VPC personalizada
-  `mooc-e2-vpc` / subred `mooc-e2-subnet` (`10.20.0.0/24`) que propone
-  `modelo-despliegue-samara.md`. Las reglas de firewall de la aplicación
-  (`mooc-e2-allow-web`, `mooc-e2-allow-redis-from-web`, `mooc-e2-allow-iap-ssh`)
-  sí se crearon sobre esta red y funcionan igual.
-- `mooc-e2-worker` quedó con IP externa (`34.61.4.185`), a diferencia de lo
-  recomendado ("Worker Server sin IP publica, con salida mediante Cloud NAT").
-  Redis y ClamAV siguen protegidos por las reglas de firewall por etiqueta,
-  pero esto es una exposición mayor a la diseñada originalmente y queda
-  anotado para la sustentación.
-- Las reglas automáticas de la red `default` (`default-allow-ssh`,
-  `default-allow-rdp`, `default-allow-internal`, `default-allow-icmp`) se
-  aplican a todas las instancias del proyecto; no se restringieron ni
-  eliminaron por límite de tiempo.
+- Se usa la VPC personalizada `mooc-e2-vpc` y la subred regional `mooc-e2-subnet`.
+- Las reglas de firewall de la aplicacion limitan la exposicion: `mooc-e2-allow-web` publica solo 80/443 hacia el Web Server, `mooc-e2-allow-redis-from-web` permite Redis solo desde `web-server` hacia `worker-server`, y `mooc-e2-allow-iap-ssh` limita SSH al rango de IAP.
+- Redis y ClamAV no tienen reglas de entrada publicas.
+- El Worker Server conserva IP externa (`34.28.33.182`) como exposicion operacional controlada porque la conexion actual a Cloud SQL usa IP publica; no existen reglas de entrada publicas hacia Redis, ClamAV ni puertos internos de la aplicacion.
 
 ## Evidencia del despliegue
 
-- Health check público: `https://35.254.78.215.sslip.io/health` responde
+- Health check pÃºblico: `https://35.254.78.215.sslip.io/health` responde
   `200 OK` con `{"status":"ok"}` (verificado 2026-09-27).
 - La API corre en Docker Compose nativo sobre `mooc-e2-web`
   (`/opt/mooc/deploy/docker-compose.web.yml`), con Caddy como servicio
@@ -50,32 +40,32 @@ Fecha de estimación: 2026-09-27 (actualizado el mismo día con evidencia real d
 La base de datos administrada utiliza Cloud SQL for PostgreSQL 16 en
 `us-central1`, instancia `mooc-postgres`.
 
-Configuración efectiva:
+ConfiguraciÃ³n efectiva:
 
-- Tipo de máquina: `db-g1-small`.
+- Tipo de mÃ¡quina: `db-g1-small`.
 - 1 vCPU.
 - 1.7 GB de memoria.
 - 10 GB de almacenamiento SSD.
 - Instancia en una sola zona.
 - Alta disponibilidad deshabilitada.
-- Backups automáticos habilitados.
-- Conexión SSL requerida.
-- IP pública `34.42.6.180`, con red autorizada restringida a las IPs que
+- Backups automÃ¡ticos habilitados.
+- ConexiÃ³n SSL requerida.
+- IP pÃºblica `34.42.6.180`, con red autorizada restringida a las IPs que
   necesitan conectarse (equipo de desarrollo y Web Server).
-- La conexión privada queda condicionada a migrar a la VPC personalizada;
-  no se hizo por la decisión de usar la red `default` (ver arriba).
+- La conexion privada queda condicionada a completar Private Service Access
+  para Cloud SQL en la VPC personalizada.
 
 Las migraciones del proyecto fueron aplicadas correctamente sobre Cloud SQL y
 el esquema fue verificado.
 
-También se realizó una prueba de respaldo y recuperación:
+TambiÃ©n se realizÃ³ una prueba de respaldo y recuperaciÃ³n:
 
-1. Se generó un backup mediante `pg_dump`.
-2. Se validó el archivo con `pg_restore --list`.
-3. Se creó una base temporal.
-4. Se restauró el backup sobre la base temporal.
+1. Se generÃ³ un backup mediante `pg_dump`.
+2. Se validÃ³ el archivo con `pg_restore --list`.
+3. Se creÃ³ una base temporal.
+4. Se restaurÃ³ el backup sobre la base temporal.
 5. Se verificaron las tablas restauradas.
-6. La base temporal fue eliminada después de la prueba.
+6. La base temporal fue eliminada despuÃ©s de la prueba.
 
 ## Control de conexiones
 
@@ -84,7 +74,7 @@ La API y el worker permiten configurar el pool de PostgreSQL mediante:
 - `DB_MAX_CONNS`
 - `DB_MIN_CONNS`
 
-La configuración utilizada como punto de partida es:
+La configuraciÃ³n utilizada como punto de partida es:
 
 ```text
 DB_MAX_CONNS=5
