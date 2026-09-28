@@ -71,3 +71,34 @@ La instancia de Cloud SQL reporta:
 
 ```text
 max_connections = 50
+```
+
+### Costos observados
+
+Durante la ejecución de la Entrega 2 se revisó el consumo acumulado del proyecto
+`proyecto1-entrega2-desarrollo` en Google Cloud Billing.
+
+Los costos observados fueron:
+
+| Servicio | Costo por uso | Ahorros/créditos | Subtotal |
+|---|---:|---:|---:|
+| Cloud SQL | USD 3.45 | -USD 3.45 | USD 0.00 |
+| Networking | USD 0.01 | -USD 0.01 | USD 0.00 |
+
+El principal componente de costo observado fue Cloud SQL. Aunque el costo por
+uso acumulado alcanzó USD 3.45, los créditos o ahorros aplicados compensaron el
+valor durante el periodo analizado, por lo que el subtotal facturado mostrado
+por Billing fue de USD 0.00.
+
+También se configuró un presupuesto mensual de:
+
+```text
+USD 20
+```
+
+con alertas de gasto real en:
+50 %
+75 %
+90 %
+
+Además, para Compute Engine y Cloud Storage no se mostraban costo desglosado en la captura disponible al momento de la revisión.
