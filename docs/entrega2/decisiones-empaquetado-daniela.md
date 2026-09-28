@@ -37,7 +37,7 @@ máquinas virtuales fijas con responsabilidades separadas. El
 (`docker compose up -d --build`), sin cambios de comportamiento.
 
 La API se publica solo en `127.0.0.1:8080` dentro del Web Server: el
-proxy HTTPS de Samara (Caddy) es el único punto de entrada público, nunca
+proxy HTTPS con Caddy es el único punto de entrada público, nunca
 la API directamente.
 
 ## Contrato de variables de entorno
@@ -68,7 +68,7 @@ Variables nuevas frente a la Entrega 1, y por qué:
   de `s3storage.go` la use; hoy el cliente no la necesita para hablar con
   el endpoint compatible con S3 de Cloud Storage.
 - `AUTH_COOKIE_ENABLED`, `CSRF_ENABLED` y las variables `SESSION_COOKIE_*`
-  / `CSRF_*`: contrato de Samara para clientes web con cookies (detalle en
+  / `CSRF_*`: contrato para clientes web con cookies (detalle en
   `docs/entrega2/secretos-y-seguridad.md`); los clientes HTTP y los
   scripts de k6 siguen sin necesitarlas porque usan `Authorization: Bearer`.
 

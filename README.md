@@ -10,7 +10,7 @@ Artefactos principales de la entrega:
 
 - Arquitectura: `docs/entrega2/arquitectura_entrega2.md`.
 - Modelo de componentes: `docs/entrega2/modelo-componentes.md`.
-- Modelo de despliegue, red, Web Server y HTTPS: `docs/entrega2/modelo-despliegue-samara.md`.
+- Modelo de despliegue, red, Web Server y HTTPS: `docs/entrega2/modelo-despliegue-red-web.md`.
 - Decisiones y adaptaciones de empaquetado: `docs/entrega2/decisiones-empaquetado-daniela.md`.
 - Secretos, cookies seguras y contrato CSRF: `docs/entrega2/secretos-y-seguridad.md`.
 - Proxy HTTPS: `deploy/caddy/Caddyfile.web`.
