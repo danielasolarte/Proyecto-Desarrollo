@@ -52,8 +52,9 @@ jobs:
 
       - name: Build binaries
         run: |
-          go build ./cmd/api
-          go build ./cmd/worker
+          mkdir -p build
+          go build -o build/mooc-api ./cmd/api
+          go build -o build/mooc-worker ./cmd/worker
 
       - name: Validate Docker Compose
         run: docker compose --env-file .env.example config --quiet
