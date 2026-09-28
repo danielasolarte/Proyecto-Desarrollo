@@ -13,6 +13,16 @@ Responsable: Daniela Solarte.
   con 60 s de pausa entre niveles para que la cola y las conexiones se
   estabilicen.
 - Fecha de la corrida: 2026-09-27 (tag de resultados `gcp`).
+- Hora de inicio y fin de cada nivel (UTC, para cruzar con las métricas de
+  infraestructura de `docs/metricas-infra-entrega2.md`):
+
+  | Nivel (VUs) | Inicio (UTC) | Fin (UTC) |
+  |---|---|---|
+  | 10  | 21:46:42 | 21:50:37 |
+  | 25  | 21:52:15 | 21:56:15 |
+  | 50  | 21:57:53 | 22:02:04 |
+  | 100 | 22:03:49 | 22:07:57 |
+
 - Resultados crudos en `k6/results/e1-gcp-10.json`, `e1-gcp-25.json`,
   `e1-gcp-50.json`, `e1-gcp-100.json` (con sus `.log`).
 

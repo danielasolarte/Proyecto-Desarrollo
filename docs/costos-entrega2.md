@@ -11,30 +11,31 @@ Fecha de estimación: 2026-09-27 (actualizado el mismo día con evidencia real d
 
 | Recurso | Servicio GCP | Configuración efectiva | Estado |
 |---|---|---|---|
-| Web Server | Compute Engine `mooc-e2-web` | `e2-small`, IP externa `35.254.78.215`, IP interna `10.128.0.3`, zona `us-central1-a` | Implementado |
-| Worker Server | Compute Engine `mooc-e2-worker` | `e2-small`, IP interna `10.128.0.2`, zona `us-central1-a` | Implementado |
+| Web Server | Compute Engine `mooc-e2-web` | `e2-small`, IP externa `35.254.78.215`, IP interna `10.20.0.3`, zona `us-central1-a`, red `mooc-e2-vpc`/subred `mooc-e2-subnet` | Implementado |
+| Worker Server | Compute Engine `mooc-e2-worker` | `e2-small`, IP externa `34.28.33.182`, IP interna `10.20.0.2`, zona `us-central1-a`, red `mooc-e2-vpc`/subred `mooc-e2-subnet` | Implementado |
 | Base de datos | Cloud SQL for PostgreSQL | PostgreSQL 16, instancia `mooc-postgres`, `db-g1-small`, 1 vCPU, 1.7 GB RAM, 10 GB SSD, zona única, sin HA, IP pública `34.42.6.180` | Implementado |
 | Multimedia | Cloud Storage | Bucket `mooc-e2-media-proyecto1-entrega2`, región `us-central1`, clase Standard | Implementado |
 | IP externa | External IP | `35.254.78.215` (Web Server, estática) | Implementado |
-| Red | VPC | Red `default` (modo automático) en vez de una VPC personalizada; decisión del equipo por tiempo, documentada como desviación frente a `modelo-despliegue-samara.md` | Implementado (desviación registrada) |
+| Red | VPC | VPC personalizada `mooc-e2-vpc` / subred `mooc-e2-subnet` (`10.20.0.0/24`), tal como propone `modelo-despliegue-samara.md`. Ambas VMs (Web Server y Worker Server) quedaron en esta red desde el 27 de septiembre (antes estaban temporalmente en la red `default`, ver historial de este documento) | Implementado |
 | Transferencia | Network Egress | Pendiente de medir durante las corridas del Escenario 1 | Pendiente |
 
 ## Desviaciones registradas frente al diseño de red original
 
-- Se usó la red `default` (modo automático) en vez de la VPC personalizada
-  `mooc-e2-vpc` / subred `mooc-e2-subnet` (`10.20.0.0/24`) que propone
-  `modelo-despliegue-samara.md`. Las reglas de firewall de la aplicación
-  (`mooc-e2-allow-web`, `mooc-e2-allow-redis-from-web`, `mooc-e2-allow-iap-ssh`)
-  sí se crearon sobre esta red y funcionan igual.
-- `mooc-e2-worker` quedó con IP externa (`34.61.4.185`), a diferencia de lo
+- **Resuelta el 27 de septiembre:** inicialmente se había desplegado sobre
+  la red `default` (modo automático) en vez de la VPC personalizada. El
+  equipo migró ambas VMs a `mooc-e2-vpc`/`mooc-e2-subnet`
+  (`10.20.0.0/24`) el mismo día de la entrega, alineando el despliegue con
+  `modelo-despliegue-samara.md`. Al recrearse las VMs en la nueva red,
+  cambiaron tanto las IPs internas (Web Server `10.20.0.3`, Worker Server
+  `10.20.0.2`) como la IP externa del Worker Server (`34.28.33.182`); la
+  IP externa estática del Web Server (`35.254.78.215`) no cambió. Esto
+  obligó a actualizar `REDIS_ADDR` en el `.env` del Web Server y las redes
+  autorizadas de Cloud SQL con las IPs nuevas.
+- `mooc-e2-worker` sigue con IP externa (`34.28.33.182`), a diferencia de lo
   recomendado ("Worker Server sin IP publica, con salida mediante Cloud NAT").
   Redis y ClamAV siguen protegidos por las reglas de firewall por etiqueta,
   pero esto es una exposición mayor a la diseñada originalmente y queda
   anotado para la sustentación.
-- Las reglas automáticas de la red `default` (`default-allow-ssh`,
-  `default-allow-rdp`, `default-allow-internal`, `default-allow-icmp`) se
-  aplican a todas las instancias del proyecto; no se restringieron ni
-  eliminaron por límite de tiempo.
 
 ## Evidencia del despliegue
 
@@ -61,9 +62,12 @@ Configuración efectiva:
 - Backups automáticos habilitados.
 - Conexión SSL requerida.
 - IP pública `34.42.6.180`, con red autorizada restringida a las IPs que
-  necesitan conectarse (equipo de desarrollo y Web Server).
-- La conexión privada queda condicionada a migrar a la VPC personalizada;
-  no se hizo por la decisión de usar la red `default` (ver arriba).
+  necesitan conectarse (equipo de desarrollo, Web Server y Worker Server).
+  Tras la migración a `mooc-e2-vpc` (ver arriba), las redes autorizadas se
+  actualizaron con las IPs externas nuevas de ambas VMs.
+- No se migró a conexión privada (Cloud SQL Auth Proxy / IP privada) por
+  límite de tiempo; se mantiene IP pública con redes autorizadas y SSL
+  requerido.
 
 Las migraciones del proyecto fueron aplicadas correctamente sobre Cloud SQL y
 el esquema fue verificado.

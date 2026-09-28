@@ -50,10 +50,12 @@ Decisiones y adaptaciones de empaquetado y configuración:
 
 - Dominio HTTPS: `https://35.254.78.215.sslip.io` (Caddy con certificado
   Let's Encrypt).
+- Red: VPC personalizada `mooc-e2-vpc` / subred `mooc-e2-subnet`
+  (`10.20.0.0/24`), la propuesta en `modelo-despliegue-samara.md`.
 - IP estatica del Web Server (`mooc-e2-web`): `35.254.78.215` (interna
-  `10.128.0.3`).
-- IP interna del Worker Server (`mooc-e2-worker`): `10.128.0.2` (tambien
-  tiene IP externa `34.61.4.185`, desviacion registrada; ver
+  `10.20.0.3`).
+- IP interna del Worker Server (`mooc-e2-worker`): `10.20.0.2` (tambien
+  tiene IP externa `34.28.33.182`, desviacion registrada; ver
   `docs/costos-entrega2.md`).
 - Instancia Cloud SQL: `mooc-postgres` (IP publica `34.42.6.180`).
 - Bucket de Cloud Storage: `mooc-e2-media-proyecto1-entrega2`.
@@ -71,7 +73,8 @@ Content-Type: application/json
 
 ## Desviaciones frente al diseno de red original
 
-Se desplego sobre la red `default` (modo automatico) en vez de la VPC
-personalizada `mooc-e2-vpc`, y el Worker Server quedo con IP externa en vez
-de solo salida por Cloud NAT. Detalle completo en
+El Worker Server quedo con IP externa (`34.28.33.182`) en vez de solo
+salida por Cloud NAT, como recomienda el diseno original. La VPC
+personalizada si se implemento (ver "Evidencias" arriba); esa desviacion
+inicial quedo resuelta el 27 de septiembre. Detalle completo en
 `docs/costos-entrega2.md`.
