@@ -48,15 +48,30 @@ Decisiones y adaptaciones de empaquetado y configuración:
 
 ## Evidencias del despliegue real (2026-09-27)
 
-- Dominio HTTPS: `https://35.254.78.215.sslip.io` (Caddy con certificado
-  Let's Encrypt).
-- IP estatica del Web Server (`mooc-e2-web`): `35.254.78.215` (interna
-  `10.128.0.3`).
-- IP interna del Worker Server (`mooc-e2-worker`): `10.128.0.2` (tambien
-  tiene IP externa `34.61.4.185`, desviacion registrada; ver
-  `docs/costos-entrega2.md`).
-- Instancia Cloud SQL: `mooc-postgres` (IP publica `34.42.6.180`).
-- Bucket de Cloud Storage: `mooc-e2-media-proyecto1-entrega2`.
+## Evidencias del despliegue real (2026-09-27)
+
+- Dominio HTTPS del Web Server:
+  `https://35.254.78.215.sslip.io`.
+- Web Server: `mooc-e2-web`, desplegado en `us-central1-a`.
+- Worker Server: `mooc-e2-worker`.
+- IP interna actual del Worker Server: `10.20.0.2`.
+- IP externa actual del Worker Server: `34.28.33.182`.
+- VPC dedicada: `mooc-e2-vpc`.
+- Subred: `mooc-e2-subnet`.
+- Rango de subred: `10.20.0.0/24`.
+- Instancia Cloud SQL: `mooc-postgres`, IP pública `34.42.6.180`.
+- Bucket de Cloud Storage:
+  `mooc-e2-media-proyecto1-entrega2`.
+
+El Worker Server ejecuta mediante Docker Compose:
+
+- worker multimedia;
+- Redis 7;
+- ClamAV.
+
+El worker fue verificado escuchando correctamente la cola `media` con
+`WORKER_CONCURRENCY=5`, y Redis respondió correctamente a `PING`.
+
 - Evidencia de `curl`:
 
 ```text
@@ -69,12 +84,22 @@ Content-Type: application/json
 - Resultado de pruebas Postman/k6 sobre la URL cloud: ver
   `capacity-planning/pruebas_de_carga_entrega2.md` (Escenario 1).
 
-## Desviaciones frente al diseno de red original
 
-Se desplego sobre la red `default` (modo automatico) en vez de la VPC
-personalizada `mooc-e2-vpc`, y el Worker Server quedo con IP externa en vez
-de solo salida por Cloud NAT. Detalle completo en
-`docs/costos-entrega2.md`.
+## Red desplegada
+
+La infraestructura fue migrada a una VPC dedicada:
+
+- VPC: `mooc-e2-vpc`.
+- Subred: `mooc-e2-subnet`.
+- CIDR: `10.20.0.0/24`.
+
+Web Server y Worker Server se encuentran dentro de esta red y utilizan
+comunicación interna para los servicios que no requieren exposición pública.
+
+Se configuró Cloud NAT como mecanismo de salida para recursos privados. Sin
+embargo, durante la entrega el Worker Server conserva también una IP externa,
+por lo que Cloud NAT no constituye actualmente su única ruta de salida a
+Internet.
 
 # Capacidad, costo y limitaciones
 
@@ -179,6 +204,192 @@ Con este límite, solicitudes concurrentes pueden quedar esperando una conexión
 disponible aunque Cloud SQL todavía tenga capacidad libre. Esta hipótesis no
 puede confirmarse únicamente con las métricas actuales y requeriría
 instrumentación adicional del pool de conexiones.
+
+### Capacidad observada – Escenario 2
+
+El Escenario 2 evaluó el flujo multimedia completo, incluyendo autorización de
+cargas, transferencia hacia almacenamiento, procesamiento asíncrono por el
+worker y consumo posterior de contenido HLS.
+
+Se ejecutaron inicialmente dos niveles de carga: `baseline` y `l1`.
+
+| Métrica | Baseline | L1 |
+|---|---:|---:|
+| Peticiones HTTP | 226 | 322 |
+| Fallos HTTP | 0 % | 2.17 % |
+| Latencia HTTP p95 | 924 ms | 1 108 ms |
+| Latencia HTTP p99 | 1 898 ms | ~60 000 ms |
+| Upload → ready promedio | 38.9 s | 46.5 s |
+| Upload → ready p95 | 120.9 s | 138.9 s |
+| Timeouts esperando estado ready | 1 | 1 |
+| Errores HLS | 0 % | 3.88 % |
+| Latencia promedio del manifest HLS | 76.6 ms | 83.2 ms |
+| Latencia promedio de segmentos HLS | 823 ms | 573 ms |
+
+En el nivel `baseline` el sistema completó el flujo multimedia sin errores HTTP
+ni errores HLS. Sin embargo, ya se observó un recurso que no alcanzó el estado
+`ready` dentro del tiempo esperado y una latencia p95 de aproximadamente 121
+segundos entre la carga y la disponibilidad final.
+
+Al incrementar la carga al nivel `l1`, se evidenció degradación. La tasa de
+fallos HTTP aumentó a 2.17 % y varias solicitudes alcanzaron el timeout de
+60 segundos.
+
+Los timeouts se concentraron principalmente en consultas de estado multimedia
+(`/media`) y reproducción (`/playback`). Esto indica que, bajo mayor
+concurrencia, el sistema comienza a presentar dificultades para responder
+mientras se ejecuta procesamiento multimedia concurrente.
+
+A pesar de esta degradación, la generación y consumo de HLS continuó
+funcionando para la mayoría de los recursos. El nivel baseline no presentó
+errores HLS y el nivel `l1` presentó una tasa de error aproximada de 3.88 %.
+
+Por lo tanto, el Escenario 2 muestra que el flujo multimedia es funcional bajo
+carga base, pero la capacidad actual del Worker Server y del procesamiento
+asíncrono comienza a degradarse desde `l1`.
+
+El principal síntoma observado no es una degradación significativa en la
+lectura de objetos ya generados desde Cloud Storage, sino un aumento en los
+tiempos necesarios para que los recursos alcancen el estado `ready` y la
+aparición de timeouts en la API durante periodos de procesamiento concurrente.
+
+#### Limitación observada en niveles superiores
+
+A partir de niveles de carga superiores a `l1`, el equipo reportó pérdida de
+disponibilidad de la VM Worker.
+
+Los resultados de `baseline` y `l1` ya muestran señales previas de degradación,
+como aumento del tiempo `upload → ready`, aparición de timeouts y errores HLS.
+
+Sin embargo, con la evidencia disponible no es posible atribuir la caída de la
+VM a una causa específica como agotamiento de memoria o saturación de CPU.
+
+Por lo tanto, la caída se documenta como una limitación de capacidad del
+Worker Server bajo cargas superiores a `l1`, cuya causa exacta requeriría
+métricas adicionales de CPU, memoria y logs del sistema durante el momento de
+la falla.
+
+#### Entorno de ejecución del Escenario 2
+
+El script de carga del Escenario 2 fue ejecutado desde Google Cloud Shell.
+
+La API utilizada durante la prueba se encontraba disponible en
+`http://localhost:8080/api/v1` dentro de ese entorno, pero estaba configurada
+para utilizar los servicios remotos desplegados en GCP, incluyendo el Worker
+Server, Redis, Cloud SQL y Cloud Storage.
+
+Por esta razón, los resultados relacionados con procesamiento multimedia,
+tiempos `upload → ready`, comportamiento de la cola y generación de contenido
+HLS reflejan el comportamiento de la infraestructura remota del Worker Server.
+
+Sin embargo, las métricas de latencia HTTP de esta prueba no se utilizan para
+evaluar directamente la capacidad de la VM `mooc-e2-web`, ya que la API no fue
+ejecutada sobre esa instancia durante el escenario.
+
+#### Consumo de CPU del Worker Server
+
+Durante la ejecución de las pruebas `baseline` y `l1` del Escenario 2 se
+revisaron las métricas de CPU de la instancia `mooc-e2-worker`.
+
+A diferencia del Escenario 1, donde las instancias mantuvieron amplio margen
+de CPU, durante el procesamiento multimedia se observó un incremento
+significativo de utilización del Worker Server.
+
+Durante el intervalo de ejecución aparecieron múltiples picos superiores al
+200 % en la métrica reportada y un pico cercano al 300 %, además de periodos
+sostenidos alrededor del 100 %.
+
+La escala utilizada por la métrica puede representar utilización acumulada
+entre múltiples vCPU, por lo que valores superiores al 100 % no deben
+interpretarse como un porcentaje simple de una única CPU. Sin embargo, el
+comportamiento evidencia una utilización intensiva del recurso de cómputo
+durante el procesamiento multimedia.
+
+Este patrón es consistente con las operaciones ejecutadas por el worker,
+principalmente análisis antivirus y transcodificación HLS mediante FFmpeg,
+que son tareas intensivas en CPU.
+
+La presión observada coincide además con la degradación registrada entre
+`baseline` y `l1`: el tiempo promedio de `upload → ready` aumentó de
+aproximadamente 38.9 s a 46.5 s, el p95 aumentó de aproximadamente 120.9 s a
+138.9 s y comenzaron a aparecer timeouts y errores HLS.
+
+Por lo tanto, las métricas permiten identificar la capacidad de procesamiento
+del Worker Server como una limitación relevante del Escenario 2. A medida que
+aumenta la concurrencia de trabajos multimedia, la VM debe ejecutar
+simultáneamente el worker, FFmpeg, ClamAV y Redis, incrementando la presión
+sobre los recursos disponibles.
+
+#### Limitación observada en niveles superiores
+
+A partir de niveles de carga superiores a `l1`, el equipo reportó pérdida de
+disponibilidad del Worker Server.
+
+Las métricas disponibles muestran una presión importante de CPU durante las
+pruebas multimedia, con periodos de utilización elevada y múltiples picos
+durante el procesamiento concurrente. Esto permite identificar la capacidad de
+cómputo del Worker Server como un factor relevante en la degradación observada.
+
+No se dispone de evidencia suficiente para afirmar que la pérdida de
+disponibilidad haya sido causada exclusivamente por CPU, ya que no se cuenta
+con una medición equivalente de memoria durante el instante exacto de la falla.
+
+Sin embargo, la combinación de alta utilización de CPU, incremento del tiempo
+`upload → ready`, aparición de timeouts y pérdida de disponibilidad bajo
+niveles superiores indica que el Worker Server constituye el principal límite
+de capacidad observado en el Escenario 2.
+
+#### Métricas de Cloud SQL durante el Escenario 2
+
+Durante el mismo intervalo de ejecución de las pruebas `baseline` y `l1` se
+revisaron las métricas de Cloud SQL.
+
+El uso de CPU de la instancia se mantuvo aproximadamente entre 8 % y 10 %,
+con incrementos puntuales moderados, sin aproximarse a niveles de saturación.
+
+El número total de conexiones aumentó gradualmente durante las pruebas, pero
+permaneció ampliamente por debajo del límite configurado de:
+
+```text
+max_connections = 50
+```
+Por lo tanto, no se observa evidencia de que Cloud SQL haya sido el recurso
+limitante durante el Escenario 2.
+Este comportamiento contrasta con el Worker Server, donde durante el mismo
+intervalo se observaron incrementos importantes en utilización de CPU y
+periodos de carga sostenida asociados al procesamiento multimedia.
+La combinación de ambas métricas permite localizar la principal presión de
+capacidad en la capa de procesamiento asíncrono del Worker Server y no en la
+base de datos.
+En consecuencia, para mejorar la capacidad del Escenario 2, la primera acción
+no debería ser aumentar el tamaño de Cloud SQL. Resulta más apropiado revisar
+la capacidad del Worker Server, la concurrencia configurada y el consumo de
+recursos generado por FFmpeg, ClamAV y los demás procesos ejecutados en esa VM.
+
+#### Conclusión de capacidad del Escenario 2
+
+Las pruebas muestran que el flujo multimedia es funcional en `baseline` y
+continúa operando bajo `l1`, aunque con degradación en tiempos de procesamiento,
+aparición de timeouts y algunos errores HLS.
+
+Las métricas de infraestructura muestran que, durante estas ejecuciones,
+Cloud SQL conservó amplio margen tanto en CPU como en conexiones, mientras que
+el Worker Server presentó una utilización significativamente mayor durante los
+periodos de procesamiento multimedia.
+
+Por lo tanto, el Worker Server constituye el principal límite de capacidad
+observado en el Escenario 2.
+
+Para aumentar la capacidad del flujo multimedia se recomienda evaluar, en este
+orden:
+
+1. reducir o ajustar `WORKER_CONCURRENCY`;
+2. monitorear CPU y memoria durante cada trabajo de transcodificación;
+3. aumentar recursos de CPU/memoria de la VM Worker si se confirma saturación;
+4. distribuir los trabajos entre múltiples workers si la cola crece de forma
+   sostenida;
+5. mantener Cloud SQL en su configuración actual mientras sus métricas continúen
+   mostrando capacidad disponible.
 
 ### Costos observados
 
