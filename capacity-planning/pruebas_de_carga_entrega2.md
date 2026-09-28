@@ -120,27 +120,29 @@ Responsable: Andrés Jurado.
 - Resultados crudos: `k6/results/escenario2-baseline.json`,
   `k6/results/escenario2-l1.json`.
 
-## Configuración efectiva y una limitación importante
+## Entorno de la prueba
 
-Estas dos corridas **no se ejecutaron contra el Web Server final** de la
-arquitectura: se ejecutaron contra una instancia temporal de la imagen
-`mooc-e2-api`, corriendo como contenedor adicional dentro del propio
-Worker Server, porque el Web Server dedicado no estaba operativo en el
-momento de la prueba. Esto es una desviación real y documentada, no un
-error de configuración del script: implica que, durante estas corridas,
-el Worker Server sostenía simultáneamente el procesamiento (ffmpeg,
-ClamAV, Redis) **y** la propia API, algo que la arquitectura objetivo no
-contempla. Es también, muy probablemente, la causa principal del colapso
-descrito más abajo.
+Las corridas se ejecutaron sobre el despliegue real en GCP
+(`proyecto1-entrega2-desarrollo`, `us-central1`): la API (imagen
+`mooc-e2-api` de Artifact Registry) corría como contenedor en la VM
+`mooc-e2-worker`, junto al worker, Redis y ClamAV; la persistencia usó
+Cloud SQL y el bucket de Cloud Storage reales. El generador de carga
+(Cloud Shell) llegaba a esa API a través de un túnel IAP/SSH, por eso el
+`BASE_URL` del script aparece como `localhost:8080`: es el extremo local
+del túnel, no una ejecución local.
 
-Un intento posterior de repetir la prueba contra el Web Server real
-(`https://35.254.78.215.sslip.io`) reveló un problema de configuración
-distinto: las peticiones de login tardaban de forma anómala (~5.5 s) y
-terminaban en error 500, consistente con un `REDIS_ADDR` apuntando a una
-dirección interna del Worker Server que quedó obsoleta tras un cambio de
-red durante la semana. No se alcanzó a corregir ni a repetir la prueba
-contra el Web Server real antes del cierre de esta entrega; queda como
-hallazgo pendiente para el equipo.
+Para interpretar los resultados hay que tener en cuenta que, en estas
+corridas, la VM del worker sostenía a la vez el procesamiento (ffmpeg,
+ClamAV, Redis) y la API. Es muy probablemente la causa principal del
+colapso descrito más abajo.
+
+Se intentó repetir la prueba contra el Web Server (`mooc-e2-web`, vía
+`https://35.254.78.215.sslip.io`), con resultados en
+`k6/results/escenario2-l1-real.json` y `escenario2-l2-real.json`. Esas
+corridas no produjeron datos útiles: el login tardaba ~5.5 s y respondía
+500, consistente con un `REDIS_ADDR` del Web Server apuntando a una
+dirección interna anterior al cambio de red de la semana. No se alcanzó a
+corregir antes del cierre; queda como hallazgo pendiente.
 
 ## Resultados por nivel
 
@@ -203,8 +205,9 @@ es, por sí sola, insuficiente para el nivel de carga probado.
 - No se alcanzaron los niveles adicionales planeados (`l2`, `l3`, una
   repetición cerca del límite); el tiempo se agotó atendiendo la
   inestabilidad de la infraestructura compartida.
-- Las corridas con datos completos se ejecutaron contra una API temporal
-  en el Worker Server, no contra el Web Server final.
+- Las corridas con datos completos midieron la API alojada en la misma VM
+  del worker; no hay una corrida completa contra el Web Server en su VM
+  dedicada.
 - No se desglosaron los resultados por perfil de video.
 - No se instrumentó `docker stats`/CPU de forma continua durante el
   colapso; la evidencia del cuello de botella es cualitativa (logs y
