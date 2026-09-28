@@ -234,7 +234,7 @@ function uploadFile(teacherToken, resourceId, file, tagsExtra) {
 
   const partUrl = pick(json(urlRes), 'url');
   const t1 = Date.now();
-  uploadAuthorizeMs.add(t1 - t0);
+  uploadAuthorizeMs.add(t1 - t0, tagsExtra);
 
   const putRes = http.put(partUrl, file.bytes, {
     headers: { 'Content-Type': file.mime },
@@ -244,7 +244,7 @@ function uploadFile(teacherToken, resourceId, file, tagsExtra) {
   uploadFailures.add(!okPut);
   if (!okPut) return { ok: false };
   const t2 = Date.now();
-  uploadTransferMs.add(t2 - t1);
+  uploadTransferMs.add(t2 - t1, tagsExtra);
 
   const completeRes = http.post(`${BASE_URL}/uploads/${sessionId}/complete`, null, {
     headers: headers(teacherToken), tags: { module: 'media', ...tagsExtra },
@@ -253,7 +253,7 @@ function uploadFile(teacherToken, resourceId, file, tagsExtra) {
   uploadFailures.add(!okComplete);
   if (!okComplete) return { ok: false };
   const t3 = Date.now();
-  uploadConfirmMs.add(t3 - t2);
+  uploadConfirmMs.add(t3 - t2, tagsExtra);
 
   return { ok: true, resourceId, startedReadyWaitAt: t3 };
 }
@@ -271,7 +271,7 @@ function waitUntilReady(teacherToken, resourceId, sinceMs, timeoutMs, tagsExtra)
     if (res.status === 200) {
       const asset = json(res);
       if (asset && asset.hls_manifest_key) {
-        uploadTimeToReadyMs.add(Date.now() - sinceMs);
+        uploadTimeToReadyMs.add(Date.now() - sinceMs, tagsExtra);
         return true;
       }
     }
@@ -304,9 +304,9 @@ export function setup() {
   const availableResources = [];
   FILES.forEach((file, idx) => {
     const resourceId = createVideoResource(teacher.token, unitId, `Disponible ${file.name}`, idx + 1);
-    const up = uploadFile(teacher.token, resourceId, file, { phase: 'setup' });
+    const up = uploadFile(teacher.token, resourceId, file, { phase: 'setup', profile: file.name });
     if (!up.ok) fail(`No se pudo precargar el recurso de referencia para el perfil ${file.name}`);
-    const ready = waitUntilReady(teacher.token, resourceId, up.startedReadyWaitAt, SETUP_READY_TIMEOUT_MS, { phase: 'setup' });
+    const ready = waitUntilReady(teacher.token, resourceId, up.startedReadyWaitAt, SETUP_READY_TIMEOUT_MS, { phase: 'setup', profile: file.name });
     if (!ready) fail(`El recurso de referencia del perfil ${file.name} no quedó "ready" dentro del timeout de setup`);
     availableResources.push({ resourceId, profile: file.name });
   });
@@ -348,7 +348,7 @@ export function viewers(data) {
   const target = data.availableResources[__VU % data.availableResources.length];
 
   const playbackRes = http.get(`${BASE_URL}/resources/${target.resourceId}/playback`, {
-    headers: headers(student.token), tags: { module: 'media', phase: 'load' },
+    headers: headers(student.token), tags: { module: 'media', phase: 'load', profile: target.profile },
   });
   const okPlayback = check(playbackRes, { 'playback 200': (r) => r.status === 200 });
   hlsErrors.add(!okPlayback);
@@ -357,11 +357,11 @@ export function viewers(data) {
   const manifestUrl = pick(json(playbackRes), 'url');
 
   const t0 = Date.now();
-  const manifestRes = http.get(manifestUrl, { tags: { module: 'storage', phase: 'load' } });
+  const manifestRes = http.get(manifestUrl, { tags: { module: 'storage', phase: 'load', profile: target.profile } });
   const okManifest = check(manifestRes, { 'manifest 200': (r) => r.status === 200 });
   hlsErrors.add(!okManifest);
   if (!okManifest) { sleep(1); return; }
-  manifestLatencyMs.add(Date.now() - t0);
+  manifestLatencyMs.add(Date.now() - t0, { profile: target.profile });
 
   // segmentos referenciados por el manifiesto (rutas relativas, ver
   // -hls_segment_filename en el worker). Se resuelven contra la MISMA
@@ -375,10 +375,10 @@ export function viewers(data) {
 
   for (const seg of segmentNames) {
     const segT0 = Date.now();
-    const segRes = http.get(`${base}${seg}`, { tags: { module: 'storage', phase: 'load' } });
+    const segRes = http.get(`${base}${seg}`, { tags: { module: 'storage', phase: 'load', profile: target.profile } });
     const okSeg = check(segRes, { 'segment 200': (r) => r.status === 200 });
     hlsErrors.add(!okSeg);
-    if (okSeg) segmentLatencyMs.add(Date.now() - segT0);
+    if (okSeg) segmentLatencyMs.add(Date.now() - segT0, { profile: target.profile });
 
     // Cadencia de reproducción real: un segmento de 6s no se pide de
     // inmediato tras el anterior. Descargar todo de golpe (sin este
