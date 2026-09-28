@@ -13,6 +13,7 @@ Artefactos principales de la entrega:
 - Modelo de despliegue, red, Web Server y HTTPS: `docs/entrega2/modelo-despliegue-red-web.md`.
 - Decisiones y adaptaciones de empaquetado: `docs/entrega2/decisiones-empaquetado-daniela.md`.
 - Secretos, cookies seguras y contrato CSRF: `docs/entrega2/secretos-y-seguridad.md`.
+- Calidad, CI, observabilidad y evidencia E2E: `docs/entrega2/calidad-observabilidad-ci.md`.
 - Proxy HTTPS: `deploy/caddy/Caddyfile.web`.
 - Scripts reproducibles de red y VMs en GCP: `deploy/gcp/`.
 - Compose por VM: `deploy/docker-compose.web.yml` y `deploy/docker-compose.worker.yml`.

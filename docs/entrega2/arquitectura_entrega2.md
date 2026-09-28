@@ -34,6 +34,10 @@ Seguridad y manejo de secretos:
 
 - [Secretos y seguridad](secretos-y-seguridad.md)
 
+Calidad, observabilidad, CI y evidencia E2E:
+
+- [Calidad, observabilidad y CI](calidad-observabilidad-ci.md)
+
 Decisiones y adaptaciones de empaquetado y configuraciÃ³n:
 
 - [Decisiones y adaptaciones: empaquetado (Daniela)](decisiones-empaquetado-daniela.md)
