@@ -1,7 +1,5 @@
 # Modelo de despliegue: red, Web Server y seguridad
 
-Responsable: Samara Martinez.
-
 ## Region y proyecto
 
 - Proveedor: Google Cloud Platform.
@@ -11,18 +9,18 @@ Responsable: Samara Martinez.
 
 ## Componentes de red
 
-| Recurso | Nombre propuesto | Proposito |
+| Recurso | Nombre | Proposito |
 |---|---|---|
 | VPC | `mooc-e2-vpc` | Red privada del despliegue |
 | Subred | `mooc-e2-subnet` | Subred regional para Web Server y Worker Server |
 | Rango privado | `mooc-e2-private-services` | Private Service Access para Cloud SQL con IP privada |
 | Cloud Router | `mooc-e2-router` | Router regional requerido por Cloud NAT |
-| Cloud NAT | `mooc-e2-nat` | Salida a Internet para Worker Server sin IP publica |
+| Cloud NAT | `mooc-e2-nat` | Opcion de salida a Internet si se retira la IP externa del Worker Server |
 | IP estatica | `mooc-e2-web-ip` | IP publica fija del Web Server |
 | Etiqueta web | `web-server` | Target de reglas publicas y origen permitido hacia Redis |
 | Etiqueta worker | `worker-server` | Target de Redis interno |
 
-CIDR sugerido:
+CIDR usado:
 
 ```text
 10.20.0.0/24
@@ -40,13 +38,15 @@ Si el equipo decide administrar por SSH directo, reemplazar IAP por una regla TC
 
 ## Web Server
 
-Configuracion efectiva esperada:
+Configuracion efectiva:
 
 - Compute Engine `e2-small`.
 - 2 vCPU.
 - 2 GiB de RAM.
 - Disco persistente de 30 GiB.
 - IP externa estatica.
+- IP interna real: `10.20.0.3`.
+- IP externa real: `35.254.78.215`.
 - Docker y Docker Compose.
 - Caddy como proxy HTTPS.
 
@@ -59,7 +59,7 @@ El compose publica la API solo en loopback:
 Caddy escucha en 80/443 y reenvia:
 
 ```text
-https://<dominio> -> 127.0.0.1:8080
+https://35.254.78.215.sslip.io -> 127.0.0.1:8080
 ```
 
 Mailpit queda solo local:
@@ -72,32 +72,35 @@ Mailpit queda solo local:
 
 Sin balanceador no se usan certificados administrados de Google. Se usa Caddy con Let's Encrypt.
 
-Dominio sugerido:
+Dominio usado:
 
 ```text
-<IP_EXTERNA>.sslip.io
+35.254.78.215.sslip.io
 ```
 
 Evidencia esperada:
 
 ```bash
-curl -I https://<dominio>/health
+curl -I https://35.254.78.215.sslip.io/health
 ```
 
 Debe responder `200 OK` con certificado valido.
 
 ## Worker Server
 
-La decision documentada para esta entrega es Worker Server sin IP publica, con salida mediante Cloud NAT.
+La decision documentada para esta entrega es aislar Redis y ClamAV en el Worker Server y permitir acceso solo por red interna desde el Web Server.
 
 Motivo:
 
+- VM real: `mooc-e2-worker` en `us-central1-a`.
+- IP interna real: `10.20.0.2`.
+- IP externa real: `34.28.33.182`.
 - Redis no soporta password en el cliente actual del proyecto.
 - ClamAV y Redis no deben exponerse a Internet.
 - La API accede a Redis por IP interna.
-- La salida a Internet se resuelve con Cloud NAT para descargar imagenes, paquetes y firmas de ClamAV.
+- La salida a Internet del Worker Server se usa para conectarse a Cloud SQL por IP publica y para descargar imagenes, paquetes y firmas de ClamAV.
 
-Si por presupuesto no se usa Cloud NAT, alternativa aceptada y documentada: VM con IP publica temporal para bootstrap, sin reglas de entrada desde Internet, y luego remover o restringir la IP. Esa alternativa debe registrarse como desviacion de la configuracion recomendada.
+La IP externa del Worker Server queda documentada como exposicion operacional controlada: se mantiene porque la conexion actual a Cloud SQL usa IP publica. No existe una regla de entrada publica hacia Redis, ClamAV ni puertos internos de la aplicacion; el acceso administrativo se restringe por IAP/SSH. Cuando se complete Private Service Access para Cloud SQL, esta IP puede retirarse o reemplazarse por salida controlada mediante Cloud NAT.
 
 ## Comandos reproducibles
 

@@ -14,7 +14,7 @@ Responsable: Daniela Solarte.
   estabilicen.
 - Fecha de la corrida: 2026-09-27 (tag de resultados `gcp`).
 - Hora de inicio y fin de cada nivel (UTC, para cruzar con las métricas de
-  infraestructura de `docs/metricas-infra-entrega2.md`):
+  infraestructura de `docs/entrega2/metricas-infra-entrega2.md`):
 
   | Nivel (VUs) | Inicio (UTC) | Fin (UTC) |
   |---|---|---|

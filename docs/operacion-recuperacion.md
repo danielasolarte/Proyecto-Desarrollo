@@ -153,10 +153,10 @@ redis-cli -h 127.0.0.1 ping   # debe responder PONG
 ```
 
 **Nota de red:** el diseño documentado en
-`docs/entrega2/modelo-despliegue-samara.md` especifica que el Worker Server no
+`docs/entrega2/modelo-despliegue-red-web.md` especifica que el Worker Server no
 debe tener IP pública (egreso solo por Cloud NAT). En el despliegue actual
 `mooc-e2-worker` sí tiene IP externa; esto está registrado como desviación en
-`docs/costos-entrega2.md` y no debe usarse para exponer los puertos 6379
+`docs/entrega2/costos-entrega2.md` y no debe usarse para exponer los puertos 6379
 (Redis) ni ningún otro puerto hacia Internet.
 
 ## Respaldo de Cloud SQL

@@ -37,7 +37,7 @@ se comunican entre sí en el despliegue de la Entrega 2.
 
 Un único binario Go, monolito modular, expuesto por Echo bajo `/api/v1` y
 publicado solo en `127.0.0.1:8080` detrás del proxy HTTPS del Web Server
-(ver `docs/entrega2/modelo-despliegue-samara.md`).
+(ver `docs/entrega2/modelo-despliegue-red-web.md`).
 
 Cadena de middleware aplicada a toda petición: `Logger` → `Recover` →
 `AuthMiddleware` (resuelve el usuario desde `Authorization: Bearer`,
@@ -97,7 +97,7 @@ Acceso vía `pgxpool`, con el tamaño de pool configurable por variables de
 entorno (`DB_MAX_CONNS`, `DB_MIN_CONNS`; por defecto 5 y 0), tanto en la
 API como en el worker. Detalle de la instancia administrada, migraciones,
 respaldo y recuperación en `docs/operacion-recuperacion.md` y
-`docs/costos-entrega2.md`.
+`docs/entrega2/costos-entrega2.md`.
 
 ## Cola de mensajería: Redis (sesiones + asynq)
 
@@ -111,7 +111,7 @@ Worker Server:
 El cliente Redis del proyecto no soporta contraseña, así que el aislamiento
 de este puerto es responsabilidad de la regla de firewall
 `mooc-e2-allow-redis-from-web` (detalle en
-`docs/entrega2/modelo-despliegue-samara.md`), no de Redis mismo.
+`docs/entrega2/modelo-despliegue-red-web.md`), no de Redis mismo.
 
 ## Almacenamiento de objetos: Cloud Storage
 

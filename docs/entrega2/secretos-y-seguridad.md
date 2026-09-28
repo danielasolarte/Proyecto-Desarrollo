@@ -1,7 +1,5 @@
 # Secretos y seguridad de acceso
 
-Responsable: Samara Martinez.
-
 ## Contrato de autenticacion y CSRF
 
 La API mantiene compatibilidad con los scripts y colecciones existentes mediante:

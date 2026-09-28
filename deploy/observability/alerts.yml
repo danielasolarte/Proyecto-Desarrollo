@@ -1,0 +1,30 @@
+groups:
+  - name: mooc-api-slo
+    rules:
+      - alert: APIHighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: API 5xx error rate is above 1 percent.
+          runbook: docs/entrega2/calidad-observabilidad-ci.md
+
+      - alert: APILatencyP95High
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: API p95 latency is above 1 second.
+          runbook: docs/entrega2/calidad-observabilidad-ci.md
+
+      - alert: APIDown
+        expr: up{job="mooc-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: API target is down.
+          runbook: docs/entrega2/calidad-observabilidad-ci.md
+

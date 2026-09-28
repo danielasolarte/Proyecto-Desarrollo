@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 
 	adminHTTP "github.com/equipo-mooc/plataforma-mooc/internal/admin/http"
@@ -75,6 +76,7 @@ func main() {
 	}
 
 	e := echo.New()
+	e.Use(middleware.RequestID())
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
@@ -87,6 +89,7 @@ func main() {
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
+	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
 	courseRepo := coursesPG.NewCourseRepository(db)
 	courseHandler := coursesHTTP.NewHandler(courseRepo)
