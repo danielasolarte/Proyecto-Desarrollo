@@ -103,111 +103,66 @@ cerrar la condición de carrera detectada en `dup_submit_double_grading`.
 
 Responsable: Andrés Jurado.
 
-## Estado de esta sección (2026-09-27)
+## Estado de esta sección (2026-09-28)
 
-**Pendiente de completar antes de la entrega.** El script de carga y su
-instrumentación ya están listos y probados, pero las corridas que existen
-hoy en el repositorio no cuentan como evidencia de capacidad para esta
-entrega, por dos razones:
+Se ejecutaron dos corridas reales con transferencia de datos y consumo de HLS (línea base y un nivel adicional), pero **no contra el Web Server final**: la infraestructura dedicada no estaba operativa en el momento de la prueba, así que se usó una instancia temporal de la API corriendo como contenedor adicional dentro del propio Worker Server. Esto es una desviación real y documentada, no un error del script, y es también la causa más probable de lo que se describe en "Punto de quiebre" más abajo: bajo la carga siguiente, **el Worker Server colapsó por completo**, incluyendo el acceso por SSH, y solo se recuperó con un reinicio forzado. Por eso no se alcanzaron los niveles `l2`, `l3` ni `peak` originalmente planeados: el tiempo se agotó atendiendo la inestabilidad de la infraestructura compartida en vez de escalar la carga.
 
-1. Se ejecutaron contra `http://localhost:8080` (valor por defecto de
-   `BASE_URL` cuando no se pasa `-e BASE_URL=...`), no contra
-   `https://35.254.78.215.sslip.io/api/v1`. El enunciado exige ejecutar
-   las pruebas "sobre el entorno desplegado en la nube pública". Solo el
-   tráfico hacia Cloud Storage (subida y lectura de HLS) sí fue contra el
-   bucket real (`mooc-e2-media-proyecto1-entrega2`), porque las URLs
-   prefirmadas apuntan directamente allí.
-2. Solo se corrieron los niveles `baseline` (1 uploader / 2 viewers, ~2
-   min) y `l1` (2 uploaders / 5 viewers, ~3 min), del `LEVELS` que ya
-   están definidos en el script:
+Un intento posterior de repetir la prueba contra el Web Server real (`https://35.254.78.215.sslip.io`) reveló un problema de configuración distinto: las peticiones de login tardaban de forma anómala (~5.5 s) y terminaban en error 500, consistente con un `REDIS_ADDR` apuntando a una dirección interna del Worker Server que quedó obsoleta tras el cambio de red del 27 de septiembre. No se alcanzó a corregir ni a repetir la prueba contra el Web Server real antes del cierre de esta entrega; queda como hallazgo pendiente para el equipo.
 
-   ```js
-   const LEVELS = {
-     baseline: { uploaders: 1, viewers: 2, duration: '2m' },
-     l1:       { uploaders: 2, viewers: 5, duration: '3m' },
-     l2:       { uploaders: 4, viewers: 10, duration: '3m' },
-     l3:       { uploaders: 6, viewers: 20, duration: '3m' },
-     peak:     { uploaders: 8, viewers: 30, duration: '3m' },
-   };
-   ```
+## Metodología
 
-   El enunciado pide al menos tres niveles crecientes más una repetición
-   cerca del límite; faltan `l2`, `l3` y, si el presupuesto de tiempo
-   alcanza, `peak`.
+- Script: `k6/escenario2.js`, reescrito para este escenario (la versión anterior solo probaba el inicio de la carga multipart, sin transferencia real ni consumo de HLS).
+- Herramienta: k6 (Grafana k6), instalado desde el repositorio oficial `dl.k6.io`.
+- Generador de carga: ejecutado en Cloud Shell / equipo del autor, fuera de las dos VMs de la aplicación.
+- Perfiles de video declarados (generados sintéticamente con `ffmpeg`, sin aumentar artificialmente la resolución del original): corto (360p, 15 s), medio (720p, 45 s), largo (1080p, 90 s).
+- Recorrido: profesores autorizan y suben un video con carga multipart directa a Cloud Storage (una sola parte, dado el tamaño de los archivos de prueba) y esperan a que el worker lo deje `ready`; en paralelo, estudiantes consumen contenido HLS **ya disponible** (precargado en `setup()`, no el que suben los profesores durante la medición), a la cadencia real de reproducción (segmentos de 6 s, sin descargar todo de golpe).
+- Autenticación fuera de la medición (sesiones de profesor/estudiante preparadas en `setup()`).
+- Concurrencia del worker: 5, fija en todos los niveles (`WORKER_CONCURRENCY=5`).
+- Niveles ejecutados: línea base (1 profesor subiendo, 2 estudiantes viendo, 2m30s) y un nivel más (2 profesores, 5 estudiantes, 3m30s).
+- Resultados crudos: `k6/results/escenario2-l1-real.json`, `k6/results/escenario2-l2-real.json`.
 
-**Para dejar esto listo falta únicamente ejecutar**, generador de carga
-fuera de las dos VMs de la aplicación (igual que en Escenario 1):
+## Resultados por nivel
 
-```bash
-k6 run k6/escenario2.js \
-  -e BASE_URL=https://35.254.78.215.sslip.io/api/v1 \
-  -e LEVEL=l1 \
-  --out json=k6/results/e2-gcp-l1.json
-```
+| Nivel | Perfiles/mezcla | Checks OK | `http_req_failed` | Autorizar (avg) | Transferir (avg) | Confirmar (avg) | Tiempo hasta listo (avg / máx) | Manifiesto HLS (avg) | Segmento HLS (avg) |
+|---|---|---|---|---|---|---|---|---|---|
+| Línea base (1 subida / 2 vistas) | 3 perfiles, mezcla mixta | 100% (96/96) | 0% | 138 ms | 590 ms | 217 ms | 38.9 s / 145.8 s | 77 ms | 823 ms |
+| Nivel siguiente (2 subidas / 5 vistas) | 3 perfiles, mezcla mixta | 96.9% (156/161) | 2.17% | 193 ms | 616 ms | 248 ms | 46.5 s / 156.6 s | 83 ms | 573 ms |
 
-repitiendo para `l2`, `l3` (y `peak` si alcanza el tiempo), y luego
-completar las secciones de resultados y punto de quiebre de más abajo con
-esas corridas, siguiendo el mismo formato que el Escenario 1.
+En el nivel siguiente ya aparecen fallos reales: el check `playback 200` cae a 72% de éxito (13 de 18), y una iteración individual tardó 2m33s. No se logró desglosar estos promedios por perfil de video (360p/720p/1080p) en estas dos corridas: el etiquetado necesario para eso se agregó al script después de ejecutarlas, y no hubo tiempo de repetirlas antes del cierre.
 
-## Metodología (ya implementada en `k6/escenario2.js`)
+## Punto de quiebre: colapso total del Worker Server
 
-- Dos poblaciones concurrentes simuladas con `scenarios` independientes de
-  k6: `uploaders` (profesores que suben un archivo directo a Cloud
-  Storage con URL prefirmada y esperan a que el worker lo deje `ready`) y
-  `viewers` (estudiantes que consumen HLS ya procesado, a la cadencia de
-  reproducción declarada, sin descargar todos los segmentos de golpe).
-- Tres perfiles de video declarados, como exige el enunciado:
-  `corto_360p`, `medio_720p`, `largo_1080p`.
-- Cada nivel usa una rampa de 20 s, el tiempo objetivo del nivel (2-3 min)
-  y una bajada de 10 s.
-- El tráfico se etiqueta por `module`: `media` para las llamadas de
-  control contra la API (autorizar carga, emitir URL prefirmada,
-  confirmar carga, consultar estado, pedir URL de reproducción) y
-  `storage` para la transferencia real de bytes contra Cloud Storage
-  (subida del archivo, lectura del manifiesto y de los segmentos `.ts`).
-  Esto es lo que permite separar, como pide el enunciado, la latencia de
-  la API de la latencia y tasa de transferencia del almacenamiento de
-  objetos.
-- Requisito de infraestructura ya identificado y documentado en el script:
-  el prefijo `resources/*/hls/*` del bucket debe tener lectura pública
-  (`roles/storage.objectViewer` para `allUsers`), porque `GetPlaybackURL`
-  solo prefirma el manifiesto, no cada segmento `.ts`.
+Al continuar presionando la carga más allá del segundo nivel, el Worker Server dejó de responder por completo, incluyendo el acceso por SSH. Evidencia capturada de la consola serial y de los logs de la API de pruebas (detalle completo en `docs/entrega2/evidencia-colapso-worker.txt`):
 
-## Validación funcional del instrumento (no es la evidencia de capacidad)
+- Los *health checks* de Docker para Redis y ClamAV empezaron a dar timeout.
+- El propio sistema operativo no pudo completar una llamada al servicio de metadatos de GCP (`169.254.169.254`), algo normalmente instantáneo — señal de saturación extrema de CPU.
+- Una petición de login, que normalmente toma decenas de milisegundos, tardó **9 minutos y 53 segundos** antes de responder con éxito.
+- La instancia solo se recuperó tras un reinicio forzado (`gcloud compute instances reset`).
 
-Las dos corridas locales ya ejecutadas sirven para confirmar que el script
-y el etiquetado `module:media` / `module:storage` funcionan correctamente,
-nada más. Quedan aquí como registro, no como resultado de capacidad:
+**Cuello de botella identificado:** CPU y memoria del Worker Server (`e2-small`, 2 vCPU / 2 GiB), que bajo carga real debe correr simultáneamente ffmpeg (transcodificación), ClamAV (antivirus) y Redis — y que, en estas corridas, además sostenía la API temporal. No se llegó a medir cuál de los tres procesos domina el consumo individualmente (no se tuvo tiempo de instrumentar `docker stats` de forma continua durante el colapso), pero la combinación de los tres en una máquina de este tamaño es, por sí sola, insuficiente para el nivel de carga probado.
 
-| Corrida | VUs máx. (uploaders/viewers) | Duración | Peticiones `media` | p95 `media` | Peticiones `storage` | p95 `storage` | Errores HTTP |
-|---|---|---|---|---|---|---|---|
-| `baseline` (local) | 1 / 2 | ~6 min (incl. rampas) | 162 | 242 ms | 64 | 1 617 ms | 0 |
-| `l1` (local) | 2 / 5 | ~7 min (incl. rampas) | 203 | 767 ms, máx. 60 001 ms | 119 | 1 167 ms | 7 |
+Este colapso confirma empíricamente, con evidencia real de carga, el punto único de falla del Worker Server ya identificado en `docs/entrega2/arquitectura_entrega2.md` (sección "Puntos únicos de falla"): concentrar worker, Redis y ClamAV en una sola VM no solo es un riesgo teórico, sino que se manifestó bajo la primera carga real sostenida.
 
-El máximo de 60 001 ms en `l1` coincide con el timeout del cliente k6 en
-una petición `module:media`; con tan pocos VUs y contra un servidor local,
-vale la pena que Andrés revise esa petición puntual en el log antes de
-repetir la corrida contra GCP, pero no se interpreta más allá porque el
-entorno no es el que se va a evaluar.
+## Hallazgos técnicos adicionales
 
-## Resultados por nivel (pendiente de llenar con las corridas contra GCP)
+- **Idempotencia bloquea el reprocesamiento tras un fallo terminal.** La clave de idempotencia de los jobs (`internal/media/usecase/complete_upload.go`) se construye como `asset.ID + tipo_de_job`. Si un job llega a `dead_letter` (por ejemplo, por una falla transitoria de ClamAV) y el profesor vuelve a subir un archivo al mismo recurso, el sistema encuentra el job viejo por esa misma clave y **nunca vuelve a encolar uno nuevo** — el recurso queda permanentemente bloqueado para reprocesarse, aunque el archivo se suba de nuevo correctamente. No se corrigió por falta de tiempo; queda documentado como hallazgo.
+- **Redis mal configurado en el Web Server real** (ver "Estado de esta sección" arriba): `REDIS_ADDR` probablemente apunta a una IP interna del Worker Server anterior al cambio de red de esta semana.
 
-| Nivel | Uploaders | Viewers | Peticiones `media` | Peticiones `storage` | p95 `media` | p95 `storage` | % fallos | Trabajos completados/min |
-|---|---|---|---|---|---|---|---|---|
-| baseline | — | — | — | — | — | — | — | — |
-| l1 | — | — | — | — | — | — | — | — |
-| l2 | — | — | — | — | — | — | — | — |
-| l3 | — | — | — | — | — | — | — | — |
+## Limitaciones del experimento
 
-## Punto de quiebre
-
-_Pendiente: completar una vez existan las corridas reales contra GCP, con
-las métricas de infraestructura de `docs/metricas-infra-entrega2.md`
-(CPU/memoria del Worker Server durante la transcodificación, profundidad y
-antigüedad de la cola de asynq, latencia de Cloud Storage)._
+- No se alcanzaron los niveles adicionales planeados (`l2`, `l3`, una repetición cerca del límite); el tiempo se agotó atendiendo la inestabilidad de la infraestructura compartida.
+- Las corridas con datos completos se ejecutaron contra una API temporal en el Worker Server, no contra el Web Server final.
+- No se desglosaron los resultados por perfil de video.
+- No se instrumentó `docker stats`/CPU de forma continua durante el colapso; la evidencia del cuello de botella es cualitativa (logs y consola serial), no una serie de métricas de recursos.
 
 ## Conclusión y recomendación
 
-_Pendiente: identificar el componente que limita primero el flujo (worker
-de ffmpeg, ancho de banda hacia Cloud Storage, o la API al emitir URLs
-prefirmadas) y la palanca de evolución sustentada en la medición._
+El hallazgo más importante del Escenario 2 no son los dos niveles medidos, sino el colapso total del Worker Server al presionar la carga un poco más: bajo la arquitectura actual, transcodificación (ffmpeg), antivirus (ClamAV) y cola/sesiones (Redis) compiten por los mismos 2 vCPU / 2 GiB, y en estas corridas además compartían la VM con una API temporal. Esto confirma con evidencia real, no solo teórica, el punto único de falla del Worker Server documentado en la arquitectura.
+
+Propuesta de evolución, en orden de prioridad:
+
+1. **Separar de verdad la API del Worker**, como manda la arquitectura objetivo — esto por sí solo debería eliminar la causa más probable del colapso observado.
+2. **Subir el Worker Server a `e2-medium`** (4 GiB de RAM) si, incluso separado de la API, ffmpeg + ClamAV + Redis siguen saturando un `e2-small` bajo carga real.
+3. **CDN delante de Cloud Storage** para el prefijo HLS: bajo carga de varios estudiantes viendo el mismo contenido, la mayoría del tráfico es de lectura repetida de los mismos segmentos, un caso ideal para cachear en el borde y reducir tanto la latencia percibida como el costo de egreso del bucket.
+4. Corregir la clave de idempotencia de los jobs para que un reintento manual (nueva carga sobre el mismo recurso) sí pueda generar un job nuevo cuando el anterior terminó en `dead_letter`.
+5. Corregir `REDIS_ADDR` en el `.env` del Web Server real y repetir la prueba completa (`l1` a `peak`) contra `https://35.254.78.215.sslip.io` antes de dar este escenario por cerrado.

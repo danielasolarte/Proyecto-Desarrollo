@@ -110,7 +110,12 @@ explícitamente para el alcance de esta entrega:
   una sola VM: el worker de procesamiento (asynq), Redis (sesiones y cola)
   y ClamAV. La caída de esta VM detiene el procesamiento asíncrono
   multimedia, invalida todas las sesiones activas y bloquea la cola,
-  simultáneamente.
+  simultáneamente. **Confirmado empíricamente durante las pruebas del
+  Escenario 2** (2026-09-28): bajo carga real de transcodificación, la
+  instancia colapsó por completo (incluido el acceso por SSH) y solo se
+  recuperó con un reinicio forzado; ver
+  `docs/entrega2/evidencia-colapso-worker.txt` y la sección "Punto de
+  quiebre" en `capacity-planning/pruebas_de_carga_entrega2.md`.
 - **Redis como servicio único compartido.** Al vivir en un solo contenedor
   sin persistencia administrada, una caída pierde tanto las sesiones
   activas (fuerza relogin a todos los usuarios) como los mensajes de la
