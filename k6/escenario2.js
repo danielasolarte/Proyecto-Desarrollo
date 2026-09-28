@@ -167,9 +167,9 @@ function createStudent(index, runId, courseId) {
   return { email, token: logged.token };
 }
 
-function createCourseSkeleton(teacherToken, runId) {
+function createCourseSkeleton(teacherToken, runId, suffix) {
   const courseRes = must(http.post(`${BASE_URL}/courses`, JSON.stringify({
-    title: `Curso Escenario2 ${runId}`,
+    title: `Curso Escenario2 ${suffix} ${runId}`,
     summary: 'Curso sintético para Escenario 2 (multimedia)',
     category: 'load-test',
   }), { headers: headers(teacherToken), tags: { module: 'media', phase: 'setup' } }), [201], 'Crear curso');
@@ -288,7 +288,17 @@ export function setup() {
   const runId = `${Date.now()}`;
   const adminToken = ensureAdmin();
   const teacher = createTeacher(adminToken, runId);
-  const { courseId, unitId } = createCourseSkeleton(teacher.token, runId);
+
+  // Curso SIN publicar: aquí es donde "uploaders" crea un recurso nuevo en
+  // cada iteración. Crear recursos es una acción de autoría (no requiere
+  // curso publicado); publicarlo bloquearía la versión para más ediciones
+  // (423 "esta version ya fue publicada y no se puede editar").
+  const { courseId: uploadCourseId, unitId: uploadUnitId } = createCourseSkeleton(teacher.token, runId, 'cargas');
+
+  // Curso que SÍ se publica: aquí viven los 3 recursos "ya disponibles"
+  // que consumen los viewers -- para verlos, los estudiantes necesitan
+  // estar inscritos, y para inscribirse el curso debe estar publicado.
+  const { courseId, unitId } = createCourseSkeleton(teacher.token, runId, 'visualización');
 
   // Un recurso "ya disponible" por perfil, precargado ANTES de medir.
   const availableResources = [];
@@ -309,7 +319,7 @@ export function setup() {
     students.push(createStudent(i, runId, courseId));
   }
 
-  return { runId, teacher, unitId, availableResources, students };
+  return { runId, teacher, uploadUnitId, availableResources, students };
 }
 
 // ---------- exec: uploaders (profesores subiendo, tasa creciente por nivel) ----------
@@ -318,7 +328,7 @@ export function uploaders(data) {
   const file = FILES[__ITER % FILES.length];
   const resourceId = createVideoResource(
     data.teacher.token,
-    data.unitId,
+    data.uploadUnitId,
     `Carga VU${__VU} iter${__ITER} ${file.name}`,
     100 + __VU * 1000 + __ITER,
   );
