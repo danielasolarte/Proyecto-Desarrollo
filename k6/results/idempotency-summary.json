@@ -1,0 +1,179 @@
+{
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "login status 200": {
+                    "name": "login status 200",
+                    "path": "::login status 200",
+                    "id": "a9f04e9f501317c68a9f824e04811bea",
+                    "passes": 1,
+                    "fails": 0
+                },
+                "create attempt status 201": {
+                    "name": "create attempt status 201",
+                    "path": "::create attempt status 201",
+                    "id": "8937bcff85d6d6a314a4baf1f98909a3",
+                    "passes": 1,
+                    "fails": 0
+                },
+                "answer status 200": {
+                    "passes": 1,
+                    "fails": 0,
+                    "name": "answer status 200",
+                    "path": "::answer status 200",
+                    "id": "e6213e049efe5a987d09904b7e067779"
+                },
+                "concurrent submit 1 status 200": {
+                    "id": "10dbf02eb3cedf9d2cb7cdb64b6e9c70",
+                    "passes": 1,
+                    "fails": 0,
+                    "name": "concurrent submit 1 status 200",
+                    "path": "::concurrent submit 1 status 200"
+                },
+                "concurrent submit 2 status 200": {
+                    "id": "88a8d41e6247fa6bd5e1f2bc3c699e60",
+                    "passes": 1,
+                    "fails": 0,
+                    "name": "concurrent submit 2 status 200",
+                    "path": "::concurrent submit 2 status 200"
+                },
+                "same submitted_at returned by both requests": {
+                    "id": "d81e77416e96f5bf52d726a8bbf3ad52",
+                    "passes": 1,
+                    "fails": 0,
+                    "name": "same submitted_at returned by both requests",
+                    "path": "::same submitted_at returned by both requests"
+                },
+                "same score returned by both requests": {
+                    "name": "same score returned by both requests",
+                    "path": "::same score returned by both requests",
+                    "id": "44b08c84ea64c0fe63b645b06f4333e2",
+                    "passes": 1,
+                    "fails": 0
+                },
+                "idempotent replay status 200": {
+                    "path": "::idempotent replay status 200",
+                    "id": "c8cccd555364f6758d96eb68a2df1bd6",
+                    "passes": 1,
+                    "fails": 0,
+                    "name": "idempotent replay status 200"
+                },
+                "replay returns same submitted_at": {
+                    "path": "::replay returns same submitted_at",
+                    "id": "7114deca6b840e820128c92c5072555e",
+                    "passes": 1,
+                    "fails": 0,
+                    "name": "replay returns same submitted_at"
+                }
+            }
+    },
+    "metrics": {
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 6,
+            "thresholds": {
+                "rate==0": false
+            },
+            "value": 0
+        },
+        "http_req_connecting": {
+            "min": 0,
+            "med": 0,
+            "max": 4.853687,
+            "p(90)": 4.3024525,
+            "p(95)": 4.57806975,
+            "avg": 1.4341508333333335
+        },
+        "http_req_receiving": {
+            "avg": 0.19064216666666667,
+            "min": 0.154146,
+            "med": 0.160193,
+            "max": 0.289633,
+            "p(90)": 0.25716649999999996,
+            "p(95)": 0.27339975
+        },
+        "iterations": {
+            "count": 1,
+            "rate": 3.885104604906871
+        },
+        "checks": {
+            "passes": 9,
+            "fails": 0,
+            "thresholds": {
+                "rate==1": false
+            },
+            "value": 1
+        },
+        "http_reqs": {
+            "count": 6,
+            "rate": 23.310627629441225
+        },
+        "http_req_blocked": {
+            "med": 0.010692,
+            "max": 9.271737,
+            "p(90)": 6.594001499999999,
+            "p(95)": 7.9328692499999995,
+            "avg": 2.2047943333333335,
+            "min": 0.009168
+        },
+        "http_req_duration{expected_response:true}": {
+            "min": 13.098514,
+            "med": 27.783552999999998,
+            "max": 150.946244,
+            "p(90)": 91.6793075,
+            "p(95)": 121.31277575000001,
+            "avg": 45.4639845
+        },
+        "http_req_duration": {
+            "max": 150.946244,
+            "p(90)": 91.6793075,
+            "p(95)": 121.31277575000001,
+            "avg": 45.4639845,
+            "min": 13.098514,
+            "med": 27.783552999999998
+        },
+        "data_sent": {
+            "count": 1639,
+            "rate": 6367.686447442361
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0
+        },
+        "iteration_duration": {
+            "avg": 257.031635,
+            "min": 257.031635,
+            "med": 257.031635,
+            "max": 257.031635,
+            "p(90)": 257.031635,
+            "p(95)": 257.031635
+        },
+        "http_req_sending": {
+            "p(95)": 0.476868,
+            "avg": 0.17973683333333335,
+            "min": 0.033379,
+            "med": 0.1164765,
+            "max": 0.564922,
+            "p(90)": 0.388814
+        },
+        "data_received": {
+            "count": 4091,
+            "rate": 15893.962938674009
+        },
+        "http_req_waiting": {
+            "p(90)": 91.15545700000001,
+            "p(95)": 120.623573,
+            "avg": 45.0936055,
+            "min": 12.861188,
+            "med": 27.408692000000002,
+            "max": 150.091689
+        }
+    }
+}

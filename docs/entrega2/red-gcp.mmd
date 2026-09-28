@@ -1,0 +1,22 @@
+flowchart LR
+    users[Usuarios y clientes HTTP]
+    k6[Generador de carga k6]
+
+    subgraph gcp[GCP us-central1]
+      subgraph vpc[mooc-e2-vpc / mooc-e2-subnet 10.20.0.0/24]
+        web[Web Server\nCompute Engine e2-small\nCaddy HTTPS 80/443\nAPI 127.0.0.1:8080]
+        worker[Worker Server\nCompute Engine e2-small\nsin IP publica\nRedis 6379 + ClamAV + worker]
+      end
+
+      sql[(Cloud SQL PostgreSQL)]
+      storage[(Cloud Storage bucket)]
+    end
+
+    users -->|HTTPS 443| web
+    k6 -->|HTTPS 443| web
+    web -->|Redis privado 6379| worker
+    web -->|PostgreSQL privado o SSL| sql
+    worker -->|PostgreSQL privado o SSL| sql
+    web -->|URLs firmadas / control| storage
+    worker -->|descarga original / sube derivados| storage
+    users -->|carga directa y HLS| storage

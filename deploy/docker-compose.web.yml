@@ -1,0 +1,17 @@
+# Web Server: API en Go + Mailpit (SMTP de laboratorio).
+# El proxy HTTPS (Caddy o Nginx) lo agrega Samara.
+services:
+  api:
+    image: ${API_IMAGE}
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      - mailpit
+
+  mailpit:
+    image: axllent/mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"

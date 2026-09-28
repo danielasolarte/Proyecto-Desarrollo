@@ -1,0 +1,887 @@
+{
+  "info": {
+    "name": "Plataforma MOOC - Persona 2 (Identidad y Administracion)",
+    "description": "Coleccion funcional para probar el modulo de Persona 2: identidad, sesiones, roles, administracion de usuarios, revocacion de sesiones, recuperacion de contrasena y auditoria.\n\nUso recomendado:\n1. Levanta infraestructura y API.\n2. Importa esta coleccion en Postman.\n3. Ejecuta las carpetas EN ORDEN con Collection Runner: 0 -> 1 -> 2 -> 3 -> 4.\n4. La coleccion usa correos unicos con {{$timestamp}} para profesor/estudiante/admin secundario, por lo que puede correrse varias veces. El bootstrap del primer admin tolera 201 o 409.\n5. El flujo de recuperacion de contrasena usa la API HTTP de Mailpit para leer el ultimo correo de recuperacion y extraer el token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080/api/v1", "type": "string" },
+    { "key": "health_url", "value": "http://localhost:8080/health", "type": "string" },
+    { "key": "mailpit_url", "value": "http://localhost:8025", "type": "string" },
+    { "key": "admin_email", "value": "admin@example.com", "type": "string" },
+    { "key": "admin_password", "value": "claveSegura123", "type": "string" },
+    { "key": "admin_token", "value": "", "type": "string" },
+    { "key": "admin_id", "value": "", "type": "string" },
+    { "key": "admin2_email", "value": "", "type": "string" },
+    { "key": "admin2_id", "value": "", "type": "string" },
+    { "key": "teacher_email", "value": "", "type": "string" },
+    { "key": "teacher_password", "value": "claveSegura123", "type": "string" },
+    { "key": "teacher_token", "value": "", "type": "string" },
+    { "key": "teacher_id", "value": "", "type": "string" },
+    { "key": "student_email", "value": "", "type": "string" },
+    { "key": "student_password", "value": "claveSegura123", "type": "string" },
+    { "key": "student_new_password", "value": "nuevaClave123", "type": "string" },
+    { "key": "student_token", "value": "", "type": "string" },
+    { "key": "student_id", "value": "", "type": "string" },
+    { "key": "verification_token", "value": "", "type": "string" },
+    { "key": "session_id", "value": "", "type": "string" },
+    { "key": "reset_message_id", "value": "", "type": "string" },
+    { "key": "reset_token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0. Setup y Admin",
+      "item": [
+        {
+          "name": "01 - Healthcheck",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('API responde healthcheck', function () { pm.response.to.have.status(200); });",
+                  "pm.test('status ok', function () { pm.expect(pm.response.json().status).to.eql('ok'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{health_url}}",
+              "host": ["{{health_url}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Crear primer admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('bootstrap crea admin o ya existia', function () { pm.expect([201, 409]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('admin_id', body.id);",
+                  "  pm.environment.set('admin_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\",\n  \"full_name\": \"Admin MOOC\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/bootstrap-admin",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "bootstrap-admin"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login admin 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('admin_token', body.token);",
+                  "pm.environment.set('admin_token', body.token);",
+                  "pm.collectionVariables.set('admin_id', body.user.id);",
+                  "pm.environment.set('admin_id', body.user.id);",
+                  "pm.test('usuario admin activo', function () {",
+                  "  pm.expect(body.user.role).to.eql('admin');",
+                  "  pm.expect(body.user.status).to.eql('active');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Listar usuarios admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('admin puede listar usuarios', function () { pm.response.to.have.status(200); });",
+                  "pm.test('respuesta es arreglo', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/users",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Administracion de usuarios",
+      "item": [
+        {
+          "name": "05 - Crear profesor",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const email = `profe.${Date.now()}@example.com`;",
+                  "pm.collectionVariables.set('teacher_email', email);",
+                  "pm.environment.set('teacher_email', email);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('profesor creado', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('teacher_id', body.id);",
+                  "pm.environment.set('teacher_id', body.id);",
+                  "pm.test('rol teacher activo', function () {",
+                  "  pm.expect(body.role).to.eql('teacher');",
+                  "  pm.expect(body.status).to.eql('active');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{teacher_email}}\",\n  \"password\": \"{{teacher_password}}\",\n  \"full_name\": \"Profe Uno\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/teachers",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "teachers"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 - Login profesor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login profesor 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('teacher_token', body.token);",
+                  "pm.environment.set('teacher_token', body.token);",
+                  "pm.test('usuario teacher activo', function () { pm.expect(body.user.role).to.eql('teacher'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{teacher_email}}\",\n  \"password\": \"{{teacher_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 - Crear segundo admin",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const email = `admin2.${Date.now()}@example.com`;",
+                  "pm.collectionVariables.set('admin2_email', email);",
+                  "pm.environment.set('admin2_email', email);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('segundo admin creado', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('admin2_id', body.id);",
+                  "pm.environment.set('admin2_id', body.id);",
+                  "pm.test('rol admin activo', function () { pm.expect(body.role).to.eql('admin'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin2_email}}\",\n  \"password\": \"{{admin_password}}\",\n  \"full_name\": \"Admin Dos\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/admins",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "admins"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Estudiante y control de acceso",
+      "item": [
+        {
+          "name": "08 - Registrar estudiante",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const email = `ana.${Date.now()}@example.com`;",
+                  "pm.collectionVariables.set('student_email', email);",
+                  "pm.environment.set('student_email', email);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estudiante registrado', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('student_id', body.user.id);",
+                  "pm.environment.set('student_id', body.user.id);",
+                  "pm.collectionVariables.set('verification_token', body.verification_token_dev);",
+                  "pm.environment.set('verification_token', body.verification_token_dev);",
+                  "pm.test('estudiante pendiente de verificacion', function () {",
+                  "  pm.expect(body.user.role).to.eql('student');",
+                  "  pm.expect(body.user.status).to.eql('pending_verification');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\",\n  \"full_name\": \"Ana Perez\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "09 - Verificar correo estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('correo verificado', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('estudiante activo', function () { pm.expect(body.status).to.eql('active'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{verification_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verify-email",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify-email"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10 - Login estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login estudiante 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('student_token', body.token);",
+                  "pm.environment.set('student_token', body.token);",
+                  "pm.test('usuario student activo', function () { pm.expect(body.user.role).to.eql('student'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11 - Me estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('me estudiante 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('retorna el estudiante', function () { pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('student_id')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{student_token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/me",
+              "host": ["{{base_url}}"],
+              "path": ["me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12 - Estudiante no puede entrar a admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estudiante recibe forbidden', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{student_token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/users",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "13 - Ruta sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin token recibe unauthorized', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/me",
+              "host": ["{{base_url}}"],
+              "path": ["me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Sesiones, estados y recuperacion",
+      "item": [
+        {
+          "name": "14 - Consultar estudiante en admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('admin consulta estudiante', function () { pm.response.to.have.status(200); });",
+                  "pm.test('id coincide', function () { pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('student_id')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{student_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "{{student_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "15 - Listar sesiones estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('lista sesiones', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{student_id}}/sessions",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "{{student_id}}", "sessions"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "16 - Revocar sesiones del estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sesion revocada', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }] },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{student_id}}/sessions",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "{{student_id}}", "sessions"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "17 - Confirmar token revocado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('token revocado no funciona', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{student_token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/me",
+              "host": ["{{base_url}}"],
+              "path": ["me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "18 - Volver a hacer login estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login estudiante nuevo 200', function () { pm.response.to.have.status(200); });",
+                  "const token = pm.response.json().token;",
+                  "pm.collectionVariables.set('student_token', token);",
+                  "pm.environment.set('student_token', token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "19 - Suspender estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estudiante suspendido', function () { pm.response.to.have.status(200); });",
+                  "pm.test('status suspended', function () { pm.expect(pm.response.json().status).to.eql('suspended'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"suspended\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{student_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "{{student_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "20 - Login estudiante suspendido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('suspendido no puede hacer login', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "21 - Reactivar estudiante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estudiante reactivado', function () { pm.response.to.have.status(200); });",
+                  "pm.test('status active', function () { pm.expect(pm.response.json().status).to.eql('active'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{student_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "{{student_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Password reset y auditoria",
+      "item": [
+        {
+          "name": "22 - Solicitar recuperacion de contrasena",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('solicitud aceptada', function () { pm.response.to.have.status(202); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/password/forgot",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "password", "forgot"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "23 - Mailpit listar correos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('mailpit responde', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "const messages = body.messages || body.Messages || [];",
+                  "pm.test('hay correos en Mailpit', function () { pm.expect(messages.length).to.be.above(0); });",
+                  "const msg = messages.find(m => (m.Subject || m.subject || '').includes('Recupera')) || messages[0];",
+                  "const id = msg.ID || msg.Id || msg.id;",
+                  "pm.collectionVariables.set('reset_message_id', id);",
+                  "pm.environment.set('reset_message_id', id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{mailpit_url}}/api/v1/messages",
+              "host": ["{{mailpit_url}}"],
+              "path": ["api", "v1", "messages"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "24 - Mailpit obtener token reset",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('mensaje de reset obtenido', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "const text = body.Text || body.text || body.HTML || body.html || JSON.stringify(body);",
+                  "const match = text.match(/Token de recuperacion:\\s*([A-Za-z0-9_-]+)/);",
+                  "pm.test('token de reset encontrado', function () { pm.expect(match && match[1]).to.be.ok; });",
+                  "pm.collectionVariables.set('reset_token', match[1]);",
+                  "pm.environment.set('reset_token', match[1]);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{mailpit_url}}/api/v1/message/{{reset_message_id}}",
+              "host": ["{{mailpit_url}}"],
+              "path": ["api", "v1", "message", "{{reset_message_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "25 - Cambiar contrasena",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('contrasena cambiada', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"new_password\": \"{{student_new_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/password/reset",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "password", "reset"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "26 - Login con nueva contrasena",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login con nueva contrasena', function () { pm.response.to.have.status(200); });",
+                  "const token = pm.response.json().token;",
+                  "pm.collectionVariables.set('student_token', token);",
+                  "pm.environment.set('student_token', token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_new_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "27 - Auditoria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('admin consulta auditoria', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('auditoria es arreglo', function () { pm.expect(body).to.be.an('array'); });",
+                  "const actions = body.map(e => e.action);",
+                  "pm.test('auditoria contiene eventos clave', function () {",
+                  "  pm.expect(actions).to.include('auth.login');",
+                  "  pm.expect(actions).to.include('auth.register');",
+                  "  pm.expect(actions).to.include('admin.update_user');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/audit-log",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "audit-log"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
