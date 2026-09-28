@@ -1,1 +1,0 @@
-DROP INDEX IF EXISTS idx_progress_events_unique_quiz_event;

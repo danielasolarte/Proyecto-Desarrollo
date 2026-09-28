@@ -1,6 +1,0 @@
-DROP TABLE IF EXISTS enrollments;
-DROP TABLE IF EXISTS resources;
-DROP TABLE IF EXISTS units;
-DROP TABLE IF EXISTS modules;
-DROP TABLE IF EXISTS course_versions;
-DROP TABLE IF EXISTS courses;
