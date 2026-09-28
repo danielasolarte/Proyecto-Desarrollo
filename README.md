@@ -46,7 +46,7 @@ docker compose up -d --build
 - Escenario 1 (actividad academica concurrente): script de k6 en `k6/escenario1.js`,
   runner en `k6/run-escenario1.ps1`. Informe: `capacity-planning/pruebas_de_carga_entrega2.md`.
   Corrida real contra la URL de GCP en `k6/results/e1-gcp-*.json`.
-- Escenario 2 (carga y procesamiento multimedia): a cargo de Andres.
+- Escenario 2 (carga, procesamiento y consumo multimedia): script en `k6/escenario2.js`, a cargo de Andres. Estado a la fecha: **pendiente de completar** (las corridas existentes fueron contra `localhost` y con muy pocos niveles de carga; falta repetirlas contra la URL de GCP con los niveles l1/l2/l3). Detalle y comando exacto de rerun en `capacity-planning/pruebas_de_carga_entrega2.md`.
 
 ### Aplicacion desplegada
 
