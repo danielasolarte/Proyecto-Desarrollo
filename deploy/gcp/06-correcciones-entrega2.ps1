@@ -50,12 +50,31 @@ $ENVFILE = "/opt/mooc/deploy/.env"
 function Titulo($t) { Write-Host ""; Write-Host "==== $t ====" -ForegroundColor Cyan }
 
 function Ssh($vm, $cmd) {
-    # Quita CR por si el archivo quedo con finales CRLF en Windows.
-    gcloud compute ssh $vm --zone=$Z --tunnel-through-iap --project=$P --command=($cmd -replace "`r", "")
+    # Quita CR por si el archivo quedo con finales CRLF en Windows. Se asigna
+    # antes a una variable: "--command=(expr)" PowerShell lo parte en dos
+    # argumentos y gcloud responde "unrecognized arguments".
+    $limpio = $cmd -replace "`r", ""
+    gcloud compute ssh $vm --zone=$Z --tunnel-through-iap --project=$P --command=$limpio
 }
 
 function IpInterna($vm) {
     gcloud compute instances describe $vm --zone=$Z --project=$P --format="value(networkInterfaces[0].networkIP)"
+}
+
+# Usa el Cloud Router que ya exista en la VPC (en el proyecto se llama
+# mooc-e2-nat-router); si no hay ninguno, el de 00-variables.
+function RouterDeLaVpc {
+    $r = gcloud compute routers list --project=$P --filter="network~$NET AND region~$R" --format="value(name)" | Select-Object -First 1
+    if ($r) { return $r } else { return $env:CLOUD_ROUTER }
+}
+
+function EncenderSql {
+    $estado = gcloud sql instances describe $SqlInstance --project=$P --format="value(state)"
+    $politica = gcloud sql instances describe $SqlInstance --project=$P --format="value(settings.activationPolicy)"
+    if ($politica -ne "ALWAYS" -or $estado -ne "RUNNABLE") {
+        Write-Host "Cloud SQL esta $estado (activationPolicy=$politica). Encendiendo..." -ForegroundColor Yellow
+        gcloud sql instances patch $SqlInstance --project=$P --activation-policy=ALWAYS --quiet
+    }
 }
 
 function IpPrivadaSql {
@@ -70,11 +89,11 @@ switch ($Fase) {
 
     "Diagnostico" {
         Titulo "Cloud SQL ($SqlInstance)"
-        gcloud sql instances describe $SqlInstance --project=$P --format="yaml(state,settings.tier,settings.ipConfiguration.ipv4Enabled,settings.ipConfiguration.privateNetwork,settings.ipConfiguration.authorizedNetworks,settings.ipConfiguration.requireSsl,ipAddresses)"
+        gcloud sql instances describe $SqlInstance --project=$P --format="yaml(state,settings.activationPolicy,settings.tier,settings.ipConfiguration.ipv4Enabled,settings.ipConfiguration.privateNetwork,settings.ipConfiguration.authorizedNetworks,settings.ipConfiguration.requireSsl,ipAddresses)"
 
         Titulo "Private Service Access en $NET"
         gcloud compute addresses list --global --project=$P --filter="purpose=VPC_PEERING" --format="table(name,address,prefixLength,network.basename())"
-        gcloud services vpc-peerings list --network=$NET --project=$P
+        gcloud services vpc-peerings list --network=$NET --project=$P --quiet
 
         Titulo "IP externas de las VM"
         foreach ($vm in @($env:WEB_VM, $env:WORKER_VM)) {
@@ -82,8 +101,10 @@ switch ($Fase) {
         }
 
         Titulo "Cloud Router / NAT"
+        $router = RouterDeLaVpc
         gcloud compute routers list --project=$P --filter="network~$NET" --format="table(name,region.basename())"
-        gcloud compute routers nats list --router=$env:CLOUD_ROUTER --region=$R --project=$P
+        Write-Host "NAT configurados en ${router}:"
+        gcloud compute routers nats list --router=$router --region=$R --project=$P --format="table(name,natIpAllocateOption,sourceSubnetworkIpRangesToNat)"
 
         Titulo "Variables relevantes en la VM web"
         Ssh $env:WEB_VM $mostrarEnv
@@ -96,6 +117,7 @@ switch ($Fase) {
 
     "RedisWeb" {
         # C1
+        EncenderSql
         $workerIp = IpInterna $env:WORKER_VM
         Titulo "Apuntando REDIS_ADDR del Web Server a ${workerIp}:6379"
         $cmd = @"
@@ -127,6 +149,7 @@ sudo docker compose -f docker-compose.web.yml logs --tail 15 api
             gcloud services vpc-peerings connect --service=servicenetworking.googleapis.com --ranges=$env:PRIVATE_SERVICE_RANGE --network=$NET --project=$P
         } else { Write-Host "Ya existe el peering $peer" }
 
+        EncenderSql
         Titulo "Activando IP privada en $SqlInstance (puede tardar varios minutos)"
         gcloud sql instances patch $SqlInstance --project=$P --network="projects/$P/global/networks/$NET" --quiet
         $ip = IpPrivadaSql
@@ -166,21 +189,26 @@ sleep 5 && sudo docker compose -f docker-compose.worker.yml logs --tail 15 worke
         Titulo "Quitando redes autorizadas e IP publica de $SqlInstance"
         gcloud sql instances patch $SqlInstance --project=$P --clear-authorized-networks --quiet
         gcloud sql instances patch $SqlInstance --project=$P --no-assign-ip --quiet
-        gcloud sql instances describe $SqlInstance --project=$P --format="yaml(settings.ipConfiguration.ipv4Enabled,settings.ipConfiguration.authorizedNetworks,ipAddresses)"
+        # El diagnostico mostro requireSsl=false aunque la documentacion dice
+        # "SSL requerido". ENCRYPTED_ONLY exige cifrado sin pedir certificado de
+        # cliente, que es lo que usa sslmode=require en DATABASE_URL.
+        gcloud sql instances patch $SqlInstance --project=$P --ssl-mode=ENCRYPTED_ONLY --quiet
+        gcloud sql instances describe $SqlInstance --project=$P --format="yaml(settings.ipConfiguration.ipv4Enabled,settings.ipConfiguration.authorizedNetworks,settings.ipConfiguration.sslMode,ipAddresses)"
         Write-Host "Nota: las migraciones (deploy/run-migrations.ps1) ya no se pueden correr desde tu equipo; corre migrate desde una VM de la VPC o con Cloud SQL Auth Proxy por IAP."
     }
 
     "WorkerSinIpPublica" {
         # C3
         Titulo "Cloud Router y Cloud NAT"
-        $router = gcloud compute routers list --project=$P --filter="name=$($env:CLOUD_ROUTER)" --format="value(name)"
-        if (-not $router) {
-            gcloud compute routers create $env:CLOUD_ROUTER --network=$NET --region=$R --project=$P
-        } else { Write-Host "Ya existe $router" }
-        $nat = gcloud compute routers nats list --router=$env:CLOUD_ROUTER --region=$R --project=$P --format="value(name)"
+        $router = RouterDeLaVpc
+        $existe = gcloud compute routers list --project=$P --filter="name=$router" --format="value(name)"
+        if (-not $existe) {
+            gcloud compute routers create $router --network=$NET --region=$R --project=$P
+        } else { Write-Host "Se usa el router existente $router" }
+        $nat = gcloud compute routers nats list --router=$router --region=$R --project=$P --format="value(name)"
         if (-not $nat) {
-            gcloud compute routers nats create $env:CLOUD_NAT --router=$env:CLOUD_ROUTER --region=$R --project=$P --nat-all-subnet-ip-ranges --auto-allocate-nat-external-ips
-        } else { Write-Host "Ya existe $nat" }
+            gcloud compute routers nats create $env:CLOUD_NAT --router=$router --region=$R --project=$P --nat-all-subnet-ip-ranges --auto-allocate-nat-external-ips
+        } else { Write-Host "Ya existe el NAT $nat en $router" }
 
         Titulo "Private Google Access en la subred (Cloud Storage y Artifact Registry sin salir a Internet)"
         gcloud compute networks subnets update $env:SUBNET --region=$R --project=$P --enable-private-ip-google-access
