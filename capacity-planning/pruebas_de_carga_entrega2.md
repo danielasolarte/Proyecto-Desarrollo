@@ -118,8 +118,34 @@ Un intento posterior de repetir la prueba contra el Web Server real (`https://35
 - Recorrido: profesores autorizan y suben un video con carga multipart directa a Cloud Storage (una sola parte, dado el tamaño de los archivos de prueba) y esperan a que el worker lo deje `ready`; en paralelo, estudiantes consumen contenido HLS **ya disponible** (precargado en `setup()`, no el que suben los profesores durante la medición), a la cadencia real de reproducción (segmentos de 6 s, sin descargar todo de golpe).
 - Autenticación fuera de la medición (sesiones de profesor/estudiante preparadas en `setup()`).
 - Concurrencia del worker: 5, fija en todos los niveles (`WORKER_CONCURRENCY=5`).
-- Niveles ejecutados: línea base (1 profesor subiendo, 2 estudiantes viendo, 2m30s) y un nivel más (2 profesores, 5 estudiantes, 3m30s).
-- Resultados crudos: `k6/results/escenario2-l1-real.json`, `k6/results/escenario2-l2-real.json`.
+- Niveles ejecutados: línea base (1 profesor subiendo, 2 estudiantes
+  viendo, 2m30s) y un nivel más (2 profesores, 5 estudiantes, 3m30s).
+- Resultados crudos: `k6/results/escenario2-baseline.json`,
+  `k6/results/escenario2-l1.json`.
+
+## Entorno de la prueba
+
+Las corridas se ejecutaron sobre el despliegue real en GCP
+(`proyecto1-entrega2-desarrollo`, `us-central1`): la API (imagen
+`mooc-e2-api` de Artifact Registry) corría como contenedor en la VM
+`mooc-e2-worker`, junto al worker, Redis y ClamAV; la persistencia usó
+Cloud SQL y el bucket de Cloud Storage reales. El generador de carga
+(Cloud Shell) llegaba a esa API a través de un túnel IAP/SSH, por eso el
+`BASE_URL` del script aparece como `localhost:8080`: es el extremo local
+del túnel, no una ejecución local.
+
+Para interpretar los resultados hay que tener en cuenta que, en estas
+corridas, la VM del worker sostenía a la vez el procesamiento (ffmpeg,
+ClamAV, Redis) y la API. Es muy probablemente la causa principal del
+colapso descrito más abajo.
+
+Se intentó repetir la prueba contra el Web Server (`mooc-e2-web`, vía
+`https://35.254.78.215.sslip.io`), con resultados en
+`k6/results/escenario2-l1-real.json` y `escenario2-l2-real.json`. Esas
+corridas no produjeron datos útiles: el login tardaba ~5.5 s y respondía
+500, consistente con un `REDIS_ADDR` del Web Server apuntando a una
+dirección interna anterior al cambio de red de la semana. No se alcanzó a
+corregir antes del cierre; queda como hallazgo pendiente.
 
 ## Resultados por nivel
 
@@ -150,8 +176,12 @@ Este colapso confirma empíricamente, con evidencia real de carga, el punto úni
 
 ## Limitaciones del experimento
 
-- No se alcanzaron los niveles adicionales planeados (`l2`, `l3`, una repetición cerca del límite); el tiempo se agotó atendiendo la inestabilidad de la infraestructura compartida.
-- Las corridas con datos completos se ejecutaron contra una API temporal en el Worker Server, no contra el Web Server final.
+- No se alcanzaron los niveles adicionales planeados (`l2`, `l3`, una
+  repetición cerca del límite); el tiempo se agotó atendiendo la
+  inestabilidad de la infraestructura compartida.
+- Las corridas con datos completos midieron la API alojada en la misma VM
+  del worker; no hay una corrida completa contra el Web Server en su VM
+  dedicada.
 - No se desglosaron los resultados por perfil de video.
 - No se instrumentó `docker stats`/CPU de forma continua durante el colapso; la evidencia del cuello de botella es cualitativa (logs y consola serial), no una serie de métricas de recursos.
 
