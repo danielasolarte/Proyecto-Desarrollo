@@ -34,7 +34,10 @@ param(
     [string]$SqlInstance = "mooc-postgres",
     [string]$BaseUrl = "https://35.254.78.215.sslip.io",
     [string]$Email,
-    [string]$Password
+    [string]$Password,
+    # Crea un estudiante nuevo (registro + verificacion de correo) y prueba el
+    # login con el. Valida escritura y lectura en Cloud SQL y sesion en Redis.
+    [switch]$CrearUsuarioPrueba
 )
 
 $ErrorActionPreference = "Continue"
@@ -99,7 +102,7 @@ D=$(sudo docker inspect -f '{{index .Config.Labels `com.docker.compose.project.w
 $mostrar = $ubicar + "`n" + @'
 echo compose: $CF
 echo carpeta: $D
-sudo docker exec $C env | sed -nE 's#^DATABASE_URL=[^@]*@([^:/?]*).*#DATABASE_URL host en el contenedor: \1#p; s#^(REDIS_ADDR=.*)#\1 (contenedor)#p'
+sudo docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' $C | sed -nE 's#^DATABASE_URL=[^@]*@([^:/?]*).*#DATABASE_URL host en el contenedor: \1#p; s#^(REDIS_ADDR=.*)#\1 (contenedor)#p'
 ls -l $D/.env 2>/dev/null || echo no existe el archivo .env en $D, revisar env_file del compose
 '@
 
@@ -109,7 +112,7 @@ sudo cp $D/.env $D/.env.bak-antes-ip-privada
 sudo sed -i -E 's#^(DATABASE_URL=[^@]*@)[^:/?]+#\1__IP__#' $D/.env
 cd $D && sudo docker compose -f $CF up -d --force-recreate __SERVICIO__
 sleep 8
-sudo docker exec $(sudo docker ps -q --filter label=com.docker.compose.service=__SERVICIO__ | head -1) env | sed -nE 's#^DATABASE_URL=[^@]*@([^:/?]*).*#DATABASE_URL host ahora: \1#p'
+sudo docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' $(sudo docker ps -q --filter label=com.docker.compose.service=__SERVICIO__ | head -1) | sed -nE 's#^DATABASE_URL=[^@]*@([^:/?]*).*#DATABASE_URL host ahora: \1#p'
 sudo docker logs --tail 15 $(sudo docker ps -q --filter label=com.docker.compose.service=__SERVICIO__ | head -1)
 '@
 
@@ -254,6 +257,21 @@ sudo docker ps --format 'table {{.Names}}\t{{.Status}}'
 
         Titulo "Login real sobre $BaseUrl"
         curl.exe -s -o NUL -w "GET /health -> %{http_code} en %{time_total}s`n" "$BaseUrl/health"
+        if ($CrearUsuarioPrueba) {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            $Email = "verificacion.$(Get-Date -Format 'yyyyMMddHHmmss')@mooc.test"
+            $Password = "Verif-" + [guid]::NewGuid().ToString("N").Substring(0, 12)
+            try {
+                $reg = Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/v1/auth/register" -ContentType "application/json" `
+                    -Body (@{ email = $Email; password = $Password; full_name = "Verificacion Entrega 2" } | ConvertTo-Json -Compress)
+                Write-Host "POST /api/v1/auth/register -> 201 (usuario $Email)"
+                Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/v1/auth/verify-email" -ContentType "application/json" `
+                    -Body (@{ token = $reg.verification_token_dev } | ConvertTo-Json -Compress) | Out-Null
+                Write-Host "POST /api/v1/auth/verify-email -> 200"
+            } catch {
+                Write-Host "Fallo el registro o la verificacion: $($_.Exception.Message)" -ForegroundColor Red
+            }
+        }
         if ($Email -and $Password) {
             $jar = Join-Path $env:TEMP "mooc-verificar-cookies.txt"
             $body = @{ email = $Email; password = $Password } | ConvertTo-Json -Compress
