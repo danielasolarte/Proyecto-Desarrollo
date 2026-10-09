@@ -50,7 +50,8 @@ $ENVFILE = "/opt/mooc/deploy/.env"
 function Titulo($t) { Write-Host ""; Write-Host "==== $t ====" -ForegroundColor Cyan }
 
 function Ssh($vm, $cmd) {
-    gcloud compute ssh $vm --zone=$Z --tunnel-through-iap --project=$P --command=$cmd
+    # Quita CR por si el archivo quedo con finales CRLF en Windows.
+    gcloud compute ssh $vm --zone=$Z --tunnel-through-iap --project=$P --command=($cmd -replace "`r", "")
 }
 
 function IpInterna($vm) {
