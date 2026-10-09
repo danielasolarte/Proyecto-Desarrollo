@@ -1,0 +1,43 @@
+# Correcciones a la retroalimentación de la Entrega 2
+
+Este documento registra cada observación de la calificación de la Entrega 2
+(76,67/100), la corrección aplicada, el script que la reproduce y la evidencia
+que la cierra. Las correcciones son además el punto de partida de la línea
+base de la Entrega 3.
+
+| Id | Observación del equipo docente | Corrección | Script | Estado |
+| --- | --- | --- | --- | --- |
+| C1 | "El login del Web Server real devolvía 500 al cierre" | `REDIS_ADDR` del Web Server apuntado a la IP interna actual del Worker (`10.20.0.2:6379`) después del cambio a `mooc-e2-vpc` | `deploy/gcp/06-correcciones-entrega2.ps1 -Fase RedisWeb` | Pendiente de ejecutar |
+| C2 | "La conexión no es privada: la instancia expone IP pública con redes autorizadas" | Private Service Access con el rango `mooc-e2-private-services`, IP privada en `mooc-postgres`, `DATABASE_URL` de ambas VM a la IP privada, sin IP pública ni redes autorizadas | `06-correcciones-entrega2.ps1 -Fase IpPrivadaSql`, `CambiarDatabaseUrl`, `QuitarIpPublicaSql` | Pendiente de ejecutar |
+| C3 | Desviación documentada: Worker con IP externa | Cloud Router + Cloud NAT, Private Google Access en `mooc-e2-subnet` y Worker sin IP externa | `06-correcciones-entrega2.ps1 -Fase WorkerSinIpPublica` | Pendiente de ejecutar |
+| C4 | "El flujo multimedia se probó contra una API temporal dentro del Worker, no sobre la topología desplegada" | Repetir el Escenario 2 contra el Web Server real por HTTPS, con los mismos perfiles y niveles | `k6/run-escenario2.ps1 -BaseUrl https://35.254.78.215.sslip.io/api/v1` | Pendiente de ejecutar (después de C1 a C3) |
+| C5 | Rúbrica: "archivos trasladados sin comprobar integridad o correspondencia" y "release sin resolver" | Verificación de existencia, tamaño, SHA-256, HLS y PDF de cada `media_asset` contra el bucket; ramas unificadas en `main` y tag `entrega-2` | `deploy/gcp/07-verificar-integridad-objetos.ps1` | Ramas unificadas; verificación pendiente de ejecutar |
+
+## Orden de ejecución
+
+1. `Diagnostico`: deja constancia del estado antes de cambiar nada.
+2. `RedisWeb` y `Verificar -Email ... -Password ...`: el login debe responder 200 y crear las cookies `mooc_session` y `mooc_csrf`.
+3. `IpPrivadaSql`: activa la IP privada sin quitar todavía la pública, para no cortar el servicio.
+4. `CambiarDatabaseUrl`: ambas VM pasan a la IP privada. Se guarda una copia `.env.bak-antes-ip-privada` en cada VM por si hay que revertir.
+5. `Verificar` de nuevo. Solo si el login y las operaciones responden bien se sigue.
+6. `QuitarIpPublicaSql`: elimina redes autorizadas e IP pública.
+7. `WorkerSinIpPublica`: NAT, Private Google Access y retiro de la IP externa del Worker; el script prueba la salida a Cloud Storage, Artifact Registry y las firmas de ClamAV.
+8. `07-verificar-integridad-objetos.ps1`: genera `docs/entrega2/integridad-objetos.md`.
+9. `k6/run-escenario2.ps1`: nuevas corridas `k6/results/escenario2-ws-*.json`, mientras `capacity-planning/monitor-queue.ps1` registra la cola.
+
+## Efectos sobre la operación
+
+- Con Cloud SQL solo por IP privada, `deploy/run-migrations.ps1` ya no puede correr desde un equipo personal. Las migraciones se ejecutan desde una VM de la VPC (por ejemplo `docker run migrate/migrate` en el Web Server) o mediante Cloud SQL Auth Proxy a través de IAP.
+- La administración sigue siendo por SSH a través de IAP (`35.235.240.0/20`), que no necesita IP externa en el Worker.
+- Si la IP `34.28.33.182` del Worker estaba reservada como estática, hay que liberarla para que deje de cobrarse.
+
+## Evidencia
+
+Completar con la salida real de cada fase (sin secretos) y la fecha en que se ejecutó.
+
+- Diagnóstico inicial:
+- Login después de C1:
+- Cloud SQL sin IP pública:
+- Worker sin IP externa y salida por NAT:
+- Reporte de integridad:
+- Corridas del Escenario 2 contra el Web Server:

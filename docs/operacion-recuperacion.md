@@ -19,11 +19,12 @@ Tipo de máquina: db-g1-small
 Alta disponibilidad: deshabilitada
 SSL: requerido
 Instancia: `mooc-postgres`
-Redes autorizadas: la IP externa del Web Server (`mooc-e2-web`) debe estar en
-la lista de redes autorizadas de la instancia (Cloud SQL > `mooc-postgres` >
-Conexiones > Redes autorizadas); sin esto, las conexiones desde el Web Server
-se cuelgan (no se rechazan, simplemente no responden) hasta agotar el
-timeout del cliente.
+Conectividad: la instancia usa IP privada por Private Service Access (rango
+`mooc-e2-private-services` en `mooc-e2-vpc`), sin IP pública ni redes
+autorizadas. Las dos VM llegan a ella por la VPC; `DATABASE_URL` en el `.env`
+de cada VM apunta a esa IP privada. El procedimiento que hizo este cambio está
+en `deploy/gcp/06-correcciones-entrega2.ps1` y en
+`docs/entrega2/correcciones-retroalimentacion.md`.
 
 ## Migraciones
 
