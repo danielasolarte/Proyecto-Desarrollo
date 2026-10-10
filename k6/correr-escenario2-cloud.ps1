@@ -26,7 +26,7 @@ param(
 $ErrorActionPreference = "Continue"
 Set-Location (Resolve-Path (Join-Path $PSScriptRoot ".."))
 . .\deploy\gcp\00-variables.example.ps1
-$P = $env:GCP_PROJECT; $Z = $env:GCP_ZONE
+$Proyecto = $env:GCP_PROJECT; $Z = $env:GCP_ZONE
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 New-Item -ItemType Directory -Force "deploy/gcp/logs", "k6/media", "capacity-planning/results" | Out-Null
 Start-Transcript -Path "deploy/gcp/logs/escenario2-$stamp.log" | Out-Null
@@ -34,10 +34,10 @@ Start-Transcript -Path "deploy/gcp/logs/escenario2-$stamp.log" | Out-Null
 function Titulo($t) { Write-Host ""; Write-Host "==== $t ($(Get-Date -Format 'HH:mm:ss')) ====" -ForegroundColor Cyan }
 function Ssh($vm, $cmd) {
     $limpio = $cmd -replace "`r", ""
-    gcloud compute ssh $vm --zone=$Z --tunnel-through-iap --project=$P --strict-host-key-checking=no --command=$limpio 2>&1 | ForEach-Object { "$_" }
+    gcloud compute ssh $vm --zone=$Z --tunnel-through-iap --project=$Proyecto --strict-host-key-checking=no --command=$limpio 2>&1 | ForEach-Object { "$_" }
 }
 function Scp($origen, $destino) {
-    gcloud compute scp $origen $destino --zone=$Z --tunnel-through-iap --project=$P --strict-host-key-checking=no 2>&1 | ForEach-Object { "$_" }
+    gcloud compute scp $origen $destino --zone=$Z --tunnel-through-iap --project=$Proyecto --strict-host-key-checking=no 2>&1 | ForEach-Object { "$_" }
 }
 
 Titulo "Docker"
@@ -50,16 +50,16 @@ $perfiles = @(
     @{ n = "medio_720p";  s = "1280x720";  d = 45 },
     @{ n = "largo_1080p"; s = "1920x1080"; d = 90 }
 )
-foreach ($p in $perfiles) {
-    $f = "k6/media/$($p.n).mp4"
+foreach ($perfil in $perfiles) {
+    $f = "k6/media/$($perfil.n).mp4"
     foreach ($img in @("jrottenberg/ffmpeg:6.1-alpine", "linuxserver/ffmpeg:latest")) {
         if (Test-Path $f) { break }
         Write-Host "Generando $f con $img"
         docker run --rm -v "${PWD}/k6/media:/out" $img -hide_banner -loglevel error `
-            -f lavfi -i "testsrc2=size=$($p.s):rate=30" -f lavfi -i "sine=frequency=440:sample_rate=44100" `
-            -t $p.d -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 128k -shortest "/out/$($p.n).mp4" 2>&1 | ForEach-Object { "$_" }
+            -f lavfi -i "testsrc2=size=$($perfil.s):rate=30" -f lavfi -i "sine=frequency=440:sample_rate=44100" `
+            -t $perfil.d -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 128k -shortest "/out/$($perfil.n).mp4" 2>&1 | ForEach-Object { "$_" }
     }
-    if (Test-Path $f) { Write-Host ("{0}: {1}, {2} s, {3:N1} MB" -f $p.n, $p.s, $p.d, ((Get-Item $f).Length / 1MB)) }
+    if (Test-Path $f) { Write-Host ("{0}: {1}, {2} s, {3:N1} MB" -f $perfil.n, $perfil.s, $perfil.d, ((Get-Item $f).Length / 1MB)) }
     else { Write-Host "No se pudo generar $f" -ForegroundColor Red; Stop-Transcript | Out-Null; return }
 }
 
