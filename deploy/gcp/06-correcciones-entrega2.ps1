@@ -29,7 +29,7 @@ imprimen: de DATABASE_URL solo se muestra el host.
 #>
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("Diagnostico", "EncenderSql", "RedisWeb", "ActivarCookiesCsrf", "IpPrivadaSql", "CambiarDatabaseUrl", "QuitarIpPublicaSql", "WorkerSinIpPublica", "Verificar")]
+    [ValidateSet("Diagnostico", "EncenderSql", "RedisWeb", "ActivarCookiesCsrf", "RepararWorker", "IpPrivadaSql", "CambiarDatabaseUrl", "QuitarIpPublicaSql", "WorkerSinIpPublica", "Verificar")]
     [string]$Fase,
 
     [string]$SqlInstance = "mooc-postgres",
@@ -105,13 +105,14 @@ echo compose: $CF
 echo carpeta: $D
 sudo docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' $C | sed -nE 's#^DATABASE_URL=[^@]*@([^:/?]*).*#DATABASE_URL host en el contenedor: \1#p; s#^(REDIS_ADDR=.*)#\1 (contenedor)#p; s#^((AUTH_COOKIE_ENABLED|CSRF_ENABLED|SESSION_COOKIE_SECURE|SESSION_COOKIE_SAMESITE)=.*)#\1 (contenedor)#p'
 ls -l $D/.env 2>/dev/null || echo no existe el archivo .env en $D, revisar env_file del compose
+echo lineas con CRLF en el .env: $(sudo grep -c $'\r' $D/.env)
 '@
 
 $cambiarDb = $ubicar + "`n" + @'
 set -e
 sudo cp $D/.env $D/.env.bak-antes-ip-privada
 sudo sed -i -E 's#^(DATABASE_URL=[^@]*@)[^:/?]+#\1__IP__#' $D/.env
-cd $D && sudo docker compose -f $CF up -d --force-recreate __SERVICIO__
+cd $D && sudo docker compose -f $CF up -d --no-deps --force-recreate __SERVICIO__
 sleep 8
 sudo docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' $(sudo docker ps -q --filter label=com.docker.compose.service=__SERVICIO__ | head -1) | sed -nE 's#^DATABASE_URL=[^@]*@([^:/?]*).*#DATABASE_URL host ahora: \1#p'
 sudo docker logs --tail 15 $(sudo docker ps -q --filter label=com.docker.compose.service=__SERVICIO__ | head -1)
@@ -137,6 +138,29 @@ sudo grep -E '^(AUTH_COOKIE_ENABLED|CSRF_ENABLED|SESSION_COOKIE_SECURE)=' $D/.en
 cd $D && sudo docker compose -f $CF up -d --force-recreate __SERVICIO__
 sleep 5
 sudo docker logs --tail 10 $(sudo docker ps -q --filter label=com.docker.compose.service=__SERVICIO__ | head -1)
+'@
+
+# Se ubica a partir del contenedor clamav porque el worker puede estar caido.
+$repararWorker = $ubicar + "`n" + @'
+echo Memoria antes:; free -m | head -2
+if sudo docker ps -q --filter name=^api-test$ | grep -q .; then
+  echo Deteniendo api-test, la API temporal de las pruebas del Escenario 2, sin borrarla
+  sudo docker update --restart=no api-test >/dev/null
+  sudo docker stop api-test >/dev/null
+fi
+cd $D
+echo Reiniciando clamav, que llevaba dias unhealthy
+sudo docker compose -f $CF restart clamav
+for i in $(seq 1 40); do
+  S=$(sudo docker inspect -f '{{.State.Health.Status}}' $(sudo docker compose -f $CF ps -q clamav))
+  echo clamav: $S; [ $S = healthy ] && break; sleep 6
+done
+if [ $S = healthy ]; then sudo docker compose -f $CF up -d worker; else echo ATENCION: clamav sigue sin estar healthy, se levanta el worker sin esperar dependencias; sudo docker compose -f $CF up -d --no-deps worker; fi
+sleep 5
+sudo docker compose -f $CF ps
+echo Memoria despues:; free -m | head -2
+sudo docker logs --tail 15 $(sudo docker compose -f $CF ps -q worker)
+sudo docker logs --tail 10 $(sudo docker compose -f $CF ps -q clamav)
 '@
 
 function Plantilla($texto, $servicio, $ip) {
@@ -189,6 +213,11 @@ switch ($Fase) {
         # cuando la sesion llega por cookie.
         Titulo "Activando cookies seguras y CSRF en el Web Server"
         Ssh $env:WEB_VM (Plantilla $activarCookies "api" "")
+    }
+
+    "RepararWorker" {
+        Titulo "Recuperando el worker (clamav unhealthy y api-test ocupando memoria)"
+        Ssh $env:WORKER_VM (Plantilla $repararWorker "clamav" "")
     }
 
     "IpPrivadaSql" {
@@ -302,6 +331,8 @@ sudo docker ps --format 'table {{.Names}}\t{{.Status}}'
             Set-Content -Path $bodyFile -Value $body -NoNewline -Encoding ascii
             curl.exe -s -c $jar -D $hdr -o $out -w "POST /api/v1/auth/login -> %{http_code} en %{time_total}s`n" -H "Content-Type: application/json" --data-binary "@$bodyFile" "$BaseUrl/api/v1/auth/login"
 
+            try { Write-Host ("  campos de la respuesta: " + ((Get-Content $out -Raw | ConvertFrom-Json).PSObject.Properties.Name -join ", ")) } catch { }
+            Write-Host ("  cabeceras: " + ((Get-Content $hdr | Where-Object { $_ -match '^[A-Za-z-]+:' } | ForEach-Object { ($_ -split ':')[0] }) -join ", "))
             # Cookies emitidas (solo nombre y atributos, nunca el valor)
             $setCookies = @(Select-String -Path $hdr -Pattern '^Set-Cookie:\s*([^=]+)=' -ErrorAction SilentlyContinue)
             if ($setCookies.Count -gt 0) {
