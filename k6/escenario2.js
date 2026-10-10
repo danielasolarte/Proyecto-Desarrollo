@@ -433,7 +433,7 @@ export const options = {
       gracefulRampDown: '30s',
     },
   },
-  setupTimeout: '5m',
+  setupTimeout: __ENV.SETUP_TIMEOUT || '20m',
   thresholds: {
     upload_functional_failures: ['rate<0.05'],
     hls_errors: ['rate<0.05'],
