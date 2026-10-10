@@ -17,7 +17,7 @@ Hace todo en orden y deja el registro en deploy/gcp/logs/:
 Se puede lanzar con Terminal > Run Active File en VS Code.
 #>
 param(
-    [string[]]$Levels = @("baseline", "l1", "l2"),
+    [string[]]$Levels = @("baseline", "l1"),
     [int]$WorkerConcurrency = 2,
     [string]$BaseUrl = "https://35.254.78.215.sslip.io/api/v1",
     [int]$PauseBetweenS = 120,
@@ -46,10 +46,13 @@ docker version --format "cliente {{.Client.Version}} / motor {{.Server.Version}}
 if ($LASTEXITCODE -ne 0) { Write-Host "Docker Desktop no esta corriendo." -ForegroundColor Red; Stop-Transcript | Out-Null; return }
 
 Titulo "1. Videos de prueba"
+# Perfiles de la corrida contra el Web Server (10 oct 2026). En e2-medium el
+# 720p de 45 s tardo ~250 s en quedar listo y el 1080p de 90 s supero 10 min,
+# asi que se conservan las tres resoluciones con duraciones de 15/30/30 s.
 $perfiles = @(
-    @{ n = "corto_360p";  s = "640x360";   d = 15 },
-    @{ n = "medio_720p";  s = "1280x720";  d = 45 },
-    @{ n = "largo_1080p"; s = "1920x1080"; d = 90 }
+    @{ n = "corto_360p_15s";  s = "640x360";   d = 15 },
+    @{ n = "medio_720p_30s";  s = "1280x720";  d = 30 },
+    @{ n = "largo_1080p_30s"; s = "1920x1080"; d = 30 }
 )
 foreach ($perfil in $perfiles) {
     $f = "k6/media/$($perfil.n).mp4"
@@ -106,7 +109,7 @@ foreach ($vm in @($env:WORKER_VM, $env:WEB_VM)) {
 }
 
 Titulo "4. k6 Escenario 2 contra $BaseUrl, niveles $($Levels -join ', ')"
-& .\k6\run-escenario2.ps1 -BaseUrl $BaseUrl -Levels $Levels -Tag "ws-$stamp" -PauseBetweenS $PauseBetweenS -AdminEmail $adminEmail -AdminPassword $adminPass 2>&1 | ForEach-Object { "$_" }
+& .\k6\run-escenario2.ps1 -BaseUrl $BaseUrl -Levels $Levels -Tag "ws-$stamp" -PauseBetweenS $PauseBetweenS -AdminEmail $adminEmail -AdminPassword $adminPass -VideoSmall "./media/corto_360p_15s.mp4" -VideoMedium "./media/medio_720p_30s.mp4" -VideoLarge "./media/largo_1080p_30s.mp4" 2>&1 | ForEach-Object { "$_" }
 
 Titulo "5. Drenaje de la cola ($DrenajeS s) y recoleccion de metricas"
 Start-Sleep -Seconds $DrenajeS

@@ -18,12 +18,16 @@ param(
     [string]$AdminEmail = $env:K6_ADMIN_EMAIL,
     [string]$AdminPassword = $env:K6_ADMIN_PASSWORD,
     [int]$SetupReadyTimeoutMs = 600000,
-    [int]$ReadyTimeoutMs = 300000
+    [int]$ReadyTimeoutMs = 300000,
+    [string]$VideoSmall = "./media/corto_360p.mp4",
+    [string]$VideoMedium = "./media/medio_720p.mp4",
+    [string]$VideoLarge = "./media/largo_1080p.mp4"
 )
 
 $ErrorActionPreference = "Continue"
 New-Item -ItemType Directory -Force "k6/results" | Out-Null
-foreach ($f in @("k6/media/corto_360p.mp4", "k6/media/medio_720p.mp4", "k6/media/largo_1080p.mp4")) {
+foreach ($f in @($VideoSmall, $VideoMedium, $VideoLarge)) {
+    $f = Join-Path "k6" $f
     if (-not (Test-Path $f)) { throw "Falta $f. Genera los perfiles con ffmpeg (ver k6/README.md)." }
 }
 
@@ -46,9 +50,9 @@ for ($i = 0; $i -lt $Levels.Count; $i++) {
         $K6Image run `
         -e LEVEL=$level `
         -e BASE_URL=$BaseUrl `
-        -e VIDEO_SMALL=./media/corto_360p.mp4 `
-        -e VIDEO_MEDIUM=./media/medio_720p.mp4 `
-        -e VIDEO_LARGE=./media/largo_1080p.mp4 `
+        -e VIDEO_SMALL=$VideoSmall `
+        -e VIDEO_MEDIUM=$VideoMedium `
+        -e VIDEO_LARGE=$VideoLarge `
         -e SETUP_READY_TIMEOUT_MS=$SetupReadyTimeoutMs `
         -e READY_TIMEOUT_MS=$ReadyTimeoutMs `
         @extraEnv `
