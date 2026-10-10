@@ -16,6 +16,7 @@ seguir. Cada fase es idempotente: si ya estaba hecha, no la repite.
   .\deploy\gcp\06-correcciones-entrega2.ps1 -Fase EncenderSql
   .\deploy\gcp\06-correcciones-entrega2.ps1 -Fase Verificar -Email "correo@mooc.test" -Password "clave"
   .\deploy\gcp\06-correcciones-entrega2.ps1 -Fase RedisWeb            (solo si REDIS_ADDR no es la IP del worker)
+  .\deploy\gcp\06-correcciones-entrega2.ps1 -Fase ActivarCookiesCsrf  (si el login no emite cookies)
   .\deploy\gcp\06-correcciones-entrega2.ps1 -Fase IpPrivadaSql
   .\deploy\gcp\06-correcciones-entrega2.ps1 -Fase CambiarDatabaseUrl
   .\deploy\gcp\06-correcciones-entrega2.ps1 -Fase QuitarIpPublicaSql
@@ -28,7 +29,7 @@ imprimen: de DATABASE_URL solo se muestra el host.
 #>
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("Diagnostico", "EncenderSql", "RedisWeb", "IpPrivadaSql", "CambiarDatabaseUrl", "QuitarIpPublicaSql", "WorkerSinIpPublica", "Verificar")]
+    [ValidateSet("Diagnostico", "EncenderSql", "RedisWeb", "ActivarCookiesCsrf", "IpPrivadaSql", "CambiarDatabaseUrl", "QuitarIpPublicaSql", "WorkerSinIpPublica", "Verificar")]
     [string]$Fase,
 
     [string]$SqlInstance = "mooc-postgres",
@@ -102,7 +103,7 @@ D=$(sudo docker inspect -f '{{index .Config.Labels `com.docker.compose.project.w
 $mostrar = $ubicar + "`n" + @'
 echo compose: $CF
 echo carpeta: $D
-sudo docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' $C | sed -nE 's#^DATABASE_URL=[^@]*@([^:/?]*).*#DATABASE_URL host en el contenedor: \1#p; s#^(REDIS_ADDR=.*)#\1 (contenedor)#p'
+sudo docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' $C | sed -nE 's#^DATABASE_URL=[^@]*@([^:/?]*).*#DATABASE_URL host en el contenedor: \1#p; s#^(REDIS_ADDR=.*)#\1 (contenedor)#p; s#^((AUTH_COOKIE_ENABLED|CSRF_ENABLED|SESSION_COOKIE_SECURE|SESSION_COOKIE_SAMESITE)=.*)#\1 (contenedor)#p'
 ls -l $D/.env 2>/dev/null || echo no existe el archivo .env en $D, revisar env_file del compose
 '@
 
@@ -124,6 +125,18 @@ timeout 3 bash -c '</dev/tcp/__IP__/6379' && echo 'Redis alcanzable desde el Web
 cd $D && sudo docker compose -f $CF up -d --force-recreate __SERVICIO__
 sleep 5
 sudo docker logs --tail 15 $(sudo docker ps -q --filter label=com.docker.compose.service=__SERVICIO__ | head -1)
+'@
+
+$activarCookies = $ubicar + "`n" + @'
+set -e
+sudo cp $D/.env $D/.env.bak-antes-cookies
+for V in AUTH_COOKIE_ENABLED CSRF_ENABLED SESSION_COOKIE_SECURE; do
+  if sudo grep -q ^$V= $D/.env; then sudo sed -i s#^$V=.*#$V=true# $D/.env; else echo $V=true | sudo tee -a $D/.env >/dev/null; fi
+done
+sudo grep -E '^(AUTH_COOKIE_ENABLED|CSRF_ENABLED|SESSION_COOKIE_SECURE)=' $D/.env
+cd $D && sudo docker compose -f $CF up -d --force-recreate __SERVICIO__
+sleep 5
+sudo docker logs --tail 10 $(sudo docker ps -q --filter label=com.docker.compose.service=__SERVICIO__ | head -1)
 '@
 
 function Plantilla($texto, $servicio, $ip) {
@@ -168,6 +181,14 @@ switch ($Fase) {
         $workerIp = IpInterna $env:WORKER_VM
         Titulo "Apuntando REDIS_ADDR del Web Server a ${workerIp}:6379"
         Ssh $env:WEB_VM (Plantilla $cambiarRedis "api" $workerIp)
+    }
+
+    "ActivarCookiesCsrf" {
+        # El enunciado exige conservar cookies seguras y CSRF por HTTPS. Los
+        # clientes con Bearer (k6, Postman) no se afectan: el CSRF solo aplica
+        # cuando la sesion llega por cookie.
+        Titulo "Activando cookies seguras y CSRF en el Web Server"
+        Ssh $env:WEB_VM (Plantilla $activarCookies "api" "")
     }
 
     "IpPrivadaSql" {
@@ -274,13 +295,31 @@ sudo docker ps --format 'table {{.Names}}\t{{.Status}}'
         }
         if ($Email -and $Password) {
             $jar = Join-Path $env:TEMP "mooc-verificar-cookies.txt"
-            $body = @{ email = $Email; password = $Password } | ConvertTo-Json -Compress
+            $hdr = Join-Path $env:TEMP "mooc-verificar-headers.txt"
+            $out = Join-Path $env:TEMP "mooc-verificar-login.json"
             $bodyFile = Join-Path $env:TEMP "mooc-verificar-body.json"
+            $body = @{ email = $Email; password = $Password } | ConvertTo-Json -Compress
             Set-Content -Path $bodyFile -Value $body -NoNewline -Encoding ascii
-            curl.exe -s -c $jar -o NUL -w "POST /api/v1/auth/login -> %{http_code} en %{time_total}s`n" -H "Content-Type: application/json" --data-binary "@$bodyFile" "$BaseUrl/api/v1/auth/login"
-            curl.exe -s -b $jar -o NUL -w "GET /api/v1/me (con cookie) -> %{http_code}`n" "$BaseUrl/api/v1/me"
-            Select-String -Path $jar -Pattern "mooc_session|mooc_csrf" | ForEach-Object { ($_.Line -split "`t")[5] + " (cookie presente)" }
-            Remove-Item $jar, $bodyFile -ErrorAction SilentlyContinue
+            curl.exe -s -c $jar -D $hdr -o $out -w "POST /api/v1/auth/login -> %{http_code} en %{time_total}s`n" -H "Content-Type: application/json" --data-binary "@$bodyFile" "$BaseUrl/api/v1/auth/login"
+
+            # Cookies emitidas (solo nombre y atributos, nunca el valor)
+            $setCookies = @(Select-String -Path $hdr -Pattern '^Set-Cookie:\s*([^=]+)=' -ErrorAction SilentlyContinue)
+            if ($setCookies.Count -gt 0) {
+                foreach ($c in $setCookies) {
+                    $n = $c.Matches[0].Groups[1].Value
+                    Write-Host ("  cookie {0}: Secure={1} HttpOnly={2} SameSite={3}" -f $n, ($c.Line -match 'Secure'), ($c.Line -match 'HttpOnly'), (($c.Line -split 'SameSite=')[1] -split ';')[0])
+                }
+                curl.exe -s -b $jar -o NUL -w "GET /api/v1/me (con cookie) -> %{http_code}`n" "$BaseUrl/api/v1/me"
+            } else {
+                Write-Host "  La API no emitio cookies: AUTH_COOKIE_ENABLED esta apagado en el Web Server (ver -Fase ActivarCookiesCsrf)." -ForegroundColor Yellow
+            }
+
+            $token = $null
+            try { $token = (Get-Content $out -Raw | ConvertFrom-Json).token } catch { }
+            if ($token) {
+                curl.exe -s -o NUL -w "GET /api/v1/me (Bearer) -> %{http_code}`n" -H "Authorization: Bearer $token" "$BaseUrl/api/v1/me"
+            }
+            Remove-Item $jar, $hdr, $out, $bodyFile -ErrorAction SilentlyContinue
         } else {
             Write-Host "Pasa -Email y -Password (entre comillas) de un usuario de prueba para verificar el login."
         }
