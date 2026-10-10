@@ -16,7 +16,9 @@ param(
     [string]$Tag = "ws",
     [string]$K6Image = "grafana/k6:latest",
     [string]$AdminEmail = $env:K6_ADMIN_EMAIL,
-    [string]$AdminPassword = $env:K6_ADMIN_PASSWORD
+    [string]$AdminPassword = $env:K6_ADMIN_PASSWORD,
+    [int]$SetupReadyTimeoutMs = 600000,
+    [int]$ReadyTimeoutMs = 300000
 )
 
 $ErrorActionPreference = "Continue"
@@ -47,6 +49,8 @@ for ($i = 0; $i -lt $Levels.Count; $i++) {
         -e VIDEO_SMALL=./media/corto_360p.mp4 `
         -e VIDEO_MEDIUM=./media/medio_720p.mp4 `
         -e VIDEO_LARGE=./media/largo_1080p.mp4 `
+        -e SETUP_READY_TIMEOUT_MS=$SetupReadyTimeoutMs `
+        -e READY_TIMEOUT_MS=$ReadyTimeoutMs `
         @extraEnv `
         --summary-export "/project/$prefix.json" `
         --summary-trend-stats "avg,min,med,p(90),p(95),p(99),max" `

@@ -1,0 +1,80 @@
+﻿
+2026-10-10T14:53:13.621491+00:00 mooc-e2-worker systemd[2216005]: Finished systemd-exit.service - Exit the Session.
+
+2026-10-10T14:53:13.621565+00:00 mooc-e2-worker systemd[2216005]: Reached target exit.target - Exit the Session.
+
+2026-10-10T14:53:13.625622+00:00 mooc-e2-worker systemd[1]: user@1003.service: Deactivated successfully.
+
+2026-10-10T14:53:13.625862+00:00 mooc-e2-worker systemd[1]: Stopped user@1003.service - User Manager for UID 1003.
+
+2026-10-10T14:53:13.652459+00:00 mooc-e2-worker systemd[1]: Stopping user-runtime-dir@1003.service - User Runtime Directory /run/user/1003...
+
+2026-10-10T14:53:13.661658+00:00 mooc-e2-worker systemd[1]: run-user-1003.mount: Deactivated successfully.
+
+2026-10-10T14:53:13.662684+00:00 mooc-e2-worker systemd[1]: user-runtime-dir@1003.service: Deactivated successfully.
+
+2026-10-10T14:53:13.662990+00:00 mooc-e2-worker systemd[1]: Stopped user-runtime-dir@1003.service - User Runtime Directory /run/user/1003.
+
+2026-10-10T14:53:13.664094+00:00 mooc-e2-worker systemd[1]: Removed slice user-1003.slice - User Slice of UID 1003.
+
+2026-10-10T15:10:15.135999+00:00 mooc-e2-worker systemd[1]: Created slice user-1004.slice - User Slice of UID 1004.
+
+2026-10-10T15:10:15.160714+00:00 mooc-e2-worker systemd[1]: Starting user-runtime-dir@1004.service - User Runtime Directory /run/user/1004...
+
+2026-10-10T15:10:15.168894+00:00 mooc-e2-worker systemd[1]: Finished user-runtime-dir@1004.service - User Runtime Directory /run/user/1004.
+
+2026-10-10T15:10:15.174745+00:00 mooc-e2-worker systemd[1]: Starting user@1004.service - User Manager for UID 1004...
+
+2026-10-10T15:10:15.283341+00:00 mooc-e2-worker systemd[2225895]: Queued start job for default target default.target.
+
+2026-10-10T15:10:15.298470+00:00 mooc-e2-worker systemd[2225895]: Created slice app.slice - User Application Slice.
+
+2026-10-10T15:10:15.303327+00:00 mooc-e2-worker systemd[2225895]: Reached target paths.target - Paths.
+
+2026-10-10T15:10:15.303638+00:00 mooc-e2-worker systemd[2225895]: Reached target timers.target - Timers.
+
+2026-10-10T15:10:15.305596+00:00 mooc-e2-worker systemd[2225895]: Starting dbus.socket - D-Bus User Message Bus Socket...
+
+2026-10-10T15:10:15.307665+00:00 mooc-e2-worker systemd[2225895]: Listening on dirmngr.socket - GnuPG network certificate management daemon.
+
+2026-10-10T15:10:15.308481+00:00 mooc-e2-worker systemd[2225895]: Listening on gpg-agent-browser.socket - GnuPG cryptographic agent and passphrase cache (access for web browsers).
+
+2026-10-10T15:10:15.309346+00:00 mooc-e2-worker systemd[2225895]: Listening on gpg-agent-extra.socket - GnuPG cryptographic agent and passphrase cache (restricted).
+
+2026-10-10T15:10:15.310210+00:00 mooc-e2-worker systemd[2225895]: Listening on gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation).
+
+2026-10-10T15:10:15.310409+00:00 mooc-e2-worker systemd[2225895]: Listening on gpg-agent.socket - GnuPG cryptographic agent and passphrase cache.
+
+2026-10-10T15:10:15.310529+00:00 mooc-e2-worker systemd[2225895]: Listening on dbus.socket - D-Bus User Message Bus Socket.
+
+2026-10-10T15:10:15.311163+00:00 mooc-e2-worker systemd[2225895]: Reached target sockets.target - Sockets.
+
+2026-10-10T15:10:15.311348+00:00 mooc-e2-worker systemd[2225895]: Reached target basic.target - Basic System.
+System.Management.Automation.RemoteException
+Specify --start=605150 in the next get-serial-port-output invocation to get only the new output starting from here.
+
+2026-10-10T15:10:15.311492+00:00 mooc-e2-worker systemd[2225895]: Reached target default.target - Main User Target.
+
+2026-10-10T15:10:15.312990+00:00 mooc-e2-worker systemd[1]: Started user@1004.service - User Manager for UID 1004.
+
+2026-10-10T15:10:15.313263+00:00 mooc-e2-worker systemd[2225895]: Startup finished in 112ms.
+
+2026-10-10T15:10:15.313452+00:00 mooc-e2-worker systemd[1]: Started session-351.scope - Session 351 of User danis.
+
+2026-10-10T15:10:16.109319+00:00 mooc-e2-worker systemd[1]: session-351.scope: Deactivated successfully.
+
+2026-10-10T15:10:22.264218+00:00 mooc-e2-worker systemd[1]: Started session-353.scope - Session 353 of User danis.
+
+2026-10-10T15:15:03.948716+00:00 mooc-e2-worker systemd[1]: Started session-354.scope - Session 354 of User danis.
+
+2026-10-10T15:15:04.816942+00:00 mooc-e2-worker systemd[1]: session-354.scope: Deactivated successfully.
+
+2026-10-10T15:15:12.130445+00:00 mooc-e2-worker systemd[1]: Started session-355.scope - Session 355 of User danis.
+
+2026-10-10T15:20:08.439377+00:00 mooc-e2-worker dockerd[713]: time="2026-10-10T15:18:53.175944312Z" level=warning msg="Health check for container f78d1540e97fa01a8d7853afd7da588fb586f83928c994f56edcae4676c67eba error: timed out starting health check for container f78d1540e97fa01a8d7853afd7da588fb586f83928c994f56edcae4676c67eba"
+
+2026-10-10T15:20:24.431571+00:00 mooc-e2-worker dockerd[713]: time="2026-10-10T15:18:50.188834195Z" level=warning msg="Health check for container 247c9bde058e154af2e63cd8a35ff5304e012e527183db30bc2562f70284a7a9 error: timed out starting health check for container 247c9bde058e154af2e63cd8a35ff5304e012e527183db30bc2562f70284a7a9"
+
+2026-10-10T15:24:26.436091+00:00 mooc-e2-worker OSConfigAgent[430]: 2026-10-10T15:24:16.6855Z OSConfigAgent Error main.go:232: network error when requesting metadata, make sure your instance has an active network and can reach the metadata server: Get "http://169.254.169.254/computeMetadata/v1/?recursive=true&alt=json&wait_for_change=true&last_etag=f6190ff5d1cee3f5&timeout_sec=60": dial tcp 169.254.169.254:80: i/o timeout
+
+

@@ -17,7 +17,8 @@ Hace todo en orden y deja el registro en deploy/gcp/logs/:
 Se puede lanzar con Terminal > Run Active File en VS Code.
 #>
 param(
-    [string[]]$Levels = @("baseline", "l1", "l2", "l3"),
+    [string[]]$Levels = @("baseline", "l1", "l2"),
+    [int]$WorkerConcurrency = 2,
     [string]$BaseUrl = "https://35.254.78.215.sslip.io/api/v1",
     [int]$PauseBetweenS = 120,
     [int]$DrenajeS = 180
@@ -76,6 +77,26 @@ try {
 } catch { Write-Host "Fallo el registro del admin de prueba: $($_.Exception.Message)" -ForegroundColor Red; Stop-Transcript | Out-Null; return }
 Scp "deploy/gcp/remoto/promover-admin-prueba.sh" "$($env:WEB_VM):/tmp/"
 Ssh $env:WEB_VM "bash /tmp/promover-admin-prueba.sh $adminEmail"
+
+Titulo "2b. Concurrencia del worker = $WorkerConcurrency y cola vacia antes de medir"
+$prep = @'
+C=$(sudo docker ps -aq --filter label=com.docker.compose.service=worker | head -1)
+CF=$(sudo docker inspect -f '{{index .Config.Labels `com.docker.compose.project.config_files`}}' $C | cut -d, -f1)
+D=$(sudo docker inspect -f '{{index .Config.Labels `com.docker.compose.project.working_dir`}}' $C)
+if sudo grep -q ^WORKER_CONCURRENCY= $D/.env; then sudo sed -i s#^WORKER_CONCURRENCY=.*#WORKER_CONCURRENCY=__CONC__# $D/.env; else echo WORKER_CONCURRENCY=__CONC__ | sudo tee -a $D/.env >/dev/null; fi
+cd $D && sudo docker compose -f $CF up -d --no-deps --force-recreate worker
+sleep 5
+W=$(sudo docker ps -q --filter label=com.docker.compose.service=worker | head -1)
+sudo docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' $W | grep ^WORKER_CONCURRENCY
+sudo docker logs --tail 3 $W
+R=$(sudo docker ps -q --filter label=com.docker.compose.service=redis | head -1)
+for i in $(seq 1 60); do
+  P=$(sudo docker exec $R redis-cli LLEN asynq:{media}:pending); A=$(sudo docker exec $R redis-cli LLEN asynq:{media}:active)
+  echo cola: pending=$P active=$A; [ $P = 0 ] && [ $A = 0 ] && break; sleep 10
+done
+free -m | head -2
+'@
+Ssh $env:WORKER_VM ($prep -replace "__CONC__", "$WorkerConcurrency")
 
 Titulo "3. Monitores en las VM"
 $durMonitor = 600 + ($Levels.Count * (240 + $PauseBetweenS)) + $DrenajeS + 300
