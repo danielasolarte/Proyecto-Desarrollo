@@ -85,14 +85,14 @@ foreach ($vm in @($env:WORKER_VM, $env:WEB_VM)) {
 }
 
 Titulo "4. k6 Escenario 2 contra $BaseUrl, niveles $($Levels -join ', ')"
-& .\k6\run-escenario2.ps1 -BaseUrl $BaseUrl -Levels $Levels -Tag "ws" -PauseBetweenS $PauseBetweenS -AdminEmail $adminEmail -AdminPassword $adminPass 2>&1 | ForEach-Object { "$_" }
+& .\k6\run-escenario2.ps1 -BaseUrl $BaseUrl -Levels $Levels -Tag "ws-$stamp" -PauseBetweenS $PauseBetweenS -AdminEmail $adminEmail -AdminPassword $adminPass 2>&1 | ForEach-Object { "$_" }
 
 Titulo "5. Drenaje de la cola ($DrenajeS s) y recoleccion de metricas"
 Start-Sleep -Seconds $DrenajeS
 Ssh $env:WORKER_VM "tail -n 3 /tmp/monitor-escenario2-$stamp.csv"
 Scp "$($env:WORKER_VM):/tmp/monitor-escenario2-$stamp.csv" "capacity-planning/results/escenario2-ws-worker-$stamp.csv"
 Scp "$($env:WEB_VM):/tmp/monitor-escenario2-$stamp.csv" "capacity-planning/results/escenario2-ws-web-$stamp.csv"
-Get-ChildItem k6/results -Filter "escenario2-ws-*" | Select-Object Name, Length, LastWriteTime | Format-Table | Out-String | Write-Host
+Get-ChildItem k6/results -Filter "escenario2-ws-$stamp-*" | Select-Object Name, Length, LastWriteTime | Format-Table | Out-String | Write-Host
 
 Stop-Transcript | Out-Null
 Write-Host "Listo. Registro en deploy/gcp/logs/escenario2-$stamp.log"
