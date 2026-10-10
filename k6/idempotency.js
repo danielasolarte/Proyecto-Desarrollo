@@ -3,6 +3,15 @@ import { check, fail } from 'k6';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080/api/v1';
 
+// La API emite cookies de sesion y CSRF en el login (AUTH_COOKIE_ENABLED=true,
+// imagen desplegada desde el 10 oct 2026). k6 las guardaria en el jar del VU y
+// la API trataria las peticiones siguientes sin Bearer como sesion por cookie,
+// exigiendo X-CSRF-Token (403 csrf_required). Estos scripts se autentican con
+// Bearer, asi que despues de cada login se descartan las cookies.
+function descartarCookies() {
+  http.cookieJar().clear(BASE_URL);
+}
+
 const STUDENT_EMAIL = __ENV.STUDENT_EMAIL;
 const STUDENT_PASSWORD = __ENV.STUDENT_PASSWORD;
 
@@ -58,6 +67,7 @@ export default function () {
       },
     },
   );
+  descartarCookies();
 
   const loginOk = check(loginRes, {
     'login status 200': (r) => r.status === 200,

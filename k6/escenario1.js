@@ -19,6 +19,15 @@ import { Rate, Counter } from 'k6/metrics';
 
 // ---------- Configuración ----------
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080/api/v1';
+
+// La API emite cookies de sesion y CSRF en el login (AUTH_COOKIE_ENABLED=true,
+// imagen desplegada desde el 10 oct 2026). k6 las guardaria en el jar del VU y
+// la API trataria las peticiones siguientes sin Bearer como sesion por cookie,
+// exigiendo X-CSRF-Token (403 csrf_required). Estos scripts se autentican con
+// Bearer, asi que despues de cada login se descartan las cookies.
+function descartarCookies() {
+  http.cookieJar().clear(BASE_URL);
+}
 const PROFILE = __ENV.PROFILE || 'smoke';
 const TOTAL_VUS = Number(__ENV.TOTAL_VUS || 20);
 const WARMUP_S = Number(__ENV.WARMUP_S || (PROFILE === 'smoke' ? 10 : 30));
@@ -394,6 +403,7 @@ export function loginBurst(data) {
   const student = data.students[(__VU - 1) % data.students.length];
   const res = call('POST', '/auth/login',
     { email: student.email, password: STUDENT_PASSWORD }, '', 'login', [200]);
+  descartarCookies();
   validate(res, tagsFor('login'), 'el login devuelve token', (r) => !!pick(json(r), 'token'));
   sleep(0.5);
 }
@@ -421,6 +431,7 @@ function login(email, password) {
     JSON.stringify({ email, password }),
     { headers: hdr(''), tags: { op: 'setup', phase: 'setup' } },
   );
+  descartarCookies();
   return res.status === 200 ? json(res) : null;
 }
 
@@ -535,6 +546,7 @@ function createStudents(count, runId) {
     const log = http.batch(emails.map((email) => ['POST', `${BASE_URL}/auth/login`,
       JSON.stringify({ email, password: STUDENT_PASSWORD }),
       { headers: hdr(''), tags: { op: 'setup', phase: 'setup' } }]));
+    descartarCookies();
     log.forEach((r, k) => {
       const body = must(r, [200], `Login ${emails[k]}`);
       students.push({ email: emails[k], token: pick(body, 'token') });

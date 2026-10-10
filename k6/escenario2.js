@@ -30,6 +30,15 @@ import { Trend, Counter, Rate } from 'k6/metrics';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080/api/v1';
 
+// La API emite cookies de sesion y CSRF en el login (AUTH_COOKIE_ENABLED=true,
+// imagen desplegada desde el 10 oct 2026). k6 las guardaria en el jar del VU y
+// la API trataria las peticiones siguientes sin Bearer como sesion por cookie,
+// exigiendo X-CSRF-Token (403 csrf_required). Estos scripts se autentican con
+// Bearer, asi que despues de cada login se descartan las cookies.
+function descartarCookies() {
+  http.cookieJar().clear(BASE_URL);
+}
+
 const ADMIN_EMAIL = __ENV.ADMIN_EMAIL || 'admin.k6@mooc.test';
 const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD || 'Admin12345';
 const TEACHER_PASSWORD = __ENV.TEACHER_PASSWORD || 'Teacher12345';
@@ -115,6 +124,7 @@ function login(email, password) {
   const res = http.post(`${BASE_URL}/auth/login`, JSON.stringify({ email, password }), {
     headers: headers(), tags: { module: 'media', phase: 'setup' },
   });
+  descartarCookies();
   if (res.status !== 200) return null;
   return json(res);
 }
