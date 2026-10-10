@@ -3,3 +3,4 @@
 .env
 *.exe
 deploy/gcp/logs/
+k6/media/
