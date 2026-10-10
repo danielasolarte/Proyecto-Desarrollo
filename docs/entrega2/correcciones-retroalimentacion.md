@@ -7,8 +7,8 @@ base de la Entrega 3.
 
 | Id | Observación del equipo docente | Corrección | Script | Estado |
 | --- | --- | --- | --- | --- |
-| C1 | "El login del Web Server real devolvía 500 al cierre" | `REDIS_ADDR` del Web Server apuntado a la IP interna actual del Worker (`10.20.0.2:6379`) después del cambio a `mooc-e2-vpc` | `deploy/gcp/06-correcciones-entrega2.ps1 -Fase RedisWeb` | Pendiente de ejecutar |
-| C2 | "La conexión no es privada: la instancia expone IP pública con redes autorizadas" | Private Service Access con el rango `mooc-e2-private-services`, IP privada en `mooc-postgres`, `DATABASE_URL` de ambas VM a la IP privada, sin IP pública ni redes autorizadas | `06-correcciones-entrega2.ps1 -Fase IpPrivadaSql`, `CambiarDatabaseUrl`, `QuitarIpPublicaSql` | Pendiente de ejecutar |
+| C1 | "El login del Web Server real devolvía 500 al cierre" | `REDIS_ADDR` del Web Server apuntado a la IP interna actual del Worker (`10.20.0.2:6379`) después del cambio a `mooc-e2-vpc` | `deploy/gcp/06-correcciones-entrega2.ps1 -Fase RedisWeb` | Cerrada (9 oct 2026): `REDIS_ADDR` ya apuntaba a `10.20.0.2:6379`; registro, verificación y login responden 200 contra el Web Server real |
+| C2 | "La conexión no es privada: la instancia expone IP pública con redes autorizadas" | Private Service Access con el rango `mooc-e2-private-services`, IP privada en `mooc-postgres`, `DATABASE_URL` de ambas VM a la IP privada, sin IP pública ni redes autorizadas | `06-correcciones-entrega2.ps1 -Fase IpPrivadaSql`, `CambiarDatabaseUrl`, `QuitarIpPublicaSql` | Cerrada (10 oct 2026): IP privada `10.235.0.3`, `ipv4Enabled: false`, sin redes autorizadas, `sslMode: ENCRYPTED_ONLY`; ambas VM usan la IP privada y el login responde 200 |
 | C3 | Desviación documentada: Worker con IP externa | Cloud Router + Cloud NAT, Private Google Access en `mooc-e2-subnet` y Worker sin IP externa | `06-correcciones-entrega2.ps1 -Fase WorkerSinIpPublica` | Pendiente de ejecutar |
 | C4 | "El flujo multimedia se probó contra una API temporal dentro del Worker, no sobre la topología desplegada" | Repetir el Escenario 2 contra el Web Server real por HTTPS, con los mismos perfiles y niveles | `k6/run-escenario2.ps1 -BaseUrl https://35.254.78.215.sslip.io/api/v1` | Pendiente de ejecutar (después de C1 a C3) |
 | C5 | Rúbrica: "archivos trasladados sin comprobar integridad o correspondencia" y "release sin resolver" | Verificación de existencia, tamaño, SHA-256, HLS y PDF de cada `media_asset` contra el bucket; ramas unificadas en `main` y tag `entrega-2` | `deploy/gcp/07-verificar-integridad-objetos.ps1` | Ramas unificadas; verificación pendiente de ejecutar |
@@ -35,9 +35,10 @@ base de la Entrega 3.
 
 Completar con la salida real de cada fase (sin secretos) y la fecha en que se ejecutó.
 
-- Diagnóstico inicial:
-- Login después de C1:
-- Cloud SQL sin IP pública:
+- Diagnóstico inicial (9 oct 2026): Cloud SQL detenida (`activationPolicy: NEVER`), IP pública `34.42.6.180` con tres redes autorizadas (`mooc-e2-web`, `mooc-e2-worker`, `camila-local`), sin peering de Private Service Access; Worker con IP externa `34.28.33.182`; Cloud NAT `mooc-e2-nat` ya existente en `mooc-e2-nat-router`.
+- Login después de C1 (9 oct 2026): `POST /api/v1/auth/register` 201, `verify-email` 200, `login` 200 en 0,45 s, `GET /api/v1/me` con Bearer 200.
+- Cloud SQL sin IP pública (10 oct 2026): `ipAddresses` solo `10.235.0.3 (PRIVATE)`, `ipv4Enabled: false`; `verify-email` 200 y `login` 200 después del cambio; migraciones en versión 5, `dirty=false`.
+- Hallazgos adicionales durante la corrección: el contenedor `clamav` del Worker llevaba 11 días `unhealthy` y la API temporal `api-test` seguía corriendo en el Worker (se detuvo, sin borrarla); la imagen `mooc-e2-api:latest` desplegada era anterior al commit `6c879a6` de cookies seguras y CSRF, por lo que el login no emitía cookies aunque `AUTH_COOKIE_ENABLED=true` (se corrige con `deploy/gcp/08-publicar-imagen-api.ps1`).
 - Worker sin IP externa y salida por NAT:
 - Reporte de integridad:
 - Corridas del Escenario 2 contra el Web Server:
