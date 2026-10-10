@@ -2,3 +2,4 @@
 .gomodcache/
 .env
 *.exe
+deploy/gcp/logs/

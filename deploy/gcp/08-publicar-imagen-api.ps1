@@ -20,7 +20,13 @@ param(
 )
 
 $ErrorActionPreference = "Continue"
-if (-not $env:GCP_PROJECT -or -not $env:WEB_VM) { throw "Carga primero deploy/gcp/00-variables.example.ps1." }
+# Permite lanzarlo con el boton Run de VS Code: se ubica en la raiz del repo,
+# carga las variables si faltan y deja el registro en deploy/gcp/logs/.
+Set-Location (Resolve-Path (Join-Path $PSScriptRoot "..\.."))
+if (-not $env:GCP_PROJECT -or -not $env:WEB_VM) { . (Join-Path $PSScriptRoot "00-variables.example.ps1") }
+New-Item -ItemType Directory -Force "deploy/gcp/logs" | Out-Null
+$log = "deploy/gcp/logs/08-publicar-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+Start-Transcript -Path $log | Out-Null
 
 $P = $env:GCP_PROJECT; $Z = $env:GCP_ZONE; $R = $env:GCP_REGION
 $registro = "$R-docker.pkg.dev"
@@ -30,7 +36,7 @@ $commit = (git rev-parse --short HEAD).Trim()
 function Titulo($t) { Write-Host ""; Write-Host "==== $t ====" -ForegroundColor Cyan }
 function Ssh($cmd) {
     $limpio = $cmd -replace "`r", ""
-    gcloud compute ssh $env:WEB_VM --zone=$Z --tunnel-through-iap --project=$P --strict-host-key-checking=no --command=$limpio
+    gcloud compute ssh $env:WEB_VM --zone=$Z --tunnel-through-iap --project=$P --strict-host-key-checking=no --command=$limpio 2>&1 | ForEach-Object { "$_" }
 }
 
 Titulo "Migraciones: version aplicada en Cloud SQL vs repositorio"
@@ -44,20 +50,20 @@ if ($AplicarMigraciones) {
     Ssh "rm -rf /tmp/mooc-migrations"
     gcloud compute scp --recurse migrations "$($env:WEB_VM):/tmp/mooc-migrations" --zone=$Z --tunnel-through-iap --project=$P --strict-host-key-checking=no | Out-Null
     Ssh "bash /tmp/aplicar-migraciones.sh"
-    return
+    Stop-Transcript | Out-Null; return
 }
-if ($SoloRevisarMigraciones) { return }
+if ($SoloRevisarMigraciones) { Stop-Transcript | Out-Null; return }
 
 Titulo "Construyendo $($imagen):$commit"
 if (git status --porcelain -- cmd internal go.mod go.sum deploy/Dockerfile.api) {
     Write-Host "ATENCION: hay cambios sin commit en el codigo de la API; la etiqueta $commit no los representaria." -ForegroundColor Yellow
-    return
+    Stop-Transcript | Out-Null; return
 }
-gcloud auth configure-docker $registro --quiet
-docker build -f deploy/Dockerfile.api -t "$($imagen):$commit" -t "$($imagen):latest" .
-if ($LASTEXITCODE -ne 0) { throw "Fallo docker build." }
-docker push "$($imagen):$commit"
-docker push "$($imagen):latest"
+gcloud auth configure-docker $registro --quiet 2>&1 | ForEach-Object { "$_" }
+docker build --progress=plain -f deploy/Dockerfile.api -t "$($imagen):$commit" -t "$($imagen):latest" . 2>&1 | ForEach-Object { "$_" }
+if ($LASTEXITCODE -ne 0) { Write-Host "Fallo docker build (revisa que Docker Desktop este corriendo)." -ForegroundColor Red; Stop-Transcript | Out-Null; return }
+docker push "$($imagen):$commit" 2>&1 | ForEach-Object { "$_" }
+docker push "$($imagen):latest" 2>&1 | ForEach-Object { "$_" }
 
 Titulo "Desplegando en $($env:WEB_VM)"
 $token = gcloud auth print-access-token
@@ -74,4 +80,7 @@ sudo docker logs --tail 10 `$(sudo docker compose -f docker-compose.web.yml ps -
 Ssh $remoto
 Write-Host ""
 Write-Host "Imagen desplegada: $($imagen):$commit (API_IMAGE fijada a esa etiqueta en el .env del Web Server)." -ForegroundColor Green
-Write-Host "Siguiente: .\deploy\gcp\06-correcciones-entrega2.ps1 -Fase Verificar -CrearUsuarioPrueba"
+Titulo "Verificacion final"
+& (Join-Path $PSScriptRoot "06-correcciones-entrega2.ps1") -Fase Verificar -CrearUsuarioPrueba 2>&1 | ForEach-Object { "$_" }
+Stop-Transcript | Out-Null
+Write-Host "Registro completo en $log"
