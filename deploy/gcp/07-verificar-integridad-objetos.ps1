@@ -19,16 +19,22 @@ Resultado: docs/entrega2/integridad-objetos.md (sin secretos).
 #>
 param(
     [string]$Bucket = "mooc-e2-media-proyecto1-entrega2",
-    [int]$MaxHash = 20,
+    [int]$MaxHash = 10,
     [string]$Salida = "docs/entrega2/integridad-objetos.md"
 )
 
-$ErrorActionPreference = "Stop"
-if (-not $env:WEB_VM) { throw "Carga primero deploy/gcp/00-variables.ps1." }
+$ErrorActionPreference = "Continue"
+# Se puede lanzar con Terminal > Run Active File: se ubica en la raiz del repo,
+# carga las variables si faltan y deja el registro en deploy/gcp/logs/.
+Set-Location (Resolve-Path (Join-Path $PSScriptRoot "..\.."))
+if (-not $env:WEB_VM) { . (Join-Path $PSScriptRoot "00-variables.example.ps1") }
+New-Item -ItemType Directory -Force "deploy/gcp/logs" | Out-Null
+Start-Transcript -Path "deploy/gcp/logs/07-integridad-$(Get-Date -Format 'yyyyMMdd-HHmmss').log" | Out-Null
+$gc = @("--zone=$env:GCP_ZONE", "--project=$env:GCP_PROJECT", "--tunnel-through-iap", "--strict-host-key-checking=no")
 
 Write-Host "1/4 Consultando media_assets en Cloud SQL desde $($env:WEB_VM)..."
-gcloud compute scp deploy/gcp/remoto/consulta-media-assets.sh "$($env:WEB_VM):/tmp/consulta-media-assets.sh" --zone=$env:GCP_ZONE --tunnel-through-iap | Out-Null
-$filas = gcloud compute ssh $env:WEB_VM --zone=$env:GCP_ZONE --tunnel-through-iap --command="bash /tmp/consulta-media-assets.sh" 2>$null |
+gcloud compute scp deploy/gcp/remoto/consulta-media-assets.sh "$($env:WEB_VM):/tmp/consulta-media-assets.sh" @gc 2>&1 | Out-Null
+$filas = gcloud compute ssh $env:WEB_VM @gc --command="bash /tmp/consulta-media-assets.sh" 2>$null |
     Where-Object { $_ -match "^[0-9a-f-]{36}\|" }
 $assets = foreach ($f in $filas) {
     $c = $f -split "\|"
@@ -38,7 +44,7 @@ Write-Host "    $($assets.Count) filas en media_assets"
 
 Write-Host "2/4 Listando objetos de gs://$Bucket ..."
 $objetos = @{}
-gcloud storage objects list "gs://$Bucket/**" --format="csv[no-heading](name,size)" | ForEach-Object {
+gcloud storage objects list "gs://$Bucket/**" --project=$env:GCP_PROJECT --format="csv[no-heading](name,size)" 2>$null | ForEach-Object {
     $p = $_ -split ","
     if ($p.Count -ge 2) { $objetos[$p[0]] = [int64]$p[1] }
 }
@@ -63,10 +69,12 @@ $resultado = foreach ($a in $assets) {
     if ($original -eq "ok" -and $a.Sha -and $hashes -lt $MaxHash) {
         $local = Join-Path $tmp ($a.Id + ".bin")
         gcloud storage cp "gs://$Bucket/$($a.Key)" $local --quiet 2>$null | Out-Null
-        $real = (Get-FileHash -Algorithm SHA256 -Path $local).Hash.ToLower()
-        Remove-Item $local -ErrorAction SilentlyContinue
-        $hashes++
-        if ($real -eq $a.Sha) { $sha = "coincide" } else { $sha = "NO coincide"; $problemas += "sha256 distinto" }
+        if (Test-Path $local) {
+            $real = (Get-FileHash -Algorithm SHA256 -Path $local).Hash.ToLower()
+            Remove-Item $local -ErrorAction SilentlyContinue
+            $hashes++
+            if ($real -eq $a.Sha) { $sha = "coincide" } else { $sha = "NO coincide"; $problemas += "sha256 distinto" }
+        } else { $sha = "no se pudo descargar" }
     }
 
     $hls = "-"
@@ -125,3 +133,4 @@ if ($huerfanos.Count -gt 0) {
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllLines((Join-Path (Get-Location) $Salida), $lineas, $utf8)
 Write-Host "Listo. Filas con problemas: $($conProblemas.Count). Huerfanos: $($huerfanos.Count)."
+Stop-Transcript | Out-Null
