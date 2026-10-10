@@ -138,11 +138,9 @@ Este es un resultado de la configuración básica: **con 2 GiB, el Worker no pue
 
 | Corrida | Perfiles | Carga | Checks | `http_req_failed` | Autorizar (avg) | Transferir a GCS (med / p95) | Confirmar (avg) | Hasta `ready` (med / máx) | Manifiesto HLS (avg / p95) | Segmento HLS (med / p95) | Errores HLS |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A, `l1` (`110215`) | 360p 15 s, 720p 45 s, 1080p 90 s | 2 profesores subiendo, 5 estudiantes viendo, 3 min | 278/278 | 0 % (0/593) | 0,27 s* | 1,78 s / 3,2 s | 0,26 s* | 12,6 s / 361 s | 0,19 s / 0,40 s | 0,27 s / 1,06 s | 0/250 |
+| A, `l1` (`110215`) | 360p 15 s, 720p 45 s, 1080p 90 s | 2 profesores subiendo, 5 estudiantes viendo, 3 min | 278/278 | 0 % (0/593) | 0,29 s | 1,78 s / 3,2 s | 0,28 s | 12,6 s / 361 s | 0,19 s / 0,40 s | 0,27 s / 1,06 s | 0/250 |
 | B, `baseline` (`114202`) | 360p 15 s, 720p 30 s, 1080p 30 s | 1 profesor, 2 estudiantes, 2,5 min | 63/65 | 2,4 % (4/164) | 0,37 s | 2,1 s / 9,7 s | 0,43 s | 34,8 s / 82,9 s | 0,46 s / 1,08 s | 2,0 s / 17,2 s | 2/41 |
 | B, `l1` (`114202`) | 360p 15 s, 720p 30 s, 1080p 30 s | 2 profesores, 5 estudiantes, 3 min | 300/300 | 0 % (0/518) | 0,28 s | 2,7 s / 5,0 s | 0,32 s | 40,7 s / 71,9 s | 0,19 s / 0,35 s | 0,32 s / 1,33 s | 0/264 |
-
-\* Valores de la fase de preparación de esa corrida.
 
 Lectura de los resultados:
 
