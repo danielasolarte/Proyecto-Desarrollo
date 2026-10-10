@@ -1,0 +1,329 @@
+{
+    "metrics": {
+        "http_req_tls_handshaking": {
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 120.66349667999995,
+            "max": 147.463925,
+            "avg": 3.335695839768339,
+            "min": 0
+        },
+        "upload_authorize_ms": {
+            "avg": 282.3333333333333,
+            "min": 264,
+            "med": 282,
+            "p(90)": 298.2,
+            "p(95)": 306.59999999999997,
+            "p(99)": 313.32,
+            "max": 315
+        },
+        "hls_segment_ms": {
+            "p(99)": 1925.2499999999995,
+            "max": 2018,
+            "avg": 486.09615384615387,
+            "min": 56,
+            "med": 315.5,
+            "p(90)": 1189.5,
+            "p(95)": 1326
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 1081.06139135,
+            "p(99)": 2219.9009437399964,
+            "max": 4945.30647,
+            "avg": 299.20526166988395,
+            "min": 55.383951,
+            "med": 143.91155700000002,
+            "p(90)": 671.2270242999999
+        },
+        "checks": {
+            "passes": 300,
+            "fails": 0,
+            "value": 1
+        },
+        "http_req_connecting": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 113.74393273999999,
+            "max": 125.3927,
+            "avg": 2.2401770193050194,
+            "min": 0,
+            "med": 0
+        },
+        "data_received": {
+            "count": 447988262,
+            "rate": 1182036.0172005536
+        },
+        "hls_manifest_ms": {
+            "p(90)": 289.4000000000004,
+            "p(95)": 352.9999999999998,
+            "p(99)": 700.4699999999998,
+            "max": 807,
+            "avg": 192.94444444444446,
+            "min": 139,
+            "med": 160
+        },
+        "http_req_blocked": {
+            "avg": 6.489617644787648,
+            "min": 0.000264,
+            "med": 0.000742,
+            "p(90)": 0.0011841000000000002,
+            "p(95)": 0.0015739999999999977,
+            "p(99)": 242.20840501999987,
+            "max": 597.235162
+        },
+        "http_req_sending": {
+            "max": 4544.652193,
+            "avg": 43.561537083011636,
+            "min": 0.066301,
+            "med": 0.21655000000000002,
+            "p(90)": 0.3706629,
+            "p(95)": 0.48429424999999987,
+            "p(99)": 1760.5583639299798
+        },
+        "hls_errors": {
+            "passes": 0,
+            "fails": 264,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 518,
+            "value": 0
+        },
+        "upload_transfer_ms": {
+            "p(99)": 5011.76,
+            "max": 5020,
+            "avg": 2930.4444444444443,
+            "min": 1167,
+            "med": 2730,
+            "p(90)": 4937.6,
+            "p(95)": 4978.8
+        },
+        "iteration_duration": {
+            "p(95)": 30349.85194955,
+            "p(99)": 58765.83352887,
+            "max": 60334.96989,
+            "avg": 20301.2841894138,
+            "min": 12454.466139,
+            "med": 13376.017488500001,
+            "p(90)": 28248.1605278
+        },
+        "vus": {
+            "max": 7,
+            "value": 1,
+            "min": 0
+        },
+        "http_req_receiving": {
+            "med": 0.39109249999999995,
+            "p(90)": 498.38497470000016,
+            "p(95)": 820.7428466499996,
+            "p(99)": 1335.15383037,
+            "max": 1906.037445,
+            "avg": 130.31656372393812,
+            "min": 0.029792
+        },
+        "http_req_duration": {
+            "max": 4945.30647,
+            "avg": 299.20526166988395,
+            "min": 55.383951,
+            "med": 143.91155700000002,
+            "p(90)": 671.2270242999999,
+            "p(95)": 1081.06139135,
+            "p(99)": 2219.9009437399964
+        },
+        "upload_confirm_ms": {
+            "avg": 320.1111111111111,
+            "min": 248,
+            "med": 298,
+            "p(90)": 395.20000000000005,
+            "p(95)": 457.5999999999999,
+            "p(99)": 507.52,
+            "max": 520
+        },
+        "iterations": {
+            "rate": 0.15303545832107562,
+            "count": 58
+        },
+        "vus_max": {
+            "value": 7,
+            "min": 7,
+            "max": 7
+        },
+        "data_sent": {
+            "count": 101255427,
+            "rate": 267166.73583519337
+        },
+        "http_reqs": {
+            "count": 518,
+            "rate": 1.366764955350296
+        },
+        "upload_functional_failures": {
+            "passes": 0,
+            "fails": 36,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "http_req_waiting": {
+            "p(99)": 464.16715146999877,
+            "max": 670.970741,
+            "avg": 125.3271608629345,
+            "min": 12.899734,
+            "med": 120.6279935,
+            "p(90)": 221.1597164,
+            "p(95)": 257.37802324999996
+        },
+        "upload_time_to_ready_ms": {
+            "avg": 36264.57142857143,
+            "min": 9467,
+            "med": 40731,
+            "p(90)": 62585.200000000004,
+            "p(95)": 67264.59999999999,
+            "p(99)": 71008.12,
+            "max": 71944
+        }
+    },
+    "setup_data": {
+        "teacher": {
+            "email": "teacher.e2.1791658718990@mooc.test",
+            "token": "2EoRXDl9-ZlC_dXHO7tsENSDtEQxPbJ9Mn-aXVgbDvw"
+        },
+        "uploadUnitId": "bb199083-7b79-40eb-be02-d56e82c5772f",
+        "availableResources": [
+            {
+                "profile": "corto_360p",
+                "resourceId": "76586b04-c3cf-4d89-8fa9-b239792e99c6"
+            },
+            {
+                "resourceId": "f0fae943-775c-4f2e-83f5-47e8c15b4b3e",
+                "profile": "medio_720p"
+            },
+            {
+                "profile": "largo_1080p",
+                "resourceId": "5b8d9a05-c58b-4d3b-a099-eb71708864e8"
+            }
+        ],
+        "runId": "1791658718990",
+        "students": [
+            {
+                "email": "student.e2.1791658718990.0@mooc.test",
+                "token": "rbx6yfouat7EbTCFmOardOD-1GZqTt8iyl-KoZBjgJ0"
+            },
+            {
+                "token": "WvmMBvwe4-8MrbmT9oV31heS9lqcekrMAwvkMXp-Ie4",
+                "email": "student.e2.1791658718990.1@mooc.test"
+            },
+            {
+                "token": "ReCndB2HcQef6soyLRWOjHMl9nrs9Kdz5yS4xgdLELM",
+                "email": "student.e2.1791658718990.2@mooc.test"
+            },
+            {
+                "email": "student.e2.1791658718990.3@mooc.test",
+                "token": "E1yFEPZ86weI1aWg_FX2btPGLBINgXe7PjDKe_54c9g"
+            },
+            {
+                "email": "student.e2.1791658718990.4@mooc.test",
+                "token": "ARIxYlmeNZwZ-Cgojq89DT5B5lRDmc848g82U8bUwOo"
+            }
+        ]
+    },
+    "root_group": {
+        "checks": {
+            "playback 200": {
+                "name": "playback 200",
+                "path": "::playback 200",
+                "id": "8e53b9937e87e7bd6ecd1909d22af7ad",
+                "passes": 54,
+                "fails": 0
+            },
+            "manifest 200": {
+                "name": "manifest 200",
+                "path": "::manifest 200",
+                "id": "9901f17e1d3c1538a9d4256439eaa66e",
+                "passes": 54,
+                "fails": 0
+            },
+            "segment 200": {
+                "name": "segment 200",
+                "path": "::segment 200",
+                "id": "54ffe9a4361f199b99db7f36ddbdd9e4",
+                "passes": 156,
+                "fails": 0
+            },
+            "initiate 201": {
+                "name": "initiate 201",
+                "path": "::initiate 201",
+                "id": "1c360810576573f7fcda0eda13163a3c",
+                "passes": 6,
+                "fails": 0
+            },
+            "part url 200": {
+                "passes": 6,
+                "fails": 0,
+                "name": "part url 200",
+                "path": "::part url 200",
+                "id": "8fb8a0cae76cb481c199281c766bf1a8"
+            },
+            "storage PUT 2xx": {
+                "name": "storage PUT 2xx",
+                "path": "::storage PUT 2xx",
+                "id": "8a245dce83caabad277e6d5865f55393",
+                "passes": 6,
+                "fails": 0
+            },
+            "complete 200": {
+                "name": "complete 200",
+                "path": "::complete 200",
+                "id": "2596e0ceacf121d4e6191001050c217a",
+                "passes": 6,
+                "fails": 0
+            }
+        },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "name": "setup",
+                "path": "::setup",
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+                "groups": {},
+                "checks": {
+                        "initiate 201": {
+                            "name": "initiate 201",
+                            "path": "::setup::initiate 201",
+                            "id": "e6d37867a2d6e2a37c61933b1dcc7715",
+                            "passes": 3,
+                            "fails": 0
+                        },
+                        "part url 200": {
+                            "name": "part url 200",
+                            "path": "::setup::part url 200",
+                            "id": "65b887db6ac71b4f8cb8d5b61efb271c",
+                            "passes": 3,
+                            "fails": 0
+                        },
+                        "storage PUT 2xx": {
+                            "passes": 3,
+                            "fails": 0,
+                            "name": "storage PUT 2xx",
+                            "path": "::setup::storage PUT 2xx",
+                            "id": "70625e8f6d6453e2563ba331576b9e5f"
+                        },
+                        "complete 200": {
+                            "name": "complete 200",
+                            "path": "::setup::complete 200",
+                            "id": "7ae3d1197766bbb65481a20810a74a0e",
+                            "passes": 3,
+                            "fails": 0
+                        }
+                    }
+            }
+        }
+    }
+}

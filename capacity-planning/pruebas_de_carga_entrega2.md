@@ -103,6 +103,67 @@ cerrar la condición de carrera detectada en `dup_submit_double_grading`.
 
 Responsable: Andrés Jurado.
 
+## Repetición contra el Web Server real (corrección C4, 10 de octubre de 2026)
+
+Esta sección responde a la observación del equipo docente: "el flujo multimedia se probó contra una API temporal dentro del Worker, no sobre la topología desplegada". Todas las corridas de esta sección entran por `https://35.254.78.215.sslip.io/api/v1` (Caddy y API en `mooc-e2-web`), con la carga directa a Cloud Storage, el procesamiento en `mooc-e2-worker` y Cloud SQL por IP privada. La API temporal `api-test` del Worker se detuvo antes de empezar.
+
+### Cómo se ejecutó
+
+- Orquestador: `k6/correr-escenario2-cloud.ps1`. Genera los videos, crea un admin de prueba (`admin.k6.e2.<fecha>@mooc.test`, promovido en Cloud SQL desde el Web Server), arranca monitores en ambas VM (`deploy/gcp/remoto/monitor-vm.sh`, muestras cada 5 s), corre `k6/run-escenario2.ps1` y trae los CSV.
+- Herramienta: k6 v2.3.0 en Docker Desktop, en el equipo de Daniela (Windows, fuera de las VM de la aplicación).
+- Mismo script `k6/escenario2.js`, con dos ajustes que no cambian la carga: las sesiones de k6 descartan las cookies tras el login, porque desde la imagen `mooc-e2-api:298301b` la API emite cookies de sesión y exigiría CSRF a k6, que se autentica con Bearer; y `setupTimeout` pasó de 5 a 20 minutos para alcanzar a precargar los tres perfiles.
+- Registros completos: `deploy/gcp/logs/` (local, no versionado), resultados en `k6/results/escenario2-ws-*` y métricas de VM en `capacity-planning/results/escenario2-ws-{web,worker}-*.csv`.
+
+### Primer resultado: con `e2-small` el Worker colapsa en la preparación
+
+Con la configuración de la Entrega 2 (Worker `e2-small`, 2 vCPU compartidas y 2 GiB, `WORKER_CONCURRENCY=5`), el Worker no completó ni la preparación de la línea base. Mientras transcodificaba el video de referencia de 720p (45 s):
+
+- a las 15:18 UTC los health checks de Redis y ClamAV dejaron de responder, y a las 15:24 UTC la VM ya no alcanzaba el servidor de metadatos (`169.254.169.254`, i/o timeout);
+- el SSH por IAP quedó sin respuesta;
+- como Redis vive en esa VM, el login de toda la plataforma pasó a responder **500 después de ~5,4 s** (`internal_error`), el mismo síntoma que el profesor observó al cierre de la entrega.
+
+Evidencia: `docs/entrega2/evidencia-saturacion-worker-20261010-103447.txt` (consola serial) y `capacity-planning/results/escenario2-ws-web-20261010-101434.csv`. La VM solo se recuperó con `gcloud compute instances reset` (`deploy/gcp/10-recuperar-worker.ps1`). Al reiniciar, el worker retomó con concurrencia 5 los trabajos que habían quedado a medias y colapsó otra vez a los dos minutos (15:38 UTC). Después del reinicio, con los contenedores en reposo, la VM tenía solo **575 MiB disponibles**, porque ClamAV ocupa ~1 GiB de forma permanente.
+
+### Ajuste mínimo aplicado
+
+El enunciado indica que, si una dependencia no puede ejecutarse con los recursos definidos, se documente el fallo, el ajuste mínimo y su efecto en costo y capacidad. El ajuste fue:
+
+- Worker `e2-small` → **`e2-medium`** (2 vCPU, 4 GiB), con `deploy/gcp/12-redimensionar-worker.ps1`. La IP interna `10.20.0.2` se conservó.
+- `WORKER_CONCURRENCY` de 5 → **2**, fija durante todas las corridas.
+- Costo: según la tarifa on-demand de `us-central1` (valor aproximado; hay que confirmarlo en la calculadora de GCP), `e2-small` cuesta ~USD 0,017/h y `e2-medium` ~USD 0,034/h, es decir unos USD 0,017/h más para el Worker. El Web Server sigue en `e2-small`.
+
+Este es un resultado de la configuración básica: **con 2 GiB, el Worker no puede transcodificar video mientras ClamAV y Redis comparten la máquina**, y su caída arrastra a toda la plataforma porque las sesiones están en el mismo Redis.
+
+### Corridas con `e2-medium` y concurrencia 2
+
+| Corrida | Perfiles | Carga | Checks | `http_req_failed` | Autorizar (avg) | Transferir a GCS (med / p95) | Confirmar (avg) | Hasta `ready` (med / máx) | Manifiesto HLS (avg / p95) | Segmento HLS (med / p95) | Errores HLS |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A, `l1` (`110215`) | 360p 15 s, 720p 45 s, 1080p 90 s | 2 profesores subiendo, 5 estudiantes viendo, 3 min | 278/278 | 0 % (0/593) | 0,27 s* | 1,78 s / 3,2 s | 0,26 s* | 12,6 s / 361 s | 0,19 s / 0,40 s | 0,27 s / 1,06 s | 0/250 |
+| B, `baseline` (`114202`) | 360p 15 s, 720p 30 s, 1080p 30 s | 1 profesor, 2 estudiantes, 2,5 min | 63/65 | 2,4 % (4/164) | 0,37 s | 2,1 s / 9,7 s | 0,43 s | 34,8 s / 82,9 s | 0,46 s / 1,08 s | 2,0 s / 17,2 s | 2/41 |
+| B, `l1` (`114202`) | 360p 15 s, 720p 30 s, 1080p 30 s | 2 profesores, 5 estudiantes, 3 min | 300/300 | 0 % (0/518) | 0,28 s | 2,7 s / 5,0 s | 0,32 s | 40,7 s / 71,9 s | 0,19 s / 0,35 s | 0,32 s / 1,33 s | 0/264 |
+
+\* Valores de la fase de preparación de esa corrida.
+
+Lectura de los resultados:
+
+- **El flujo completo funciona sobre la topología desplegada.** Las cargas se autorizan en la API, el archivo va directo a Cloud Storage, el worker lo procesa y queda `ready`, y los estudiantes consumen HLS desde el bucket. No hubo fallos funcionales de carga (0/28, 0/24 y 0/36).
+- **El tráfico de control de la API es liviano y estable.** Autorizar y confirmar tardan ~0,3 s. En la corrida B la API usó como máximo ~15 % de CPU y ~15 MiB de memoria en el Web Server.
+- **El límite está en el procesamiento.** En la corrida A, el tiempo hasta `ready` va de 9 s (360p) a ~6 min (1080p de 90 s). En esa ventana el Worker tuvo una carga promedio de hasta 11 con 2 vCPU, el contenedor worker estuvo por encima del 100 % de CPU la mayor parte del tiempo, la memoria disponible bajó hasta ~1,1 GiB y ClamAV se mantuvo en ~1 GiB. Durante la preparación, el 1080p de 90 s no alcanzó a quedar `ready` en 10 minutos.
+- **Los 2 errores HLS y las 4 peticiones fallidas de la línea base B** son descargas de segmentos desde Cloud Storage cortadas con `unexpected EOF` entre las 16:57:51 y las 16:57:57 UTC, justo cuando el equipo generador se suspendió (en ese momento se perdió también la conexión con él). Se atribuyen al generador, no a la plataforma.
+
+### Limitaciones de esta repetición
+
+- Los últimos minutos de la corrida A se cruzaron con la preparación de otra corrida (la `111518`), lo que agregó trabajos al Worker. Su `l2` falló en la preparación porque el 1080p de 90 s no quedó listo en 10 min.
+- El nivel `l1` de la corrida B se reanudó después de que el equipo generador volvió de suspensión. Sus resultados de k6 son válidos, pero el monitor de las VM ya había terminado, así que **no hay métricas de infraestructura para ese nivel**.
+- Para que la preparación terminara, en la corrida B se redujo la duración de los videos de 720p y 1080p (las resoluciones se mantienen). Por eso las corridas A y B no son comparables en tiempo hasta `ready`.
+- No se ejecutaron los niveles `l2`, `l3` ni `peak` sobre el Web Server real. El máximo probado son 2 profesores subiendo y 5 estudiantes viendo, y **no corresponde a la capacidad máxima**.
+
+### Qué cambiaría la capacidad (y qué medición lo respalda)
+
+1. **Sacar ClamAV y Redis del Worker.** ClamAV ocupa ~1 GiB constante y Redis concentra las sesiones de toda la plataforma: cuando el Worker se satura, cae el login. Respaldo: memoria disponible de 575 MiB con la VM en reposo en `e2-small`, y login en 500 a los ~5,4 s durante los colapsos.
+2. **Más CPU de procesamiento o más workers en paralelo**, que es lo que introduce la Entrega 3 con autoscaling de workers. Respaldo: carga promedio de hasta 11 con 2 vCPU y tiempo hasta `ready` de ~6 min para el 1080p de 90 s.
+3. **Una CDN para HLS** reduciría la latencia de los segmentos vistos desde fuera de `us-central1`, pero no es el cuello de botella actual. Respaldo: con 5 estudiantes, 0 errores HLS y segmentos con mediana de ~0,3 s.
+
 ## Estado de esta sección (2026-09-28)
 
 Se ejecutaron dos corridas reales con transferencia de datos y consumo de HLS (línea base y un nivel adicional), pero **no contra el Web Server final**: la infraestructura dedicada no estaba operativa en el momento de la prueba, así que se usó una instancia temporal de la API corriendo como contenedor adicional dentro del propio Worker Server. Esto es una desviación real y documentada, no un error del script, y es también la causa más probable de lo que se describe en "Punto de quiebre" más abajo: bajo la carga siguiente, **el Worker Server colapsó por completo**, incluyendo el acceso por SSH, y solo se recuperó con un reinicio forzado. Por eso no se alcanzaron los niveles `l2`, `l3` ni `peak` originalmente planeados: el tiempo se agotó atendiendo la inestabilidad de la infraestructura compartida en vez de escalar la carga.
