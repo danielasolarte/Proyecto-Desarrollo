@@ -1,0 +1,208 @@
+{
+    "metrics": {
+        "http_req_sending": {
+            "med": 0.267898,
+            "p(90)": 0.40905880000000006,
+            "p(95)": 0.4960000000000003,
+            "p(99)": 2.9860523999999686,
+            "max": 3282.630058,
+            "avg": 19.162149659016414,
+            "min": 0.095747
+        },
+        "http_req_waiting": {
+            "med": 140.483433,
+            "p(90)": 231.4072564,
+            "p(95)": 271.35016980000006,
+            "p(99)": 416.82487835999984,
+            "max": 753.940391,
+            "avg": 160.36127791803278,
+            "min": 100.687916
+        },
+        "http_req_receiving": {
+            "avg": 0.2725552426229508,
+            "min": 0.053725,
+            "med": 0.166168,
+            "p(90)": 0.3127238,
+            "p(95)": 0.4357648000000003,
+            "p(99)": 2.2467575999999783,
+            "max": 14.521514
+        },
+        "checks": {
+            "passes": 12,
+            "fails": 0,
+            "value": 1
+        },
+        "upload_confirm_ms": {
+            "p(95)": 418.1,
+            "p(99)": 418.82,
+            "max": 419,
+            "avg": 358.3333333333333,
+            "min": 246,
+            "med": 410,
+            "p(90)": 417.2
+        },
+        "vus": {
+            "value": 0,
+            "min": 0,
+            "max": 0
+        },
+        "http_req_failed": {
+            "fails": 305,
+            "passes": 0,
+            "value": 0
+        },
+        "data_received": {
+            "count": 220470,
+            "rate": 246.88058756722978
+        },
+        "http_req_tls_handshaking": {
+            "avg": 1.2071407049180327,
+            "min": 0,
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0,
+            "max": 226.47428
+        },
+        "upload_ready_timeouts": {
+            "count": 1,
+            "rate": 0.0011197922055936399
+        },
+        "upload_functional_failures": {
+            "fails": 12,
+            "passes": 0,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "http_req_duration{expected_response:true}": {
+            "min": 100.971154,
+            "med": 140.81528,
+            "p(90)": 236.18168580000008,
+            "p(95)": 277.4093396,
+            "p(99)": 744.7559181599952,
+            "max": 3511.022794,
+            "avg": 179.79598281967213
+        },
+        "upload_authorize_ms": {
+            "p(99)": 267.7,
+            "max": 268,
+            "avg": 254.33333333333334,
+            "min": 242,
+            "med": 253,
+            "p(90)": 265,
+            "p(95)": 266.5
+        },
+        "hls_errors": {
+            "passes": 0,
+            "fails": 0,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "http_reqs": {
+            "count": 305,
+            "rate": 0.34153662270606017
+        },
+        "data_sent": {
+            "count": 80502390,
+            "rate": 90145.94885365937
+        },
+        "vus_max": {
+            "value": 3,
+            "min": 3,
+            "max": 3
+        },
+        "upload_time_to_ready_ms": {
+            "p(90)": 228360.80000000002,
+            "p(95)": 239460.9,
+            "p(99)": 248340.98,
+            "max": 250561,
+            "avg": 139560,
+            "min": 28559,
+            "med": 139560
+        },
+        "http_req_blocked": {
+            "min": 0.000221,
+            "med": 0.000745,
+            "p(90)": 0.0012336000000000003,
+            "p(95)": 0.001466,
+            "p(99)": 0.005318239999999983,
+            "max": 348.075463,
+            "avg": 1.6836122032786895
+        },
+        "upload_transfer_ms": {
+            "avg": 2294,
+            "min": 1574,
+            "med": 1604,
+            "p(90)": 3284,
+            "p(95)": 3494,
+            "p(99)": 3662,
+            "max": 3704
+        },
+        "http_req_duration": {
+            "p(95)": 277.4093396,
+            "p(99)": 744.7559181599952,
+            "max": 3511.022794,
+            "avg": 179.79598281967213,
+            "min": 100.971154,
+            "med": 140.81528,
+            "p(90)": 236.18168580000008
+        },
+        "http_req_connecting": {
+            "p(99)": 0,
+            "max": 108.731209,
+            "avg": 0.41657859016393445,
+            "min": 0,
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "path": "::setup",
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+                "groups": {},
+                "checks": {
+                        "initiate 201": {
+                            "fails": 0,
+                            "name": "initiate 201",
+                            "path": "::setup::initiate 201",
+                            "id": "e6d37867a2d6e2a37c61933b1dcc7715",
+                            "passes": 3
+                        },
+                        "part url 200": {
+                            "id": "65b887db6ac71b4f8cb8d5b61efb271c",
+                            "passes": 3,
+                            "fails": 0,
+                            "name": "part url 200",
+                            "path": "::setup::part url 200"
+                        },
+                        "storage PUT 2xx": {
+                            "name": "storage PUT 2xx",
+                            "path": "::setup::storage PUT 2xx",
+                            "id": "70625e8f6d6453e2563ba331576b9e5f",
+                            "passes": 3,
+                            "fails": 0
+                        },
+                        "complete 200": {
+                            "name": "complete 200",
+                            "path": "::setup::complete 200",
+                            "id": "7ae3d1197766bbb65481a20810a74a0e",
+                            "passes": 3,
+                            "fails": 0
+                        }
+                    },
+                "name": "setup"
+            }
+        },
+        "checks": {}
+    }
+}
