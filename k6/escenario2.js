@@ -36,7 +36,13 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080/api/v1';
 // exigiendo X-CSRF-Token (403 csrf_required). Estos scripts se autentican con
 // Bearer, asi que despues de cada login se descartan las cookies.
 function descartarCookies() {
-  http.cookieJar().clear(BASE_URL);
+  const jar = http.cookieJar();
+  const actuales = jar.cookiesForURL(BASE_URL);
+  for (const nombre of Object.keys(actuales)) jar.delete(BASE_URL, nombre);
+}
+// Jar desechable para las peticiones de login: la cookie nunca entra al jar del VU.
+function jarLogin() {
+  return new http.CookieJar();
 }
 
 const ADMIN_EMAIL = __ENV.ADMIN_EMAIL || 'admin.k6@mooc.test';
@@ -122,10 +128,13 @@ function must(res, allowed, label) {
 
 function login(email, password) {
   const res = http.post(`${BASE_URL}/auth/login`, JSON.stringify({ email, password }), {
-    headers: headers(), tags: { module: 'media', phase: 'setup' },
+    headers: headers(), tags: { module: 'media', phase: 'setup' }, jar: jarLogin(),
   });
   descartarCookies();
-  if (res.status !== 200) return null;
+  if (res.status !== 200) {
+    console.error(`login ${email} -> status=${res.status} body=${String(res.body).slice(0, 200)}`);
+    return null;
+  }
   return json(res);
 }
 

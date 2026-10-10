@@ -9,7 +9,13 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080/api/v1';
 // exigiendo X-CSRF-Token (403 csrf_required). Estos scripts se autentican con
 // Bearer, asi que despues de cada login se descartan las cookies.
 function descartarCookies() {
-  http.cookieJar().clear(BASE_URL);
+  const jar = http.cookieJar();
+  const actuales = jar.cookiesForURL(BASE_URL);
+  for (const nombre of Object.keys(actuales)) jar.delete(BASE_URL, nombre);
+}
+// Jar desechable para las peticiones de login: la cookie nunca entra al jar del VU.
+function jarLogin() {
+  return new http.CookieJar();
 }
 
 const STUDENT_EMAIL = __ENV.STUDENT_EMAIL;

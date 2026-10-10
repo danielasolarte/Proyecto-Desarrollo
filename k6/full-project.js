@@ -10,7 +10,13 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080/api/v1';
 // exigiendo X-CSRF-Token (403 csrf_required). Estos scripts se autentican con
 // Bearer, asi que despues de cada login se descartan las cookies.
 function descartarCookies() {
-  http.cookieJar().clear(BASE_URL);
+  const jar = http.cookieJar();
+  const actuales = jar.cookiesForURL(BASE_URL);
+  for (const nombre of Object.keys(actuales)) jar.delete(BASE_URL, nombre);
+}
+// Jar desechable para las peticiones de login: la cookie nunca entra al jar del VU.
+function jarLogin() {
+  return new http.CookieJar();
 }
 const PROFILE = __ENV.PROFILE || 'smoke';
 const TOTAL_VUS = Number(__ENV.TOTAL_VUS || 100);
@@ -290,7 +296,7 @@ function login(email, password) {
   const res = http.post(
     `${BASE_URL}/auth/login`,
     JSON.stringify({ email, password }),
-    { headers: headers(), tags: { module: 'auth', phase: 'setup' } },
+    { headers: headers(), tags: { module: 'auth', phase: 'setup' }, jar: jarLogin() },
   );
   descartarCookies();
   if (res.status !== 200) return null;
@@ -605,7 +611,7 @@ export function authentication(data) {
       email: student.email,
       password: STUDENT_PASSWORD,
     }),
-    { headers: headers(), tags: { module: 'auth' } },
+    { headers: headers(), tags: { module: 'auth' }, jar: jarLogin() },
   );
   descartarCookies();
   assertStatus(res, [200], 'auth login');
