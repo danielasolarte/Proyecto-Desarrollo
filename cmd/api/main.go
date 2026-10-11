@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
@@ -26,6 +30,7 @@ import (
 	mediaHTTP "github.com/equipo-mooc/plataforma-mooc/internal/media/http"
 	mediaPlatform "github.com/equipo-mooc/plataforma-mooc/internal/media/platform"
 	mediaPG "github.com/equipo-mooc/plataforma-mooc/internal/media/postgres"
+	"github.com/equipo-mooc/plataforma-mooc/internal/platform/health"
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/mailer"
 	progressHTTP "github.com/equipo-mooc/plataforma-mooc/internal/progress/http"
 	progressPG "github.com/equipo-mooc/plataforma-mooc/internal/progress/postgres"
@@ -75,9 +80,21 @@ func main() {
 		mailFrom = "no-reply@mooc.local"
 	}
 
+	instanceID := health.InstanceID()
+	log.Printf("API iniciando en la instancia %s", instanceID)
+
 	e := echo.New()
+	e.HideBanner = true
+	e.Use(health.InstanceHeader(instanceID))
 	e.Use(middleware.RequestID())
-	e.Use(middleware.Logger())
+	// Los health checks del balanceador llegan cada pocos segundos por
+	// instancia; no se registran para no llenar los logs.
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Skipper: func(c echo.Context) bool {
+			p := c.Request().URL.Path
+			return p == "/health" || p == "/health/ready"
+		},
+	}))
 	e.Use(middleware.Recover())
 
 	userRepo := authPG.NewUserRepository(db)
@@ -86,9 +103,12 @@ func main() {
 	e.Use(authHTTP.AuthMiddleware(userRepo, sessionStore))
 	e.Use(authHTTP.CSRFMiddleware())
 
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
-	})
+	// /health (vida) y /health/ready (Postgres + Redis, sin detalles de
+	// error). El balanceador usa /health/ready; ver internal/platform/health.
+	checker := health.New(time.Duration(intEnv("HEALTH_TIMEOUT_MS", 1500)) * time.Millisecond)
+	checker.Add("postgres", func(ctx context.Context) error { return db.Ping(ctx) })
+	checker.Add("redis", func(ctx context.Context) error { return redisClient.Ping(ctx).Err() })
+	checker.Register(e)
 	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
 	courseRepo := coursesPG.NewCourseRepository(db)
@@ -190,7 +210,55 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	e.Logger.Fatal(e.Start(":" + port))
+	serve(e, checker, ":"+port)
+}
+
+// serve arranca la API y hace un apagado ordenado al recibir SIGTERM o
+// SIGINT (docker stop, systemctl stop, retiro de la VM por el MIG):
+//
+//  1. /health/ready pasa a 503 para que el balanceador deje de enviar
+//     solicitudes nuevas a esta réplica.
+//  2. Espera SHUTDOWN_DRAIN_SECONDS (por defecto 10 s, el tiempo que tarda
+//     el health check del balanceador en marcarla como no saludable).
+//  3. Deja de aceptar conexiones y espera hasta SHUTDOWN_TIMEOUT_SECONDS
+//     (por defecto 20 s) a que terminen las solicitudes en curso.
+//
+// El tiempo total (drenaje + timeout) debe ser menor que el que da
+// "docker stop -t" en la unidad systemd de la VM.
+func serve(e *echo.Echo, checker *health.Checker, addr string) {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	errCh := make(chan error, 1)
+	go func() {
+		if err := e.Start(addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+		close(errCh)
+	}()
+
+	select {
+	case err, ok := <-errCh:
+		if ok && err != nil {
+			log.Fatalf("la API se detuvo: %v", err)
+		}
+		return
+	case <-ctx.Done():
+	}
+
+	drain := time.Duration(intEnv("SHUTDOWN_DRAIN_SECONDS", 10)) * time.Second
+	timeout := time.Duration(intEnv("SHUTDOWN_TIMEOUT_SECONDS", 20)) * time.Second
+	log.Printf("señal de apagado recibida: /health/ready en 503, drenando %s", drain)
+	checker.StartDraining()
+	time.Sleep(drain)
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if err := e.Shutdown(shutdownCtx); err != nil {
+		log.Printf("apagado con solicitudes sin terminar tras %s: %v", timeout, err)
+		return
+	}
+	log.Println("API apagada sin solicitudes pendientes")
 }
 func intEnv(key string, fallback int) int {
 	value := os.Getenv(key)
