@@ -66,14 +66,20 @@ function Ssh($vm, $cmd) {
     # Quita CR (CRLF de Windows). Se asigna a variable porque
     # "--command=(expr)" PowerShell lo parte en dos argumentos.
     $limpio = $cmd -replace "`r", ""
-    gcloud compute ssh $vm --zone=$Z --tunnel-through-iap --project=$P --strict-host-key-checking=no --command=$limpio 2>&1 | ForEach-Object { "$_" }
+    # En Windows gcloud usa PuTTY (plink): la primera vez pregunta si guarda la
+    # llave de la VM nueva y sigue igual; esas lineas se filtran.
+    gcloud compute ssh $vm --zone=$Z --tunnel-through-iap --project=$P --strict-host-key-checking=no --command=$limpio 2>&1 |
+        ForEach-Object { "$_" } |
+        Where-Object { $_ -notmatch "host key is not cached|no guarantee that the server|think it is\.|ssh-ed25519 key fingerprint|ssh-ed25519 255 SHA256|If you trust this host|cache and carry on|If you want to carry on|the key to the cache|If you do not trust|abandon the|connection\.$|Store key in cache|compute\.\d+ \(port 22\)|^\s*$" }
 }
 
 function Existe($tipo, $nombre, $extra) {
     # $tipo: por ejemplo "compute instance-templates" o "iam service-accounts".
     $argumentos = @($tipo.Split(" ")) + @("describe", $nombre, "--project=$P", "--format=value(name)")
     if ($extra) { $argumentos += $extra }
-    $r = & gcloud @argumentos 2>$null
+    # Los "not found" de gcloud llegan como registros de error; se descartan
+    # aqui para que no ensucien la consola ni el registro.
+    $r = & gcloud @argumentos 2>&1 | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] }
     return [bool]$r
 }
 

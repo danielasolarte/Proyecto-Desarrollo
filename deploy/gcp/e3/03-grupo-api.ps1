@@ -83,7 +83,8 @@ switch ($Fase) {
         Aviso "REDIS_ADDR = $RedisAddr (Redis del Worker de la E2, temporal)"
     }
     if (-not $S3Bucket) {
-        $S3Bucket = (Ssh $env:WEB_VM "sudo docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' `$(sudo docker ps -q --filter label=com.docker.compose.service=api | head -1) | grep ^S3_BUCKET= | cut -d= -f2" | Where-Object { $_ -match '^[a-z0-9._-]+$' } | Select-Object -First 1)
+        $S3Bucket = (Ssh $env:WEB_VM "sudo docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' `$(sudo docker ps -q --filter label=com.docker.compose.service=api | head -1) | grep ^S3_BUCKET= | cut -d= -f2" | Where-Object { $_ -match '^[a-z0-9._-]+$' })
+        $S3Bucket = @($S3Bucket)[0]
         if (-not $S3Bucket) { Falla "No se pudo leer S3_BUCKET del Web Server; pasalo con -S3Bucket."; break }
         Write-Host "S3_BUCKET = $S3Bucket (leido del Web Server)"
     }
