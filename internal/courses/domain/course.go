@@ -147,6 +147,43 @@ type UnitTree struct {
 	Resources []Resource `json:"resources"`
 }
 
+// TeacherCourse es la fila de "Mis cursos" del profesor: un curso propio
+// con los datos de la versión que el profesor ve (el borrador si existe,
+// si no la publicada) y su estado de publicación.
+type TeacherCourse struct {
+	ID                   string     `json:"id"`
+	Slug                 string     `json:"slug"`
+	Title                string     `json:"title"`
+	Summary              string     `json:"summary"`
+	Category             string     `json:"category"`
+	Status               string     `json:"status"`
+	PublishedVersionID   *string    `json:"published_version_id,omitempty"`
+	LatestDraftVersionID *string    `json:"latest_draft_version_id,omitempty"`
+	PublishedAt          *time.Time `json:"published_at,omitempty"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
+}
+
+// Estados de un curso en la lista del profesor.
+const (
+	CourseStatusDraft              = "draft"                // nunca publicado
+	CourseStatusPublished          = "published"            // publicado, sin cambios pendientes
+	CourseStatusPublishedWithDraft = "published_with_draft" // publicado y con un borrador de actualización
+)
+
+// CourseStatusFor deriva el estado a partir de los punteros del curso:
+// al publicar, latest_draft_version_id queda en NULL (ver usecase/publish.go).
+func CourseStatusFor(publishedVersionID, latestDraftVersionID *string) string {
+	switch {
+	case publishedVersionID != nil && latestDraftVersionID != nil:
+		return CourseStatusPublishedWithDraft
+	case publishedVersionID != nil:
+		return CourseStatusPublished
+	default:
+		return CourseStatusDraft
+	}
+}
+
 // ---------- errores de dominio ----------
 
 var (
@@ -165,6 +202,10 @@ type CourseRepository interface {
 	CreateCourseWithFirstVersion(course *Course, version *CourseVersion) error
 	FindCourseByID(id string) (*Course, error)
 	FindCourseBySlug(slug string) (*Course, error)
+	// ListCoursesByTeacher devuelve los cursos del profesor, del más
+	// reciente al más antiguo, con paginación por cursor (keyset). Devuelve
+	// el cursor de la página siguiente, o "" si no hay más.
+	ListCoursesByTeacher(teacherID string, cursor string, limit int) ([]TeacherCourse, string, error)
 	UpdateCoursePublishedVersion(courseID string, publishedVersionID *string, latestDraftVersionID *string) error
 
 	FindVersionByID(id string) (*CourseVersion, error)

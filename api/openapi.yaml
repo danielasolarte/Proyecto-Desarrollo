@@ -295,6 +295,46 @@ paths:
           description: Curso y primera versión creados
         '400':
           $ref: '#/components/responses/ValidationError'
+  /me/courses:
+    get:
+      summary: Mis cursos (profesor autenticado), en borrador y publicados
+      description: |
+        Lista los cursos cuyo teacher_id es el usuario de la sesion, del mas
+        reciente al mas antiguo. El titulo, resumen y categoria son los del
+        borrador si existe; si no, los de la version publicada. Nunca acepta
+        el id del profesor por parametro: un profesor no puede listar cursos
+        ajenos.
+      tags:
+      - autoria
+      parameters:
+      - name: cursor
+        in: query
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+      responses:
+        '200':
+          description: Cursos del profesor y cursor de la siguiente pagina ("" si no hay mas)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  courses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TeacherCourse'
+                  next_cursor:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /courses/{courseID}:
     get:
       summary: Obtener metadatos de un curso
@@ -1225,6 +1265,43 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
   schemas:
+    TeacherCourse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+          enum:
+          - draft
+          - published
+          - published_with_draft
+          description: draft = nunca publicado; published = publicado sin cambios pendientes; published_with_draft = publicado y con borrador de actualizacion
+        published_version_id:
+          type: string
+          format: uuid
+        latest_draft_version_id:
+          type: string
+          format: uuid
+          description: Version que el profesor edita (modulos, unidades y recursos se crean sobre ella)
+        published_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     InitiateUploadRequest:
       type: object
       properties:

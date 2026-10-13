@@ -5,7 +5,10 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -164,6 +167,91 @@ func (r *CourseRepository) FindCourseBySlug(slug string) (*domain.Course, error)
 	c.PublishedVersionID = strPtr(published)
 	c.LatestDraftVersionID = strPtr(draft)
 	return &c, nil
+}
+
+// encodeTeacherCursor / decodeTeacherCursor: el cursor es opaco para el
+// cliente y lleva (created_at, id) del último curso de la página, que es
+// exactamente la clave del ORDER BY.
+func encodeTeacherCursor(createdAt time.Time, id string) string {
+	raw := createdAt.UTC().Format(time.RFC3339Nano) + "|" + id
+	return base64.RawURLEncoding.EncodeToString([]byte(raw))
+}
+
+func decodeTeacherCursor(cursor string) (time.Time, string, error) {
+	if cursor == "" {
+		return time.Time{}, "", nil
+	}
+	b, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		return time.Time{}, "", err
+	}
+	parts := strings.SplitN(string(b), "|", 2)
+	if len(parts) != 2 || parts[1] == "" {
+		return time.Time{}, "", errors.New("formato de cursor")
+	}
+	t, err := time.Parse(time.RFC3339Nano, parts[0])
+	if err != nil {
+		return time.Time{}, "", err
+	}
+	return t, parts[1], nil
+}
+
+func (r *CourseRepository) ListCoursesByTeacher(teacherID string, cursor string, limit int) ([]domain.TeacherCourse, string, error) {
+	cursorTime, cursorID, err := decodeTeacherCursor(cursor)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: cursor invalido", domain.ErrValidation)
+	}
+
+	// El título y la descripción que ve el profesor son los del borrador si
+	// existe (lo que está editando); si no, los de la versión publicada.
+	query := `
+		SELECT c.id, c.slug,
+		       COALESCE(d.title, p.title, ''), COALESCE(d.summary, p.summary, ''), COALESCE(d.category, p.category, ''),
+		       c.published_version_id, c.latest_draft_version_id, p.published_at,
+		       c.created_at, c.updated_at
+		FROM courses c
+		LEFT JOIN course_versions d ON d.id = c.latest_draft_version_id
+		LEFT JOIN course_versions p ON p.id = c.published_version_id
+		WHERE c.teacher_id = $1`
+	args := []any{teacherID}
+	if !cursorTime.IsZero() {
+		query += ` AND (c.created_at, c.id) < ($2, $3)`
+		args = append(args, cursorTime, cursorID)
+	}
+	query += fmt.Sprintf(` ORDER BY c.created_at DESC, c.id DESC LIMIT $%d`, len(args)+1)
+	args = append(args, limit)
+
+	rows, err := r.db.Query(context.Background(), query, args...)
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+
+	out := []domain.TeacherCourse{}
+	for rows.Next() {
+		var tc domain.TeacherCourse
+		var published, draft sql.NullString
+		var publishedAt sql.NullTime
+		if err := rows.Scan(&tc.ID, &tc.Slug, &tc.Title, &tc.Summary, &tc.Category,
+			&published, &draft, &publishedAt, &tc.CreatedAt, &tc.UpdatedAt); err != nil {
+			return nil, "", err
+		}
+		tc.PublishedVersionID = strPtr(published)
+		tc.LatestDraftVersionID = strPtr(draft)
+		tc.PublishedAt = timePtr(publishedAt)
+		tc.Status = domain.CourseStatusFor(tc.PublishedVersionID, tc.LatestDraftVersionID)
+		out = append(out, tc)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, "", err
+	}
+
+	next := ""
+	if len(out) == limit {
+		last := out[len(out)-1]
+		next = encodeTeacherCursor(last.CreatedAt, last.ID)
+	}
+	return out, next, nil
 }
 
 func (r *CourseRepository) UpdateCoursePublishedVersion(courseID string, publishedVersionID *string, latestDraftVersionID *string) error {

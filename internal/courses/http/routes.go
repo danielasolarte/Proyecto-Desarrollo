@@ -17,6 +17,7 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 	authoring := g.Group("", authctx.RequireRole(authctx.RoleTeacher, authctx.RoleAdmin))
 
 	authoring.POST("/courses", h.CreateCourse)
+	authoring.GET("/me/courses", h.ListMyCourses)
 	g.GET("/courses/:courseID", h.GetCourse)
 	g.GET("/courses/:courseID/preview", h.PreviewCourse)
 	authoring.POST("/courses/:courseID/draft", h.CreateUpdateDraft)

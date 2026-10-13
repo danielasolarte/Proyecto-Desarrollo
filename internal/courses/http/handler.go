@@ -6,6 +6,7 @@ package http
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 
@@ -107,6 +108,24 @@ func (h *Handler) CreateCourse(c echo.Context) error {
 		return respondError(c, err)
 	}
 	return c.JSON(http.StatusCreated, map[string]any{"course": course, "version": version})
+}
+
+// ListMyCourses implementa GET /api/v1/me/courses?cursor=&limit=
+// Pantalla "Mis cursos" del profesor: sus cursos en borrador y publicados.
+func (h *Handler) ListMyCourses(c echo.Context) error {
+	user, err := currentUser(c)
+	if err != nil {
+		return respondError(c, err)
+	}
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	result, err := usecase.ListTeacherCourses(h.repo, user.ID, c.QueryParam("cursor"), limit)
+	if err != nil {
+		return respondError(c, err)
+	}
+	return c.JSON(http.StatusOK, map[string]any{
+		"courses":     result.Courses,
+		"next_cursor": result.NextCursor,
+	})
 }
 
 func (h *Handler) GetCourse(c echo.Context) error {
