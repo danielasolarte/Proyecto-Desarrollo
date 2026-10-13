@@ -1,3 +1,4 @@
 Video[[:space:]]y[[:space:]]doc/proyecto1[[:space:]]entrega[[:space:]]1[[:space:]]desarrollo.mp4 filter=lfs diff=lfs merge=lfs -text
 
 *.sh text eol=lf
+deploy/gcp/e3/maquina/* text eol=lf

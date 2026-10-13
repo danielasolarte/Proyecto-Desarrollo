@@ -1,0 +1,25 @@
+[Unit]
+Description=MOOC (API o worker segun la plantilla del grupo)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Lee metadatos y secretos y deja /run/mooc/env y /run/mooc/unidad.env.
+ExecStartPre=/usr/local/bin/mooc-preparar.sh
+# Nombre fijo del contenedor: un reinicio nunca deja dos copias corriendo.
+ExecStartPre=-/usr/bin/docker rm -f mooc
+# ("$$" es un "$" literal: systemd no expande esas variables; las expande
+# /bin/sh despues de cargar /run/mooc/unidad.env.)
+ExecStart=/bin/sh -c '. /run/mooc/unidad.env; exec /usr/bin/docker run --name mooc --network host --env-file /run/mooc/env --log-opt max-size=20m --log-opt max-file=3 $$MOOC_DOCKER_ARGS "$$MOOC_IMAGEN"'
+# Apagado ordenado: SIGTERM al proceso y hasta MOOC_DETENER_S segundos antes
+# de SIGKILL (la API drena y cierra; el worker termina sus trabajos activos).
+ExecStop=/bin/sh -c '. /run/mooc/unidad.env; /usr/bin/docker stop -t "$$MOOC_DETENER_S" mooc'
+TimeoutStartSec=600
+TimeoutStopSec=900
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
