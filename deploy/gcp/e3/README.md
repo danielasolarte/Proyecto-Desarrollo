@@ -41,4 +41,4 @@ Entre pruebas, `03 -Fase Apagar` deja el grupo en 0 instancias y `03 -Fase Encen
 
 - Crear una plantilla nueva con `-RedisAddr <IP de servicios>:6379` y aplicar `-Fase Actualizar`.
 - Borrar la regla temporal `mooc-e3-redis-temporal`.
-- Mover las migraciones a la VM de servicios. Mientras tanto se usa `..\08-publicar-imagen-api.ps1 -AplicarMigraciones`, que las ejecuta una sola vez desde el Web Server dentro de la VPC.
+- Migraciones: `.\deploy\gcp\e3\05-migraciones.ps1 -Fase Version` y `-Fase Aplicar`. Corren una sola vez desde `mooc-servicios`, leen `DATABASE_URL` de Secret Manager con `sa-mooc-servicios` y usan el bloqueo de golang-migrate; nunca en el arranque de las réplicas. Se aplican antes de publicar una versión de la API que las necesite.
