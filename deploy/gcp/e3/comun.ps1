@@ -29,6 +29,7 @@ $DOCKERFILE = @{ api = "deploy/Dockerfile.api"; worker = "deploy/Dockerfile.work
 $SA = @{
     api    = "sa-mooc-api@$P.iam.gserviceaccount.com"
     worker = "sa-mooc-worker@$P.iam.gserviceaccount.com"
+    servicios = "sa-mooc-servicios@$P.iam.gserviceaccount.com"
 }
 
 # Secretos: variable de entorno de la app => nombre del secreto en Secret Manager.

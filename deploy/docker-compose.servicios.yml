@@ -1,0 +1,39 @@
+# VM de servicios (Entrega 3): Redis (cola asynq + sesiones) y ClamAV.
+# Vive fuera de los grupos elasticos: el autoscaling nunca la retira.
+# La levanta deploy/gcp/e3/maquina/servicios-arranque.sh en cada arranque.
+services:
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: unless-stopped
+    # AOF: la cola sobrevive a un reinicio de la VM.
+    # noeviction: asynq no tolera que Redis borre llaves al llenarse.
+    command: redis-server --appendonly yes --maxmemory-policy noeviction
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  clamav:
+    image: clamav/clamav:stable
+    container_name: clamav
+    restart: unless-stopped
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamavdata:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+volumes:
+  redisdata:
+  clamavdata:
