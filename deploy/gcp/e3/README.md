@@ -30,6 +30,19 @@ Para publicar una versión nueva: hacer commit y luego ejecutar `02 -Rol api`, `
 
 Entre pruebas, `03 -Fase Apagar` deja el grupo en 0 instancias y `03 -Fase Encender` lo vuelve a levantar.
 
+## VM de servicios (Mateo)
+
+VM fija `mooc-servicios`, fuera de los grupos, con Redis (cola asynq y sesiones, AOF) y ClamAV. Usa una IP interna reservada (`mooc-servicios-ip`) para que `REDIS_ADDR` de las plantillas no cambie si la VM se recrea. Solo `mooc-api` y `mooc-worker` llegan a 6379 y 3310.
+
+| Paso | Comando | Qué deja |
+| --- | --- | --- |
+| 1 | `.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Identidad` | `sa-mooc-servicios` (logs, métricas, solo `mooc-database-url`) |
+| 2 | `.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Red` | IP reservada y regla `mooc-e3-allow-servicios` |
+| 3 | `.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Crear` | VM con `deploy/docker-compose.servicios.yml` levantado por su script de arranque |
+| 4 | `.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Probar` | Redis, ClamAV y conectividad desde una instancia de la API |
+| 5 | `.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Replicar` | Copia en vivo del Redis de la E2 (cola y sesiones) |
+| 6 | `.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Promover` | Redis nuevo como principal; imprime el `-RedisAddr` para la plantilla de la API |
+
 ## Workers (Mateo)
 
 `02-imagen-maquina.ps1 -Rol worker` construye la imagen del worker con el mismo mecanismo. La plantilla del worker usa los mismos metadatos, más:
