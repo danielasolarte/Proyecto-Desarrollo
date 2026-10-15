@@ -1,15 +1,21 @@
 // cmd/worker es el proceso separado que corre los trabajos asíncronos del
 // módulo de multimedia (ver diagrama de arquitectura, sección 4 del
-// enunciado: "Workers en Go" aparte de la API). No expone HTTP; solo
-// escucha la cola de Redis y consume tareas.
+// enunciado: "Workers en Go" aparte de la API). Escucha la cola de Redis
+// y consume tareas; el único HTTP que expone es GET /health (ver salud.go)
+// para la autorreparación del grupo de workers.
 package main
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -101,17 +107,29 @@ func main() {
 	}
 	log.Printf("worker de multimedia con concurrencia %d", concurrency)
 
+	// Al retirar una VM, el grupo detiene mooc.service y Docker manda
+	// SIGTERM. asynq deja de tomar trabajos, espera a los activos hasta
+	// ShutdownTimeout y devuelve a la cola los que no alcanzaron a
+	// terminar (otro worker los retoma; el estado en Postgres evita
+	// duplicados). El timeout debe ser mayor que la duración de un
+	// trabajo y menor que el mooc-detener-s de la plantilla.
+	shutdownTimeout := time.Duration(intEnv("WORKER_SHUTDOWN_TIMEOUT_SECONDS", 300)) * time.Second
+	const intervaloSalud = 15 * time.Second
+	estadoSalud := nuevaSalud(intervaloSalud)
+
 	srv := asynq.NewServer(
 		asynq.RedisClientOpt{Addr: redisAddr},
 		asynq.Config{
-			// Cuántos jobs procesa este worker EN PARALELO. Escalar a más
-			// instancias del contenedor (docker compose --scale worker=3)
-			// es la forma de escalar horizontalmente; esto es concurrencia
-			// DENTRO de una sola instancia.
+			// Cuántos jobs procesa este worker EN PARALELO. El escalamiento
+			// horizontal lo hace el grupo de workers (más VM); esto es
+			// concurrencia DENTRO de una sola instancia.
 			Concurrency: concurrency,
 			Queues: map[string]int{
 				"media": 1,
 			},
+			ShutdownTimeout:     shutdownTimeout,
+			HealthCheckFunc:     estadoSalud.registrarChequeo,
+			HealthCheckInterval: intervaloSalud,
 		},
 	)
 
@@ -124,10 +142,33 @@ func main() {
 		mux.HandleFunc(string(jobType), taskHandler(mediaRepo, processor))
 	}
 
-	log.Println("worker de multimedia escuchando en la cola 'media'...")
-	if err := srv.Run(mux); err != nil {
-		log.Fatalf("el worker se detuvo: %v", err)
+	saludAddr := os.Getenv("WORKER_HEALTH_ADDR")
+	if saludAddr == "" {
+		saludAddr = ":8081"
 	}
+	rutas := http.NewServeMux()
+	rutas.Handle("GET /health", estadoSalud)
+	httpSrv := &http.Server{Addr: saludAddr, Handler: rutas, ReadHeaderTimeout: 5 * time.Second}
+	go func() {
+		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("servidor de salud en %s: %v", saludAddr, err)
+		}
+	}()
+
+	if err := srv.Start(mux); err != nil {
+		log.Fatalf("el worker no pudo arrancar: %v", err)
+	}
+	estadoSalud.marcarIniciado()
+	log.Printf("worker de multimedia escuchando en la cola 'media' (salud en %s, apagado ordenado hasta %s)", saludAddr, shutdownTimeout)
+
+	senal := make(chan os.Signal, 1)
+	signal.Notify(senal, syscall.SIGTERM, os.Interrupt)
+	s := <-senal
+	log.Printf("señal %v: no se toman trabajos nuevos; se espera hasta %s a los activos", s, shutdownTimeout)
+	estadoSalud.marcarApagando()
+	srv.Shutdown()
+	_ = httpSrv.Close()
+	log.Println("worker detenido")
 }
 
 // taskHandler adapta la firma que pide asynq (func(ctx, *asynq.Task) error)
