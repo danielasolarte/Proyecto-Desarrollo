@@ -1,5 +1,12 @@
 # Plataforma MOOC - Backend
 
+## Entrega 3: base del frontend
+
+Login, logout, sesión por cookies/CSRF, rutas por rol y componentes compartidos en
+[`frontend/`](frontend/README.md). La guía incluye arranque local, preparación de
+cuentas de prueba, contrato de integración y verificación. Las pantallas de cursos,
+multimedia y quizzes están pendientes de integración por sus responsables.
+
 ## Entrega 2: Despliegue basico en la nube (GCP)
 
 Despliegue de la plataforma MOOC en Google Cloud, con dos maquinas virtuales fijas

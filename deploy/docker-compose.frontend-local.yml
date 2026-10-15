@@ -1,0 +1,11 @@
+# Aplicar DESPUES del compose principal. Solo desarrollo HTTP en localhost.
+services:
+  api:
+    environment:
+      AUTH_COOKIE_ENABLED: "true"
+      CSRF_ENABLED: "true"
+      SESSION_COOKIE_SECURE: "false"
+      SESSION_COOKIE_SAMESITE: Lax
+      SESSION_COOKIE_NAME: mooc_session
+      CSRF_COOKIE_NAME: mooc_csrf
+      CSRF_HEADER_NAME: X-CSRF-Token
