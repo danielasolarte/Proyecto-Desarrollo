@@ -155,6 +155,7 @@ echo "clamav: $(sudo docker exec clamav clamdcheck.sh >/dev/null 2>&1 && echo PO
         Ok "Creada la regla temporal $REGLA_REPLICA"
     }
     $remoto = @"
+if ! sudo docker exec redis redis-cli ping >/dev/null 2>&1; then echo NO_LISTO; exit 0; fi
 sudo docker exec redis redis-cli replicaof $ipViejo 6379
 for i in `$(seq 1 30); do
   E=`$(sudo docker exec redis redis-cli info replication | tr -d '\r')
@@ -163,7 +164,10 @@ for i in `$(seq 1 30); do
 done
 echo "llaves en la VM de servicios: `$(sudo docker exec redis redis-cli dbsize)"
 "@
-    Ssh $VM $remoto | ForEach-Object { Write-Host "  $_" }
+    $salida = Ssh $VM $remoto
+    $salida | ForEach-Object { Write-Host "  $_" }
+    if ($salida -match "NO_LISTO") { Falla "Redis todavia no esta arriba en $VM (el primer arranque tarda 3 a 5 min). Espera y corre -Fase Probar antes de repetir."; break }
+    if (-not ($salida -match "SINCRONIZADO")) { Falla "No sincronizo en 60 s. Revisa que $($env:WORKER_VM) este encendida y su Redis arriba; NO corras -Fase Promover."; break }
     $origen = Ssh $env:WORKER_VM "sudo docker exec `$(sudo docker ps -q --filter name=redis | head -1) redis-cli dbsize"
     Write-Host "  llaves en $($env:WORKER_VM): $(@($origen)[-1])"
     Aviso "La replica es de solo lectura y sigue copiando cambios. Cuando Daniela este lista para cambiar la plantilla: -Fase Promover."
