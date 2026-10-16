@@ -50,8 +50,15 @@ VM fija `mooc-servicios`, fuera de los grupos, con Redis (cola asynq y sesiones,
 - `mooc-detener-s`: más largo, alineado con `ShutdownTimeout` de asynq.
 - `mooc-docker-args=--add-host=clamav:<IP de la VM de servicios>`: el contenedor del worker busca ClamAV por el nombre `clamav`.
 
-## Pendiente cuando exista la VM de servicios
+## Migraciones
 
-- Crear una plantilla nueva con `-RedisAddr <IP de servicios>:6379` y aplicar `-Fase Actualizar`.
-- Borrar la regla temporal `mooc-e3-redis-temporal`.
-- Migraciones: `.\deploy\gcp\e3\05-migraciones.ps1 -Fase Version` y `-Fase Aplicar`. Corren una sola vez desde `mooc-servicios`, leen `DATABASE_URL` de Secret Manager con `sa-mooc-servicios` y usan el bloqueo de golang-migrate; nunca en el arranque de las réplicas. Se aplican antes de publicar una versión de la API que las necesite.
+`.\deploy\gcp\e3\05-migraciones.ps1 -Fase Version` y `-Fase Aplicar`. Corren una sola vez desde `mooc-servicios`, leen `DATABASE_URL` de Secret Manager con `sa-mooc-servicios` y usan el bloqueo de golang-migrate; nunca en el arranque de las réplicas. Se aplican antes de publicar una versión de la API que las necesite.
+
+## CORS del bucket de medios
+
+El navegador del profesor sube los archivos directo al bucket con URL prefirmadas. El bucket debe aceptar el origen del frontend:
+
+```powershell
+.\deploy\gcp\e3\06-cors-bucket.ps1 -Origen "http://<IP o dominio del balanceador>"
+.\deploy\gcp\e3\06-cors-bucket.ps1 -Ver
+```

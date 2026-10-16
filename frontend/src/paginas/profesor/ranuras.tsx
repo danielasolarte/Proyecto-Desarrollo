@@ -1,20 +1,16 @@
-// Puntos de integración del editor del curso con los componentes de Mateo
-// (multimedia) y Camila (quiz). Cuando existan sus componentes, se cambia
-// solo este archivo:
+// Puntos de integración del editor del curso con los componentes de
+// multimedia (CargaArchivo) y de quiz (EditorQuiz).
 //
-//   Mateo:  import { CargaArchivo } from '../../componentes/media/CargaArchivo'
-//           y en RanuraMultimedia: return <CargaArchivo resourceId={recurso.id} alCambiar={alCambiar} />
-//   Camila: import { EditorQuiz } from '../../componentes/quiz/EditorQuiz'
-//           y en RanuraQuiz: return <EditorQuiz resourceId={recurso.id} />
-//
-// Contrato acordado: el componente recibe el id del recurso y, si cambia el
-// estado del recurso (por ejemplo, termina una carga), llama a alCambiar()
-// para que el editor recargue el árbol y los problemas de publicación.
+// Contrato: el componente recibe el id del recurso y, si cambia el estado del
+// recurso (por ejemplo, termina una carga), llama a alCambiar() para que el
+// editor recargue el árbol y los problemas de publicación.
 import type { EstadoProcesamiento, Recurso } from '../../api/cursos'
 import { Procesando } from '../../componentes/estados/Estados'
+import { CargaArchivo } from '../../componentes/media/CargaArchivo'
+import { EditorQuiz } from '../../componentes/quiz/EditorQuiz'
 
 const textoEstado: Record<EstadoProcesamiento, string> = {
-  pending: 'Sin archivo cargado',
+  pending: 'Sin archivo listo',
   processing: 'Procesando',
   ready: 'Disponible',
   failed: 'Falló el procesamiento',
@@ -26,13 +22,13 @@ export function EstadoMultimedia({ estado }: { estado?: EstadoProcesamiento }) {
   return <span className={`estado-proceso proceso-${estado}`}>{textoEstado[estado]}</span>
 }
 
-export function RanuraMultimedia({ recurso }: { recurso: Recurso; alCambiar: () => void }) {
+export function RanuraMultimedia({ recurso, editable = true, alCambiar }: { recurso: Recurso; editable?: boolean; alCambiar: () => void }) {
   return <div className="ranura">
     <EstadoMultimedia estado={recurso.processing_status} />
-    <p className="ranura-nota">La carga del archivo se integra con el componente de multimedia.</p>
+    <CargaArchivo resourceId={recurso.id} tipo={recurso.type} estado={recurso.processing_status} editable={editable} alCambiar={alCambiar} />
   </div>
 }
 
-export function RanuraQuiz({ recurso }: { recurso: Recurso }) {
-  return <div className="ranura"><p className="ranura-nota">Las preguntas del quiz «{recurso.title}» se editan con el componente de quiz.</p></div>
+export function RanuraQuiz({ recurso, editable = true }: { recurso: Recurso; editable?: boolean }) {
+  return <div className="ranura"><EditorQuiz resourceId={recurso.id} editable={editable} /></div>
 }

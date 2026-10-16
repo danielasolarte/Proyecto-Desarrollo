@@ -19,7 +19,7 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 	authoring.GET("/me/courses", h.ListMyCourses)
 	g.GET("/courses/:courseID", h.GetCourse)
 	g.GET("/courses/:courseID/outline", h.GetCourseOutline)
-	g.GET("/courses/:courseID/preview", h.PreviewCourse) // ver la nota de deuda en PreviewCourse
+	g.GET("/courses/:courseID/preview", h.PreviewCourse) // dueño/admin: borrador; estudiante inscrito: publicada
 	authoring.POST("/courses/:courseID/draft", h.CreateUpdateDraft)
 	authoring.POST("/courses/:courseID/publish", h.PublishCourse)
 

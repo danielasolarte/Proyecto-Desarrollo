@@ -1,0 +1,8 @@
+/* Carga de archivos (componente CargaArchivo). */
+.carga-archivo { margin-top: 8px }
+.carga-elegir { display: flex; flex-wrap: wrap; align-items: center; gap: 10px }
+.carga-elegir label { margin: 0 }
+.carga-elegir input[type="file"] { width: auto; margin: 0; padding: 6px; background: #fff }
+.carga-avance { display: flex; align-items: center; gap: 12px; margin: 8px 0; font-size: 13px; color: #4f5f53 }
+.carga-avance progress { flex: 1 1 200px; height: 10px; accent-color: #234f3f }
+.carga-archivo .aviso { margin: 8px 0 }

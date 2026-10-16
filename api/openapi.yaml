@@ -367,7 +367,10 @@ paths:
       security: []
   /courses/{courseID}/preview:
     get:
-      summary: Previsualizar el árbol de la versión draft (o publicada si no hay draft)
+      summary: Previsualizar el árbol del curso con su contenido
+      description: 'Profesor dueño o administrador: versión draft (o publicada si no hay draft) y problemas de
+        publicación. Estudiante con inscripción activa: solo la versión publicada, con problems vacío. Para el
+        detalle público sin sesión usar /courses/{courseID}/outline.'
       tags:
       - autoria
       parameters:
@@ -375,7 +378,12 @@ paths:
       responses:
         '200':
           description: Árbol completo más la lista de problemas de publicación (vacía si ya se puede publicar)
-      security: []
+        '401':
+          description: Sin sesión
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /courses/{courseID}/draft:
     post:
       summary: 'Crear un borrador de actualización a partir de la versión publicada (opcional: borradores de actualización
@@ -779,6 +787,21 @@ paths:
                 required:
                 - status
   /resources/{resourceID}/quiz:
+    get:
+      summary: Consultar el quiz de un recurso para autoría
+      description: Solo profesor propietario del curso o administrador. Misma forma que /quizzes/{quizID}/authoring.
+        404 si el recurso todavía no tiene quiz.
+      tags:
+      - quizzes
+      parameters:
+      - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Quiz con sus preguntas y opciones (incluye cuáles son correctas)
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       summary: Crear quiz asociado a un recurso de tipo quiz
       description: Solo profesor propietario del curso o administrador.

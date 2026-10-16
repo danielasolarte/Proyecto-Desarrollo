@@ -23,6 +23,7 @@ import (
 	badgesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/badges/http"
 	badgesPG "github.com/equipo-mooc/plataforma-mooc/internal/badges/postgres"
 	badgesUC "github.com/equipo-mooc/plataforma-mooc/internal/badges/usecase"
+	catalogDomain "github.com/equipo-mooc/plataforma-mooc/internal/catalog/domain"
 	catalogHTTP "github.com/equipo-mooc/plataforma-mooc/internal/catalog/http"
 	catalogPG "github.com/equipo-mooc/plataforma-mooc/internal/catalog/postgres"
 	coursesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/courses/http"
@@ -122,6 +123,12 @@ func main() {
 	adminHTTP.RegisterRoutes(e, adminHandler)
 
 	catalogRepo := catalogPG.NewCatalogRepository(db)
+	// La vista previa con contenido solo se entrega al dueño, a un admin o a
+	// un estudiante con inscripción activa (ver PreviewCourse).
+	courseHandler.ConInscripciones(func(studentID, courseID string) bool {
+		en, err := catalogRepo.FindEnrollment(studentID, courseID)
+		return err == nil && en.Status == catalogDomain.EnrollmentActive
+	})
 	catalogHandler := catalogHTTP.NewHandler(catalogRepo)
 	catalogHTTP.RegisterRoutes(e, catalogHandler)
 

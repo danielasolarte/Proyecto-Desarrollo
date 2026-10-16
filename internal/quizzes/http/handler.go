@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"encoding/json"
 	"time"
@@ -336,6 +337,47 @@ func (h *Handler) GetQuizForAuthoring(c echo.Context) error {
 		c.Request().Context(),
 		quizID,
 	)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"quiz":      quizData,
+		"questions": questions,
+	})
+}
+
+// GetQuizByResource devuelve el quiz de un recurso con sus preguntas y
+// opciones (la misma forma que GET /quizzes/:quizID/authoring). Solo el
+// profesor dueño del curso o un admin. 404 si el recurso aún no tiene quiz.
+func (h *Handler) GetQuizByResource(c echo.Context) error {
+	user, err := currentUser(c)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	resourceIDString := c.Param("resourceID")
+	resourceID, err := uuid.Parse(resourceIDString)
+	if err != nil {
+		return c.JSON(
+			http.StatusBadRequest,
+			apierror.New(apierror.CodeValidation, "resource_id invalido"),
+		)
+	}
+
+	if err := h.ensureResourceOwner(user, resourceIDString); err != nil {
+		if errors.Is(err, coursesDomain.ErrNotFound) {
+			return c.JSON(http.StatusNotFound, apierror.New(apierror.CodeNotFound, "recurso no encontrado"))
+		}
+		return respondError(c, err)
+	}
+
+	quiz, err := h.quizRepo.GetQuizByResourceID(c.Request().Context(), resourceID)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	quizData, questions, err := h.service.GetQuizForAuthoring(c.Request().Context(), quiz.ID)
 	if err != nil {
 		return respondError(c, err)
 	}

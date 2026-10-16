@@ -226,8 +226,8 @@ function RecursoEditor({ recurso: r, editable, ocupado, hacer, alCambiar }: {
 }) {
   let detalle: ReactNode = null
   if (r.type === 'rich_text') detalle = <EditorTexto recurso={r} editable={editable} ocupado={ocupado} hacer={hacer} />
-  else if (esMultimedia(r.type)) detalle = <RanuraMultimedia recurso={r} alCambiar={alCambiar} />
-  else if (r.type === 'quiz') detalle = <RanuraQuiz recurso={r} />
+  else if (esMultimedia(r.type)) detalle = <RanuraMultimedia recurso={r} editable={editable} alCambiar={alCambiar} />
+  else if (r.type === 'quiz') detalle = <RanuraQuiz recurso={r} editable={editable} />
   else if (r.external_url) detalle = <a className="ranura-nota" href={r.external_url} target="_blank" rel="noreferrer">{r.external_url}</a>
   return <div className="recurso">
     <div className="fila-editable"><span className="tipo-recurso">{nombreTipo[r.type] || r.type}</span><strong>{r.title}</strong>

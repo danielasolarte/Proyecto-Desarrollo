@@ -18,10 +18,21 @@ import (
 
 type Handler struct {
 	repo domain.CourseRepository
+	// inscritoActivo responde si un estudiante tiene una inscripción activa
+	// en un curso. La conecta main.go con el repositorio de catálogo (este
+	// módulo no importa catálogo). Si es nil, ningún estudiante pasa.
+	inscritoActivo func(studentID, courseID string) bool
 }
 
 func NewHandler(repo domain.CourseRepository) *Handler {
 	return &Handler{repo: repo}
+}
+
+// ConInscripciones conecta la consulta de inscripción activa que usa
+// PreviewCourse para dejar pasar a estudiantes inscritos.
+func (h *Handler) ConInscripciones(fn func(studentID, courseID string) bool) *Handler {
+	h.inscritoActivo = fn
+	return h
 }
 
 // ---------- helpers de autorización ----------
@@ -199,22 +210,48 @@ func (h *Handler) GetCourseOutline(c echo.Context) error {
 	return c.JSON(http.StatusOK, outline)
 }
 
-// PreviewCourse devuelve el árbol de la versión en borrador (o la publicada
-// si no hay borrador) con su contenido y la lista de problemas de
-// publicación.
+// PreviewCourse devuelve el árbol del curso con su contenido.
 //
-// DEUDA TECNICA (registrada para la E3): hoy no exige sesión ni propiedad,
-// así que expone el borrador de cualquier curso. No se restringe todavía
-// porque el Escenario 1 de capacidad lo usa como "consulta de contenido" de
-// un estudiante inscrito y debe repetirse igual que en la Entrega 2. Para el
-// detalle público usar GET /courses/:courseID/outline.
+//   - Profesor dueño o admin: el borrador (o la publicada si no hay
+//     borrador) y la lista de problemas de publicación.
+//   - Estudiante con inscripción activa: solo la versión publicada, con
+//     problems vacío. Nunca ve el borrador.
+//   - Cualquier otro: 401 sin sesión, 403 con sesión.
+//
+// Antes (E1 y E2) no exigía sesión y exponía el borrador de cualquier curso.
+// El Escenario 1 lo sigue llamando con un estudiante inscrito sobre un curso
+// publicado, así que la operación medida es la misma.
 func (h *Handler) PreviewCourse(c echo.Context) error {
+	user, ok := authctx.UserFromContext(c)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, apierror.New(apierror.CodeUnauthorized, "no autenticado"))
+	}
 	courseID := c.Param("courseID")
-	tree, problems, err := usecase.Preview(h.repo, courseID)
+	course, err := h.repo.FindCourseByID(courseID)
 	if err != nil {
 		return respondError(c, err)
 	}
-	return c.JSON(http.StatusOK, map[string]any{"tree": tree, "problems": problems})
+
+	if usecase.EnsureOwner(course, user.ID, user.Role == authctx.RoleAdmin) == nil {
+		tree, problems, err := usecase.Preview(h.repo, courseID)
+		if err != nil {
+			return respondError(c, err)
+		}
+		return c.JSON(http.StatusOK, map[string]any{"tree": tree, "problems": problems})
+	}
+
+	if user.Role == authctx.RoleStudent && h.inscritoActivo != nil && h.inscritoActivo(user.ID, course.ID) {
+		if course.PublishedVersionID == nil {
+			return respondError(c, domain.ErrNotFound)
+		}
+		tree, err := h.repo.LoadTree(*course.PublishedVersionID)
+		if err != nil {
+			return respondError(c, err)
+		}
+		return c.JSON(http.StatusOK, map[string]any{"tree": tree, "problems": []string{}})
+	}
+
+	return respondError(c, domain.ErrForbidden)
 }
 
 // ---------- versiones ----------

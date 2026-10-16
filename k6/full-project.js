@@ -594,7 +594,8 @@ function capacityStudentForVU(data) {
 export function publicReads(data) {
   get('/catalog?q=k6&category=load-test', '', 'catalog', [200]);
   get(`/courses/${data.learning.courseId}`, '', 'courses', [200]);
-  get(`/courses/${data.learning.courseId}/preview`, '', 'courses', [200]);
+  // /preview exige sesion (dueno del curso, admin o estudiante inscrito); la lectura publica es /outline.
+  get(`/courses/${data.learning.courseId}/outline`, '', 'courses', [200]);
 
   if (VERIFICATION_CODE) {
     get(`/badges/verify/${VERIFICATION_CODE}`, '', 'badges', [200]);

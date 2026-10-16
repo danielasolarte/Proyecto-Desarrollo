@@ -1,0 +1,21 @@
+/* Editor de quiz (componente EditorQuiz). */
+.editor-quiz, .quiz-config, .nueva-pregunta { margin-top: 6px }
+.quiz-resumen { font-size: 13px; color: #4f5f53; margin: 0 0 8px }
+.quiz-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0 14px }
+.quiz-campos input, .quiz-campos select { margin-bottom: 12px }
+.quiz-preguntas { margin: 4px 0 8px; padding-left: 22px }
+.quiz-preguntas > li { padding: 6px 0; font-size: 14px }
+.quiz-preguntas ul { list-style: none; margin: 4px 0 0; padding-left: 4px }
+.quiz-preguntas ul li { font-size: 13px; color: #4f5f53; padding: 2px 0 2px 18px; position: relative }
+.quiz-preguntas ul li::before { content: '○'; position: absolute; left: 0 }
+.quiz-preguntas ul li.quiz-correcta { color: #2f5530; font-weight: 600 }
+.quiz-preguntas ul li.quiz-correcta::before { content: '●' }
+.quiz-enunciado { font-weight: 600 }
+.quiz-puntos { font-size: 12px; color: #8a6a2a; margin-left: 6px }
+.quiz-puntos-campo { max-width: 140px }
+.quiz-opciones { border: 1px dashed #ccd5cc; border-radius: 10px; padding: 12px 14px; margin: 0 0 12px }
+.quiz-opciones legend { font-size: 13px; font-weight: 600; padding: 0 6px }
+.quiz-opcion { display: flex; align-items: center; gap: 8px; margin-bottom: 8px }
+.quiz-opcion input[type="radio"] { width: auto; margin: 0; accent-color: #234f3f }
+.quiz-opcion input:not([type]) { margin: 0; padding: 8px 12px; flex: 1 }
+.quiz-opcion .boton-texto { margin: 0 }

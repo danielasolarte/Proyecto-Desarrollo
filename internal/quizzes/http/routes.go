@@ -23,6 +23,13 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 		h.CreateQuiz,
 	)
 
+	// El editor del curso solo conoce el recurso: con esto sabe si ya hay
+	// quiz (200) o si debe crearlo (404).
+	authoring.GET(
+		"/resources/:resourceID/quiz",
+		h.GetQuizByResource,
+	)
+
 	authoring.POST(
 		"/quizzes/:quizID/questions",
 		h.CreateQuestion,
