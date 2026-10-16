@@ -189,6 +189,25 @@ func (h *Handler) PublishCourse(c echo.Context) error {
 	return c.JSON(http.StatusOK, version)
 }
 
+// GetCourseOutline implementa GET /api/v1/courses/:courseID/outline:
+// temario de la versión publicada para el detalle del catálogo.
+func (h *Handler) GetCourseOutline(c echo.Context) error {
+	outline, err := usecase.PublishedOutline(h.repo, c.Param("courseID"))
+	if err != nil {
+		return respondError(c, err)
+	}
+	return c.JSON(http.StatusOK, outline)
+}
+
+// PreviewCourse devuelve el árbol de la versión en borrador (o la publicada
+// si no hay borrador) con su contenido y la lista de problemas de
+// publicación.
+//
+// DEUDA TECNICA (registrada para la E3): hoy no exige sesión ni propiedad,
+// así que expone el borrador de cualquier curso. No se restringe todavía
+// porque el Escenario 1 de capacidad lo usa como "consulta de contenido" de
+// un estudiante inscrito y debe repetirse igual que en la Entrega 2. Para el
+// detalle público usar GET /courses/:courseID/outline.
 func (h *Handler) PreviewCourse(c echo.Context) error {
 	courseID := c.Param("courseID")
 	tree, problems, err := usecase.Preview(h.repo, courseID)

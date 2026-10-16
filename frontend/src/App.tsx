@@ -5,6 +5,11 @@ import { Marco } from './componentes/Marco'
 import { Cargando, ErrorEstado } from './componentes/estados/Estados'
 import { Login } from './paginas/Login'
 import { Inicio, NoEncontrado, SinPermiso } from './paginas/Inicio'
+import { Catalogo } from './paginas/catalogo/Catalogo'
+import { DetalleCurso } from './paginas/catalogo/DetalleCurso'
+import { MisCursos } from './paginas/profesor/MisCursos'
+import { NuevoCurso } from './paginas/profesor/NuevoCurso'
+import { EditorCurso } from './paginas/profesor/EditorCurso'
 
 declare const __APP_COMMIT__: string
 
@@ -24,9 +29,13 @@ export function App() {
       <Route element={<RutaProtegida />}>
         <Route element={<Marco />}>
           <Route path="/sin-permiso" element={<SinPermiso />} />
-          <Route path="/catalogo/*" element={<Inicio modulo="Explorar cursos" />} />
-          <Route path="/cursos/:id" element={<Inicio modulo="Detalle del curso" />} />
+          <Route path="/catalogo" element={<Catalogo />} />
+          <Route path="/cursos/:id" element={<DetalleCurso />} />
           <Route element={<RutaProtegida roles={['teacher']} />}>
+            <Route path="/profesor" element={<Navigate to="/profesor/cursos" replace />} />
+            <Route path="/profesor/cursos" element={<MisCursos />} />
+            <Route path="/profesor/cursos/nuevo" element={<NuevoCurso />} />
+            <Route path="/profesor/cursos/:id/editar" element={<EditorCurso />} />
             <Route path="/profesor/*" element={<Inicio modulo="Mis cursos" />} />
           </Route>
           <Route element={<RutaProtegida roles={['student']} />}>
