@@ -73,7 +73,7 @@ if ($codigoMeta -ne 0) { Falla "No se pudieron cargar los metadatos en $Vm."; Ce
 
 $traer = @'
 MD=http://metadata.google.internal/computeMetadata/v1/instance/attributes
-rm -rf /tmp/mooc-migrations && mkdir -p /tmp/mooc-migrations
+sudo rm -rf /tmp/mooc-migrations && mkdir -p /tmp/mooc-migrations
 curl -sf -H 'Metadata-Flavor: Google' $MD/mooc-migrar-sh > /tmp/mooc-migrar.sh
 curl -sf -H 'Metadata-Flavor: Google' $MD/mooc-migraciones | base64 -d | tar -xz -C /tmp/mooc-migrations
 ls /tmp/mooc-migrations/*.up.sql 2>/dev/null | wc -l
@@ -99,6 +99,6 @@ if ("$final" -match 'dirty') {
 } elseif ($final) {
     Aviso "Cloud SQL esta en la version $final y el repositorio en la $ultima. Usa -Fase Aplicar para ponerla al dia."
 }
-Ssh $Vm "rm -rf /tmp/mooc-migrations /tmp/mooc-migrar.sh" | Out-Null
+Ssh $Vm "sudo rm -rf /tmp/mooc-migrations /tmp/mooc-migrar.sh" | Out-Null
 gcloud compute instances remove-metadata $Vm --zone=$Z --project=$P --keys=mooc-migraciones,mooc-migrar-sh --format=none 2>&1 | Out-Null
 CerrarRegistro

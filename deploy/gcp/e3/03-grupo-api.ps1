@@ -82,12 +82,14 @@ switch ($Fase) {
         $RedisAddr = "$($ipWorker):6379"
         Aviso "REDIS_ADDR = $RedisAddr (Redis del Worker de la E2, temporal)"
     }
-    if (-not $S3Bucket) {
-        $S3Bucket = (Ssh $env:WEB_VM "sudo docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' `$(sudo docker ps -q --filter label=com.docker.compose.service=api | head -1) | grep ^S3_BUCKET= | cut -d= -f2" | Where-Object { $_ -match '^[a-z0-9._-]+$' })
-        $S3Bucket = @($S3Bucket)[0]
-        if (-not $S3Bucket) { Falla "No se pudo leer S3_BUCKET del Web Server; pasalo con -S3Bucket."; break }
-        Write-Host "S3_BUCKET = $S3Bucket (leido del Web Server)"
-    }
+    if (-not $S3Bucket) { $S3Bucket = $BUCKET_MEDIA }
+    # Se valida que el bucket exista antes de escribirlo en la plantilla: un
+    # nombre equivocado no tumba la API (el health check no usa S3), pero
+    # rompe las cargas de archivos sin que nadie lo note.
+    $bucketOk = gcloud storage buckets describe "gs://$S3Bucket" --project=$P --format="value(name)" 2>&1 |
+        Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] }
+    if ("$bucketOk".Trim() -cne $S3Bucket) { Falla "El bucket '$S3Bucket' no existe en $P. Pasa el correcto con -S3Bucket."; break }
+    Write-Host "S3_BUCKET = $S3Bucket (verificado en Cloud Storage)"
 
     $config = [System.IO.File]::ReadAllText((Resolve-Path "deploy/gcp/e3/config/api.config"))
     $config = $config -replace "__REDIS_ADDR__", $RedisAddr -replace "__S3_BUCKET__", $S3Bucket -replace "__SMTP_ADDR__", $SmtpAddr

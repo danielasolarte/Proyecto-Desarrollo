@@ -39,6 +39,9 @@ $SECRETOS = [ordered]@{
     S3_SECRET_KEY = "mooc-s3-secret-key"
 }
 
+# Bucket de medios (el mismo de la Entrega 2; el valor no es secreto).
+$BUCKET_MEDIA = "mooc-e2-media-proyecto1-entrega2"
+
 # Etiquetas de red de la Entrega 3.
 $TAG = @{ api = "mooc-api"; worker = "mooc-worker"; servicios = "mooc-servicios" }
 
@@ -73,7 +76,12 @@ function Ssh($vm, $cmd) {
     # "POTENTIAL SECURITY BREACH" cuando el grupo recrea una VM con el mismo
     # nombre (autorreparacion o actualizacion): la VM nueva trae otra llave.
     gcloud compute ssh $vm --zone=$Z --tunnel-through-iap --project=$P --strict-host-key-checking=no --command=$limpio 2>&1 |
-        ForEach-Object { "$_" } |
+        ForEach-Object {
+            # La salida de error de gcloud llega como ErrorRecord; "$_" daria
+            # el texto "System.Management.Automation.RemoteException".
+            if ($_ -is [System.Management.Automation.ErrorRecord]) { "$($_.Exception.Message)" } else { "$_" }
+        } |
+        Where-Object { $_ -notmatch "^System\.Management\.Automation" } |
         Where-Object { $_ -notmatch "host key is not cached|no guarantee that the server|think it is\.|ssh-ed25519 key fingerprint|ssh-ed25519 255 SHA256|If you trust this host|cache and carry on|If you want to carry on|the key to the cache|If you do not trust|abandon the|connection\.$|Store key in cache|compute\.\d+ \(port 22\)|POTENTIAL SECURITY BREACH|does not match the one Plink|this server:|administrator has changed|the host key, or you have|computer pretending to be|new ssh-ed25519 key|were expecting this change|update Plink's cache|without updating the|cache, enter|abandon the connection|Return to cancel|ONLY guaranteed|safe choice|Update cached key|^\s*$" }
 }
 
