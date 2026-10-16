@@ -68,10 +68,12 @@ function Ssh($vm, $cmd) {
     # "--command=(expr)" PowerShell lo parte en dos argumentos.
     $limpio = $cmd -replace "`r", ""
     # En Windows gcloud usa PuTTY (plink): la primera vez pregunta si guarda la
-    # llave de la VM nueva y sigue igual; esas lineas se filtran.
+    # llave de la VM nueva y sigue igual; esas lineas se filtran. Tambien avisa
+    # "POTENTIAL SECURITY BREACH" cuando el grupo recrea una VM con el mismo
+    # nombre (autorreparacion o actualizacion): la VM nueva trae otra llave.
     gcloud compute ssh $vm --zone=$Z --tunnel-through-iap --project=$P --strict-host-key-checking=no --command=$limpio 2>&1 |
         ForEach-Object { "$_" } |
-        Where-Object { $_ -notmatch "host key is not cached|no guarantee that the server|think it is\.|ssh-ed25519 key fingerprint|ssh-ed25519 255 SHA256|If you trust this host|cache and carry on|If you want to carry on|the key to the cache|If you do not trust|abandon the|connection\.$|Store key in cache|compute\.\d+ \(port 22\)|^\s*$" }
+        Where-Object { $_ -notmatch "host key is not cached|no guarantee that the server|think it is\.|ssh-ed25519 key fingerprint|ssh-ed25519 255 SHA256|If you trust this host|cache and carry on|If you want to carry on|the key to the cache|If you do not trust|abandon the|connection\.$|Store key in cache|compute\.\d+ \(port 22\)|POTENTIAL SECURITY BREACH|does not match the one Plink|this server:|administrator has changed|the host key, or you have|computer pretending to be|new ssh-ed25519 key|were expecting this change|update Plink's cache|without updating the|cache, enter|abandon the connection|Return to cancel|ONLY guaranteed|safe choice|Update cached key|^\s*$" }
 }
 
 function Existe($tipo, $nombre, $extra) {

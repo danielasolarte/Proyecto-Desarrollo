@@ -185,6 +185,10 @@ echo ESCUCHANDO_UTC=$(sudo docker inspect -f '{{.State.StartedAt}}' mooc 2>/dev/
 '@
         $salida = Ssh $vm $remoto
         $salida | Where-Object { $_ -notmatch '^ESCUCHANDO_UTC=' } | ForEach-Object { Write-Host "  $_" }
+        if (-not ($salida -match '^HTTP/1\.1 200')) {
+            Aviso "  La API no responde 200 en /health/ready. Si mooc-preparar aparece varias veces arriba, el contenedor se esta reiniciando:"
+            Aviso "  revisa que Cloud SQL este encendida (RUNNABLE) y que mooc-servicios (Redis) este encendida. El tiempo de arranque no es valido en ese caso."
+        }
         $linea = $salida | Where-Object { $_ -match '^ESCUCHANDO_UTC=\d{4}-' } | Select-Object -First 1
         if ($linea -and ($linea -match '^ESCUCHANDO_UTC=(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)')) {
             # Docker da 9 decimales; .NET solo acepta 7, asi que se corta a segundos.
