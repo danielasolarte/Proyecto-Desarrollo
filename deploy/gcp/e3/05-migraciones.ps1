@@ -7,7 +7,8 @@ vez, a mano y antes de publicar una version que las necesite, desde la VM de
 servicios (mooc-servicios), que esta dentro de la VPC y llega a Cloud SQL por
 IP privada.
 
-  1. Copia la carpeta migrations/ y maquina/migrar.sh a la VM por IAP.
+  1. Envia la carpeta migrations/ y maquina/migrar.sh a la VM como metadatos
+     temporales (se borran al final) y los descarga por IAP.
   2. En la VM, migrar.sh lee DATABASE_URL de Secret Manager con la cuenta
      sa-mooc-servicios (no viaja desde este equipo ni queda en disco) y
      ejecuta golang-migrate v4.17.1 en un contenedor.
@@ -53,17 +54,37 @@ $locales = @(Get-ChildItem migrations -Filter "*.up.sql" | Sort-Object Name)
 $ultima = [int]($locales[-1].Name.Substring(0, 6))
 Titulo "Migraciones en el repositorio: $($locales.Count) (la ultima es la $ultima, commit $(Commit))"
 
-Titulo "Copiando migrations/ y migrar.sh a $Vm"
+Titulo "Enviando migrations/ y migrar.sh a $Vm (por metadatos de la VM, sin scp)"
+# Se empaquetan en un .tar.gz en base64 y viajan como metadatos temporales de
+# la VM; ella los descarga del servidor de metadatos. Es mas robusto que scp
+# en Windows cuando la VM es nueva o se recreo (llaves SSH de PuTTY).
+$tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ("mooc-mig-" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Force $tmpDir | Out-Null
+$tgz = Join-Path $tmpDir "migraciones.tgz"
+tar -czf $tgz -C migrations .
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tgz)) { Falla "No se pudo empaquetar la carpeta migrations (tar)."; CerrarRegistro; return }
+$b64 = Join-Path $tmpDir "migraciones.b64"
+[System.IO.File]::WriteAllText($b64, [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($tgz)))
 $fMigrar = ArchivoLF "deploy/gcp/e3/maquina/migrar.sh"
-Ssh $Vm "rm -rf /tmp/mooc-migrations /tmp/mooc-migrar.sh" | Out-Null
-gcloud compute scp $fMigrar "$($Vm):/tmp/mooc-migrar.sh" --zone=$Z --tunnel-through-iap --project=$P --strict-host-key-checking=no 2>&1 | Out-Null
-gcloud compute scp --recurse migrations "$($Vm):/tmp/mooc-migrations" --zone=$Z --tunnel-through-iap --project=$P --strict-host-key-checking=no 2>&1 | Out-Null
-Remove-Item $fMigrar -Force -ErrorAction SilentlyContinue
-$copiadas = @(Ssh $Vm "ls /tmp/mooc-migrations/*.up.sql 2>/dev/null | wc -l")[-1]
+gcloud compute instances add-metadata $Vm --zone=$Z --project=$P --metadata-from-file="mooc-migraciones=$b64,mooc-migrar-sh=$fMigrar" --format=none 2>&1 | Out-Null
+$codigoMeta = $LASTEXITCODE
+Remove-Item $tmpDir, $fMigrar -Recurse -Force -ErrorAction SilentlyContinue
+if ($codigoMeta -ne 0) { Falla "No se pudieron cargar los metadatos en $Vm."; CerrarRegistro; return }
+
+$traer = @'
+MD=http://metadata.google.internal/computeMetadata/v1/instance/attributes
+rm -rf /tmp/mooc-migrations && mkdir -p /tmp/mooc-migrations
+curl -sf -H 'Metadata-Flavor: Google' $MD/mooc-migrar-sh > /tmp/mooc-migrar.sh
+curl -sf -H 'Metadata-Flavor: Google' $MD/mooc-migraciones | base64 -d | tar -xz -C /tmp/mooc-migrations
+ls /tmp/mooc-migrations/*.up.sql 2>/dev/null | wc -l
+'@
+$copiadas = @(Ssh $Vm $traer | Where-Object { $_ -match '^\d+$' })[-1]
 if ("$copiadas".Trim() -ne "$($locales.Count)") {
-    Falla "En la VM hay '$copiadas' migraciones y en el repositorio $($locales.Count). Revisa la copia por IAP y vuelve a intentar."
+    Falla "En la VM hay '$copiadas' migraciones y en el repositorio $($locales.Count). Revisa la salida de arriba."
+    gcloud compute instances remove-metadata $Vm --zone=$Z --project=$P --keys=mooc-migraciones,mooc-migrar-sh --format=none 2>&1 | Out-Null
     CerrarRegistro; return
 }
+Write-Host "  $copiadas migraciones listas en $Vm"
 
 $accion = if ($Fase -eq "Aplicar") { "up" } else { "version" }
 Titulo "golang-migrate $accion desde $Vm"
@@ -79,4 +100,5 @@ if ("$final" -match 'dirty') {
     Aviso "Cloud SQL esta en la version $final y el repositorio en la $ultima. Usa -Fase Aplicar para ponerla al dia."
 }
 Ssh $Vm "rm -rf /tmp/mooc-migrations /tmp/mooc-migrar.sh" | Out-Null
+gcloud compute instances remove-metadata $Vm --zone=$Z --project=$P --keys=mooc-migraciones,mooc-migrar-sh --format=none 2>&1 | Out-Null
 CerrarRegistro

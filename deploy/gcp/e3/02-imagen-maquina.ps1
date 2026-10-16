@@ -49,7 +49,9 @@ if (-not $SinConstruir) {
         CerrarRegistro; return
     }
     gcloud auth configure-docker $REGISTRO --quiet 2>&1 | Out-Null
-    docker build --progress=plain -f $dockerfile -t $contenedor . 2>&1 | Select-Object -Last 5 | ForEach-Object { "$_" }
+    # --load: con el constructor "docker-container" de Docker Desktop, sin esta
+    # opcion la imagen queda solo en la cache de buildx y el push no la encuentra.
+    docker build --load --progress=plain -f $dockerfile -t $contenedor . 2>&1 | Select-Object -Last 5 | ForEach-Object { "$_" }
     if ($LASTEXITCODE -ne 0) { Falla "Fallo docker build (revisa que Docker Desktop este corriendo)."; CerrarRegistro; return }
     docker push $contenedor 2>&1 | Select-Object -Last 2 | ForEach-Object { "$_" }
     if ($LASTEXITCODE -ne 0) { Falla "Fallo docker push."; CerrarRegistro; return }
