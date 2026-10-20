@@ -7,10 +7,9 @@ import (
 )
 
 // RegisterRoutes registra todos los endpoints de autoría de cursos.
-// Todos exigen rol profesor o admin, salvo la previsualización y la
-// lectura de un curso, que son de solo lectura y no mutan nada (el
-// control de acceso más fino, como si el estudiante está inscrito para
-// ver contenido no publico, se aplica en el módulo de catálogo).
+// Todos exigen rol profesor o admin (y luego propiedad del curso), salvo la
+// lectura básica de un curso, el temario publicado (/outline) y la
+// previsualización (ver la nota de deuda técnica en PreviewCourse).
 func RegisterRoutes(e *echo.Echo, h *Handler) {
 	g := e.Group("/api/v1")
 
@@ -19,7 +18,8 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 	authoring.POST("/courses", h.CreateCourse)
 	authoring.GET("/me/courses", h.ListMyCourses)
 	g.GET("/courses/:courseID", h.GetCourse)
-	g.GET("/courses/:courseID/preview", h.PreviewCourse)
+	g.GET("/courses/:courseID/outline", h.GetCourseOutline)
+	g.GET("/courses/:courseID/preview", h.PreviewCourse) // ver la nota de deuda en PreviewCourse
 	authoring.POST("/courses/:courseID/draft", h.CreateUpdateDraft)
 	authoring.POST("/courses/:courseID/publish", h.PublishCourse)
 

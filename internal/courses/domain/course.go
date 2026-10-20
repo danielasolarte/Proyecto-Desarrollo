@@ -184,6 +184,40 @@ func CourseStatusFor(publishedVersionID, latestDraftVersionID *string) string {
 	}
 }
 
+// CourseOutline es el temario PUBLICO de un curso publicado: lo que ve
+// cualquier usuario en el detalle del catálogo antes de inscribirse.
+// Solo títulos y tipos; nunca el contenido de los recursos (markdown,
+// enlaces, archivos), que es solo para inscritos.
+type CourseOutline struct {
+	CourseID    string          `json:"course_id"`
+	Slug        string          `json:"slug"`
+	TeacherID   string          `json:"teacher_id"`
+	Title       string          `json:"title"`
+	Summary     string          `json:"summary"`
+	Category    string          `json:"category"`
+	PublishedAt *time.Time      `json:"published_at,omitempty"`
+	Modules     []OutlineModule `json:"modules"`
+}
+
+type OutlineModule struct {
+	ID    string        `json:"id"`
+	Title string        `json:"title"`
+	Units []OutlineUnit `json:"units"`
+}
+
+type OutlineUnit struct {
+	ID        string            `json:"id"`
+	Title     string            `json:"title"`
+	Resources []OutlineResource `json:"resources"`
+}
+
+type OutlineResource struct {
+	ID       string       `json:"id"`
+	Title    string       `json:"title"`
+	Type     ResourceType `json:"type"`
+	Required bool         `json:"required"`
+}
+
 // ---------- errores de dominio ----------
 
 var (

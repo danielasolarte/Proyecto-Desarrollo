@@ -348,6 +348,23 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security: []
+  /courses/{courseID}/outline:
+    get:
+      summary: Temario publico de un curso publicado (detalle del catalogo)
+      description: |
+        Titulos y tipos de modulos, unidades y recursos visibles de la version
+        publicada. No incluye contenido (markdown, enlaces ni archivos). 404 si
+        el curso no esta publicado.
+      tags:
+      - catalogo
+      parameters:
+      - $ref: '#/components/parameters/CourseID'
+      responses:
+        '200':
+          description: Temario del curso publicado
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security: []
   /courses/{courseID}/preview:
     get:
       summary: Previsualizar el árbol de la versión draft (o publicada si no hay draft)

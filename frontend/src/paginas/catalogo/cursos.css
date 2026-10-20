@@ -1,0 +1,116 @@
+/* Estilos de catálogo, detalle y editor del profesor (Daniela).
+   Reutilizan la paleta y los componentes de styles.css (Samara). */
+
+textarea, select {
+  font: inherit;
+  border: 1px solid #ccd5cc;
+  background: #fff;
+  padding: 11px 14px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  width: 100%;
+  color: #243c34;
+}
+textarea:focus-visible, select:focus-visible { outline: 3px solid #af7a28; outline-offset: 4px }
+.oculto {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+.acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 6px }
+.centrado { display: flex; justify-content: center; margin: 28px 0 }
+
+/* Catálogo */
+.filtros {
+  flex-direction: row; flex-wrap: wrap; align-items: flex-end; gap: 16px;
+  background: #fff; border: 1px solid #e0e5da; border-radius: 14px; padding: 20px 24px; margin-bottom: 28px;
+}
+.filtros .campo { flex: 1 1 220px }
+.filtros input { margin-bottom: 0 }
+.filtros .boton-principal { padding: 13px 26px }
+.campo { display: flex; flex-direction: column }
+.rejilla-cursos {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
+}
+.tarjeta-curso { padding: 22px 24px; display: flex; flex-direction: column; gap: 10px }
+.tarjeta-curso .insignia { align-self: flex-start }
+.tarjeta-curso h2 { font-size: 19px; margin: 0 }
+.tarjeta-curso h2 a { text-decoration: none }
+.tarjeta-curso h2 a:hover { text-decoration: underline }
+.tarjeta-curso p { color: #5f6d62; font-size: 14px; margin: 0; flex: 1 }
+.enlace-accion { font-size: 13px; font-weight: 600; color: #234f3f; text-decoration: none }
+
+/* Detalle */
+.detalle-cabecera .insignia { display: inline-block; margin-bottom: 4px }
+.detalle-datos { font-size: 13px }
+.temario { margin: 0; padding: 18px 28px 26px 48px }
+.temario > li { margin: 14px 0 }
+.temario h3 { font-family: Manrope, sans-serif; font-size: 16px; margin: 0 0 6px }
+.temario ol { padding-left: 22px }
+.temario ul { list-style: none; padding-left: 4px; margin: 4px 0 10px }
+.temario-unidad { font-weight: 600; font-size: 14px }
+.temario ul li { font-size: 14px; color: #4f5f53; padding: 2px 0 }
+.tipo-recurso {
+  display: inline-block; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700;
+  color: #426044; background: #eef3e8; border-radius: 4px; padding: 2px 7px; margin-right: 6px;
+}
+.obligatorio { font-size: 12px; color: #8a6a2a }
+
+/* Mis cursos */
+.encabezado-con-accion { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 20px }
+.lista-cursos { list-style: none; margin: 0; padding: 0 }
+.lista-cursos li {
+  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 18px;
+  padding: 18px 28px; border-bottom: 1px solid #e9ede5;
+}
+.lista-cursos li:last-child { border-bottom: 0 }
+.lista-cursos h2 { font-size: 17px; margin: 0 0 4px }
+.lista-cursos h2 a { text-decoration: none }
+.lista-cursos p { margin: 0; font-size: 13px; color: #6e7b72 }
+.lista-cursos .acciones { margin: 0 }
+.lista-cursos .boton-secundario, .encabezado-con-accion .boton-secundario, .acciones .boton-secundario { margin-top: 0 }
+.estado-curso { font-size: 11px; padding: 5px 11px; border-radius: 20px; white-space: nowrap }
+.estado-draft { background: #f5ecd9; color: #7a5a1c }
+.estado-published { background: #e3efdc; color: #2f5530 }
+.estado-published_with_draft { background: #e6ecf3; color: #2f4a66 }
+
+/* Formularios y editor */
+.formulario-tarjeta form, .bloque-cuerpo { padding: 24px 28px }
+.bloque { margin-bottom: 24px }
+.bloque-cuerpo > p:first-child { margin-top: 0 }
+.bloque-pie { padding: 18px 28px 24px; border-top: 1px solid #e9ede5 }
+.editor-modulos { list-style: none; margin: 0; padding: 8px 28px 4px }
+.editor-modulo { border-bottom: 1px solid #e9ede5; padding: 16px 0 }
+.editor-unidades { list-style: none; margin: 8px 0 8px 18px; padding: 0 0 0 16px; border-left: 2px solid #e3e9de }
+.editor-unidad { padding: 10px 0 }
+.editor-recursos { list-style: none; margin: 6px 0 6px 10px; padding: 0 }
+.recurso { padding: 8px 0 }
+.fila-editable { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex-direction: row }
+.fila-editable input { margin: 0; width: auto; flex: 1 1 220px; padding: 8px 12px }
+.fila-editable .boton-secundario { margin-top: 0 }
+.fila-acciones { margin-left: auto; display: flex; gap: 4px; align-items: center }
+.peligro { color: #9b2c2c }
+.confirmar { font-size: 12px; display: inline-flex; align-items: center; gap: 2px }
+.agregar { flex-direction: row; gap: 10px; margin-top: 8px }
+.agregar input { margin: 0; padding: 9px 12px }
+.agregar .boton-secundario { margin-top: 0; white-space: nowrap }
+.nuevo-recurso { background: #f8f9f6; border: 1px dashed #ccd5cc; border-radius: 10px; padding: 16px; margin: 8px 0 }
+.nuevo-recurso input, .nuevo-recurso select { margin-bottom: 12px }
+.casilla { display: flex; align-items: center; gap: 8px; font-weight: 400 }
+.casilla input { width: auto; margin: 0 }
+.ranura { margin: 6px 0 4px 10px; padding: 10px 14px; background: #f8f9f6; border-radius: 8px }
+.ranura .estado { padding: 0; justify-content: flex-start }
+.ranura textarea { margin-bottom: 8px }
+.ranura-nota { font-size: 12px; color: #6e7b72; margin: 4px 0 }
+.estado-proceso { font-size: 12px; padding: 3px 9px; border-radius: 12px }
+.proceso-pending { background: #f1f1ec; color: #5f665c }
+.proceso-ready { background: #e3efdc; color: #2f5530 }
+.proceso-failed { background: #f7e1df; color: #8a2d26 }
+.problemas { margin: 0 0 18px; padding-left: 20px; color: #7a3a1c }
+.problemas li { padding: 2px 0 }
+
+@media (max-width: 640px) {
+  .lista-cursos li { grid-template-columns: 1fr; gap: 10px; padding: 16px 20px }
+  .editor-modulos { padding: 8px 18px }
+  .formulario-tarjeta form, .bloque-cuerpo { padding: 20px }
+}
