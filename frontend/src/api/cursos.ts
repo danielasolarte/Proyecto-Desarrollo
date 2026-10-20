@@ -49,11 +49,60 @@ export interface Arbol {
 }
 export interface Previsualizacion { tree: Arbol; problems: string[] }
 
+export type QuizDeRecurso = { id: string; resource_id: string }
+
 const q = (params: Record<string, string | number | undefined>) => {
   const s = new URLSearchParams()
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') s.set(k, String(v))
   const t = s.toString()
   return t ? `?${t}` : ''
+}
+
+export type EstadoProgresoRecurso =
+  | 'not_started'
+  | 'in_progress'
+  | 'completed'
+
+export type ProgresoRecurso = {
+  ID: string
+  StudentID: string
+  EnrollmentID: string
+  ResourceID: string
+  ResourceStableID: string
+  Status: EstadoProgresoRecurso
+  OpenedAt?: string | null
+  LastActivityAt?: string | null
+  CompletedAt?: string | null
+  ActiveSeconds: number
+  LastPositionSeconds?: number | null
+  CreatedAt: string
+  UpdatedAt: string
+}
+
+export type ProgresoCurso = {
+  ID: string
+  StudentID: string
+  EnrollmentID: string
+  CourseID: string
+  Status: 'in_progress' | 'completed' | 'approved'
+  ProgressPercentage: number
+  CompletedAt?: string | null
+  ApprovedAt?: string | null
+  CreatedAt: string
+  UpdatedAt: string
+}
+
+export type CompletarRecursoRespuesta = {
+  resource_progress: ProgresoRecurso
+  course_progress: ProgresoCurso
+}
+
+export type ContenidoPublicado = {
+  resource_id: string
+  type: TipoRecurso
+  title: string
+  content_markdown?: string | null
+  external_url?: string | null
 }
 
 export const api = {
@@ -89,6 +138,47 @@ export const api = {
   crearRecurso: (uid: string, datos: { type: TipoRecurso; title: string; position: number; visible: boolean; required: boolean; downloadable: boolean; external_url?: string }) =>
     cliente<Recurso>(`/units/${uid}/resources`, { method: 'POST', body: datos }),
   borrarRecurso: (id: string) => cliente<void>(`/resources/${id}`, { method: 'DELETE' }),
+  quizDeRecurso: (resourceId: string) => cliente<QuizDeRecurso>(`/resources/${encodeURIComponent(resourceId)}/quiz`),
+  abrirRecurso: (resourceId: string) =>
+    cliente<ProgresoRecurso>(
+      `/resources/${encodeURIComponent(resourceId)}/progress/open`,
+      {
+        method: 'POST',
+      },
+    ),
+
+  contenidoRecurso: (resourceId: string) =>
+  cliente<ContenidoPublicado>(
+    `/resources/${encodeURIComponent(resourceId)}/content`,
+  ),
+  
+  heartbeatRecurso: (
+    resourceId: string,
+    positionSeconds?: number,
+  ) =>
+    cliente<ProgresoRecurso>(
+      `/resources/${encodeURIComponent(resourceId)}/progress/heartbeat`,
+      {
+        method: 'POST',
+        body: {
+          position_seconds: positionSeconds ?? null,
+          client_timestamp: new Date().toISOString(),
+        },
+      },
+    ),
+
+  completarRecurso: (resourceId: string) =>
+    cliente<CompletarRecursoRespuesta>(
+      `/resources/${encodeURIComponent(resourceId)}/progress/complete`,
+      {
+        method: 'POST',
+      },
+    ),
+
+  progresoCurso: (courseId: string) =>
+    cliente<ProgresoCurso>(
+      `/courses/${encodeURIComponent(courseId)}/progress`,
+    ),
   guardarTexto: (id: string, markdown: string) =>
     cliente<Recurso>(`/resources/${id}/content/draft`, { method: 'PUT', body: { markdown } }),
   publicarTexto: (id: string) => cliente<Recurso>(`/resources/${id}/content/publish`, { method: 'POST' }),
@@ -125,4 +215,12 @@ export const nombreEstado: Record<EstadoCurso, string> = {
 
 export function esMultimedia(t: TipoRecurso): boolean {
   return ['video', 'pdf', 'image', 'audio', 'presentation', 'file'].includes(t)
+}
+
+
+
+export function quizDeRecurso(resourceId: string) {
+  return cliente<QuizDeRecurso>(
+    `/resources/${resourceId}/quiz`,
+  )
 }

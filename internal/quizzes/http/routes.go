@@ -44,6 +44,11 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 		authctx.RequireRole(authctx.RoleStudent),
 	)
 
+	student.GET(
+		"/resources/:resourceID/quiz",
+		h.GetQuizByResource,
+	)
+
 	student.POST(
 		"/quizzes/:quizID/attempts",
 		h.StartAttempt,
@@ -64,4 +69,3 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 		h.SubmitAttempt,
 	)
 }
-

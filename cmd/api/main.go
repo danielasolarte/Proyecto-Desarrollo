@@ -112,7 +112,8 @@ func main() {
 	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
 	courseRepo := coursesPG.NewCourseRepository(db)
-	courseHandler := coursesHTTP.NewHandler(courseRepo)
+	catalogRepo := catalogPG.NewCatalogRepository(db)
+	courseHandler := coursesHTTP.NewHandler(courseRepo, catalogRepo)
 	coursesHTTP.RegisterRoutes(e, courseHandler)
 
 	authHandler := authHTTP.NewHandler(userRepo, sessionStore, mailerClient)
@@ -121,7 +122,6 @@ func main() {
 	adminHandler := adminHTTP.NewHandler(userRepo, sessionStore)
 	adminHTTP.RegisterRoutes(e, adminHandler)
 
-	catalogRepo := catalogPG.NewCatalogRepository(db)
 	catalogHandler := catalogHTTP.NewHandler(catalogRepo)
 	catalogHTTP.RegisterRoutes(e, catalogHandler)
 

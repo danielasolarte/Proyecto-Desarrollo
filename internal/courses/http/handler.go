@@ -10,6 +10,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	catalogDomain "github.com/equipo-mooc/plataforma-mooc/internal/catalog/domain"
 	"github.com/equipo-mooc/plataforma-mooc/internal/courses/domain"
 	"github.com/equipo-mooc/plataforma-mooc/internal/courses/usecase"
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/apierror"
@@ -17,11 +18,23 @@ import (
 )
 
 type Handler struct {
-	repo domain.CourseRepository
+	repo        domain.CourseRepository
+	catalogRepo catalogDomain.CatalogRepository
 }
 
-func NewHandler(repo domain.CourseRepository) *Handler {
-	return &Handler{repo: repo}
+func NewHandler(
+	repo domain.CourseRepository,
+	catalogRepos ...catalogDomain.CatalogRepository,
+) *Handler {
+	h := &Handler{
+		repo: repo,
+	}
+
+	if len(catalogRepos) > 0 {
+		h.catalogRepo = catalogRepos[0]
+	}
+
+	return h
 }
 
 // ---------- helpers de autorización ----------
@@ -38,6 +51,30 @@ func (h *Handler) courseForVersion(versionID string) (*domain.Course, *domain.Co
 	return c, v, nil
 }
 
+func (h *Handler) versionForResource(resourceID string) (*domain.CourseVersion, error) {
+	res, err := h.repo.FindResourceByID(resourceID)
+	if err != nil {
+		return nil, err
+	}
+
+	unit, err := h.repo.FindUnitByID(res.UnitID)
+	if err != nil {
+		return nil, err
+	}
+
+	module, err := h.repo.FindModuleByID(unit.ModuleID)
+	if err != nil {
+		return nil, err
+	}
+
+	version, err := h.repo.FindVersionByID(module.CourseVersionID)
+	if err != nil {
+		return nil, err
+	}
+
+	return version, nil
+}
+
 func (h *Handler) courseForModule(moduleID string) (*domain.Course, *domain.Module, error) {
 	m, err := h.repo.FindModuleByID(moduleID)
 	if err != nil {
@@ -48,6 +85,88 @@ func (h *Handler) courseForModule(moduleID string) (*domain.Course, *domain.Modu
 		return nil, nil, err
 	}
 	return c, m, nil
+}
+
+func (h *Handler) GetPublishedContent(c echo.Context) error {
+	user, err := currentUser(c)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	resourceID := c.Param("resourceID")
+
+	course, resource, err := h.courseForResource(resourceID)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	version, err := h.versionForResource(resourceID)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	// El recurso debe pertenecer exactamente a la versión publicada.
+	if course.PublishedVersionID == nil ||
+		*course.PublishedVersionID != version.ID {
+
+		return c.JSON(
+			http.StatusForbidden,
+			apierror.New(
+				apierror.CodeForbidden,
+				"el recurso no pertenece a la version publicada",
+			),
+		)
+	}
+
+	// No exponer recursos ocultos al estudiante.
+	if !resource.Visible {
+		return c.JSON(
+			http.StatusForbidden,
+			apierror.New(
+				apierror.CodeForbidden,
+				"el recurso no esta disponible",
+			),
+		)
+	}
+
+	// Los estudiantes deben estar inscritos activamente.
+	if user.Role == authctx.RoleStudent {
+		if h.catalogRepo == nil {
+			return c.JSON(
+				http.StatusInternalServerError,
+				apierror.New(
+					apierror.CodeInternal,
+					"repositorio de catalogo no configurado",
+				),
+			)
+		}
+
+		enrollment, err := h.catalogRepo.FindEnrollment(
+			user.ID,
+			course.ID,
+		)
+
+		if err != nil ||
+			enrollment.Status != catalogDomain.EnrollmentActive {
+
+			return c.JSON(
+				http.StatusForbidden,
+				apierror.New(
+					apierror.CodeForbidden,
+					"active enrollment required",
+				),
+			)
+		}
+	}
+
+	// Este endpoint solo devuelve contenido publicado.
+	return c.JSON(http.StatusOK, map[string]any{
+		"resource_id":      resource.ID,
+		"type":             resource.Type,
+		"title":            resource.Title,
+		"content_markdown": resource.ContentMarkdown,
+		"external_url":     resource.ExternalURL,
+	})
 }
 
 func (h *Handler) courseForUnit(unitID string) (*domain.Course, *domain.Unit, error) {
