@@ -10,6 +10,7 @@ import { DetalleCurso } from './paginas/catalogo/DetalleCurso'
 import { MisCursos } from './paginas/profesor/MisCursos'
 import { NuevoCurso } from './paginas/profesor/NuevoCurso'
 import { EditorCurso } from './paginas/profesor/EditorCurso'
+import { QuizEstudiante } from './paginas/estudiante/QuizEstudiante'
 
 declare const __APP_COMMIT__: string
 
@@ -41,7 +42,7 @@ export function App() {
           <Route element={<RutaProtegida roles={['student']} />}>
             <Route path="/mis-cursos" element={<Inicio modulo="Mi aprendizaje" />} />
             <Route path="/aprender/:cursoId" element={<Inicio modulo="Mi aprendizaje" />} />
-            <Route path="/quiz/:quizId" element={<Inicio modulo="Evaluación" />} />
+            <Route path="/quiz/:quizId" element={<QuizEstudiante />} />
           </Route>
           <Route element={<RutaProtegida roles={['admin']} />}>
             <Route path="/admin/*" element={<Inicio modulo="Administración" />} />
