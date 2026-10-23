@@ -77,6 +77,7 @@ jobs:
           mkdir -p build
           go build -o build/mooc-api ./cmd/api
           go build -o build/mooc-worker ./cmd/worker
+          go build -o build/mooc-cola-exportador ./cmd/cola-exportador
 
       - name: Validate Docker Compose
         run: docker compose --env-file .env.example config --quiet

@@ -23,13 +23,6 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 		h.CreateQuiz,
 	)
 
-	// El editor del curso solo conoce el recurso: con esto sabe si ya hay
-	// quiz (200) o si debe crearlo (404).
-	authoring.GET(
-		"/resources/:resourceID/quiz",
-		h.GetQuizByResource,
-	)
-
 	authoring.POST(
 		"/quizzes/:quizID/questions",
 		h.CreateQuestion,
@@ -43,6 +36,14 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 	authoring.GET(
 		"/quizzes/:quizID/authoring",
 		h.GetQuizForAuthoring,
+	)
+
+	// Profesor/admin: quiz completo para el editor (404 si aún no existe).
+	// Estudiante inscrito: id del quiz publicado para iniciar un intento.
+	g.GET(
+		"/resources/:resourceID/quiz",
+		h.GetQuizByResource,
+		authctx.RequireRole(authctx.RoleTeacher, authctx.RoleAdmin, authctx.RoleStudent),
 	)
 
 	// Estudiante.
@@ -71,4 +72,3 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 		h.SubmitAttempt,
 	)
 }
-

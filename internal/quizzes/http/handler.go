@@ -2,8 +2,8 @@ package http
 
 import (
 	"errors"
-	"net/http"
 	"encoding/json"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,16 +13,16 @@ import (
 	coursesDomain "github.com/equipo-mooc/plataforma-mooc/internal/courses/domain"
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/apierror"
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/authctx"
-	quizDomain "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/domain"
 	progressUC "github.com/equipo-mooc/plataforma-mooc/internal/progress/usecase"
+	quizDomain "github.com/equipo-mooc/plataforma-mooc/internal/quizzes/domain"
 	"github.com/equipo-mooc/plataforma-mooc/internal/quizzes/usecase"
 )
 
 type Handler struct {
-	service     *usecase.Service
-	quizRepo    quizDomain.Repository
-	courseRepo  coursesDomain.CourseRepository
-	catalogRepo catalogDomain.CatalogRepository
+	service         *usecase.Service
+	quizRepo        quizDomain.Repository
+	courseRepo      coursesDomain.CourseRepository
+	catalogRepo     catalogDomain.CatalogRepository
 	progressService *progressUC.Service
 }
 
@@ -347,14 +347,25 @@ func (h *Handler) GetQuizForAuthoring(c echo.Context) error {
 	})
 }
 
-// GetQuizByResource devuelve el quiz de un recurso con sus preguntas y
-// opciones (la misma forma que GET /quizzes/:quizID/authoring). Solo el
-// profesor dueño del curso o un admin. 404 si el recurso aún no tiene quiz.
+// GetQuizByResource atiende GET /resources/:resourceID/quiz para los tres
+// roles, porque Echo solo admite una ruta por método y camino:
+//   - profesor dueño o admin: el quiz con preguntas y opciones, incluida la
+//     correcta (misma forma que GET /quizzes/:quizID/authoring), también en
+//     borrador. 404 si el recurso aún no tiene quiz.
+//   - estudiante con inscripción activa: solo {id, resource_id} del quiz de
+//     la versión publicada, para iniciar un intento. Nunca ve la clave.
 func (h *Handler) GetQuizByResource(c echo.Context) error {
 	user, err := currentUser(c)
 	if err != nil {
 		return respondError(c, err)
 	}
+	if user.Role == authctx.RoleStudent {
+		return h.quizDelRecursoParaEstudiante(c, user)
+	}
+	return h.quizDelRecursoParaAutoria(c, user)
+}
+
+func (h *Handler) quizDelRecursoParaAutoria(c echo.Context, user authctx.User) error {
 
 	resourceIDString := c.Param("resourceID")
 	resourceID, err := uuid.Parse(resourceIDString)
@@ -428,16 +439,16 @@ func (h *Handler) versionForResource(
 }
 
 type attemptResponse struct {
-	ID           uuid.UUID       `json:"id"`
-	QuizID       uuid.UUID       `json:"quiz_id"`
-	Status       string          `json:"status"`
-	Score        *float64        `json:"score,omitempty"`
-	Percentage   *float64        `json:"percentage,omitempty"`
-	Passed       *bool           `json:"passed,omitempty"`
-	Snapshot     json.RawMessage `json:"snapshot"`
-	StartedAt    time.Time       `json:"started_at"`
-	ExpiresAt    *time.Time      `json:"expires_at,omitempty"`
-	SubmittedAt  *time.Time      `json:"submitted_at,omitempty"`
+	ID          uuid.UUID       `json:"id"`
+	QuizID      uuid.UUID       `json:"quiz_id"`
+	Status      string          `json:"status"`
+	Score       *float64        `json:"score,omitempty"`
+	Percentage  *float64        `json:"percentage,omitempty"`
+	Passed      *bool           `json:"passed,omitempty"`
+	Snapshot    json.RawMessage `json:"snapshot"`
+	StartedAt   time.Time       `json:"started_at"`
+	ExpiresAt   *time.Time      `json:"expires_at,omitempty"`
+	SubmittedAt *time.Time      `json:"submitted_at,omitempty"`
 }
 
 func toAttemptResponse(a *quizDomain.Attempt) attemptResponse {
@@ -453,6 +464,73 @@ func toAttemptResponse(a *quizDomain.Attempt) attemptResponse {
 		ExpiresAt:   a.ExpiresAt,
 		SubmittedAt: a.SubmittedAt,
 	}
+}
+
+func (h *Handler) quizDelRecursoParaEstudiante(c echo.Context, user authctx.User) error {
+
+	resourceIDString := c.Param("resourceID")
+
+	resourceID, err := uuid.Parse(resourceIDString)
+	if err != nil {
+		return c.JSON(
+			http.StatusBadRequest,
+			apierror.New(
+				apierror.CodeValidation,
+				"resource_id invalido",
+			),
+		)
+	}
+
+	course, resource, err := h.courseForResource(resourceIDString)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	if resource.Type != coursesDomain.ResourceQuiz {
+		return c.JSON(
+			http.StatusBadRequest,
+			apierror.New(
+				apierror.CodeValidation,
+				"el recurso no es de tipo quiz",
+			),
+		)
+	}
+
+	version, err := h.versionForResource(resourceIDString)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	// El estudiante solo puede consultar quizzes de la versión publicada.
+	if course.PublishedVersionID == nil ||
+		*course.PublishedVersionID != version.ID {
+
+		return c.JSON(
+			http.StatusForbidden,
+			apierror.New(
+				apierror.CodeForbidden,
+				"el quiz no pertenece a la version publicada",
+			),
+		)
+	}
+
+	// Además debe estar inscrito activamente en el curso.
+	if _, err := h.activeEnrollment(user.ID, course.ID); err != nil {
+		return respondError(c, err)
+	}
+
+	quiz, err := h.quizRepo.GetQuizByResourceID(
+		c.Request().Context(),
+		resourceID,
+	)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"id":          quiz.ID,
+		"resource_id": quiz.ResourceID,
+	})
 }
 
 func (h *Handler) StartAttempt(c echo.Context) error {
@@ -756,6 +834,3 @@ func (h *Handler) SubmitAttempt(c echo.Context) error {
 		toAttemptResponse(attempt),
 	)
 }
-
-
-

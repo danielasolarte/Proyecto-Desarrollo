@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	catalogDomain "github.com/equipo-mooc/plataforma-mooc/internal/catalog/domain"
 	"github.com/equipo-mooc/plataforma-mooc/internal/courses/domain"
 	"github.com/equipo-mooc/plataforma-mooc/internal/platform/authctx"
 )
@@ -96,6 +98,21 @@ func TestOutlineDeCursoSinPublicarEs404(t *testing.T) {
 	}
 }
 
+// catalogoFalso: los estudiantes de la lista están inscritos y activos en c1.
+type catalogoFalso struct {
+	catalogDomain.CatalogRepository
+	inscritos []string
+}
+
+func (f catalogoFalso) FindEnrollment(studentID, courseID string) (*catalogDomain.Enrollment, error) {
+	for _, id := range f.inscritos {
+		if id == studentID && courseID == "c1" {
+			return &catalogDomain.Enrollment{Status: catalogDomain.EnrollmentActive}, nil
+		}
+	}
+	return nil, errors.New("no inscrito")
+}
+
 func servidorPreview(repo domain.CourseRepository, usuario *authctx.User, inscritos ...string) *echo.Echo {
 	e := echo.New()
 	if usuario != nil {
@@ -107,14 +124,7 @@ func servidorPreview(repo domain.CourseRepository, usuario *authctx.User, inscri
 			}
 		})
 	}
-	h := NewHandler(repo).ConInscripciones(func(studentID, courseID string) bool {
-		for _, id := range inscritos {
-			if id == studentID && courseID == "c1" {
-				return true
-			}
-		}
-		return false
-	})
+	h := NewHandler(repo, catalogoFalso{inscritos: inscritos})
 	RegisterRoutes(e, h)
 	return e
 }

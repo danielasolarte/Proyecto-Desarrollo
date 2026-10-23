@@ -45,10 +45,22 @@ VM fija `mooc-servicios`, fuera de los grupos, con Redis (cola asynq y sesiones,
 
 ## Workers (Mateo)
 
-`02-imagen-maquina.ps1 -Rol worker` construye la imagen del worker con el mismo mecanismo. La plantilla del worker usa los mismos metadatos, más:
+Mismo mecanismo de arranque que la API. La señal de autoscaling es `custom.googleapis.com/mooc/cola/demanda` (pendientes + activos de la cola `media`), que publica `cola-exportador` cada 30 s desde `mooc-servicios`; incluye los activos para no retirar workers ocupados con la cola vacía. Concurrencia 2 por VM (igual que la C4 de la E2).
 
-- `mooc-detener-s`: más largo, alineado con `ShutdownTimeout` de asynq.
-- `mooc-docker-args=--add-host=clamav:<IP de la VM de servicios>`: el contenedor del worker busca ClamAV por el nombre `clamav`.
+| Paso | Comando | Qué deja |
+| --- | --- | --- |
+| 1 | `.\deploy\gcp\e3\02-imagen-maquina.ps1 -Rol worker` | Contenedor `mooc-e2-worker:<commit>` (incluye `cola-exportador`) e imagen `mooc-worker-<commit>` |
+| 2 | `.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Red` | Regla `mooc-e3-allow-hc-worker` (health checks → :8081) |
+| 3 | `.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Salud` | `mooc-worker-hc-vida` (`/health` en 8081, autorreparación) |
+| 4 | `.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Exportador` | `cola-exportador` en `mooc-servicios` (una sola copia) |
+| 5 | `.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Plantilla` | Plantilla `mooc-worker-<commit>-<fecha>`: e2-medium, Redis y ClamAV en `mooc-servicios`, `mooc-detener-s=330` |
+| 6 | `.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Grupo` | `mooc-worker-mig` con 1 instancia |
+| 7 | `.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Probar` | `/health`, consumo de la cola, tiempo de arranque y muestras de la cola |
+| 8 | `.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Autoscaling` | 1 a 3 VM, 4 trabajos (pendientes + activos) por VM |
+
+Retiro seguro: al borrar una VM, `docker stop -t 330` manda SIGTERM; el worker deja de tomar trabajos y espera hasta 300 s (`WORKER_SHUTDOWN_TIMEOUT_SECONDS`) a los activos. Lo que no termine vuelve a la cola y lo toma otro worker; el estado del job en Postgres evita derivados duplicados.
+
+Permisos que necesita `sa-mooc-servicios` para el exportador: `roles/monitoring.metricWriter` (proyecto) y `roles/artifactregistry.reader` (repositorio `mooc-e2`).
 
 ## Migraciones
 

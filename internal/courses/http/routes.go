@@ -19,6 +19,15 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 	authoring.GET("/me/courses", h.ListMyCourses)
 	g.GET("/courses/:courseID", h.GetCourse)
 	g.GET("/courses/:courseID/outline", h.GetCourseOutline)
+	g.GET(
+		"/resources/:resourceID/content",
+		h.GetPublishedContent,
+		authctx.RequireRole(
+			authctx.RoleStudent,
+			authctx.RoleTeacher,
+			authctx.RoleAdmin,
+		),
+	)
 	g.GET("/courses/:courseID/preview", h.PreviewCourse) // dueño/admin: borrador; estudiante inscrito: publicada
 	authoring.POST("/courses/:courseID/draft", h.CreateUpdateDraft)
 	authoring.POST("/courses/:courseID/publish", h.PublishCourse)
@@ -40,4 +49,5 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 	authoring.PUT("/resources/:resourceID/content/draft", h.SaveContentDraft)
 	authoring.GET("/resources/:resourceID/content/draft", h.GetContentDraft)
 	authoring.POST("/resources/:resourceID/content/publish", h.PublishContentDraft)
+
 }
