@@ -22,29 +22,112 @@ it('bloquea la pantalla de profesor para un estudiante autenticado', async () =>
   expect(screen.queryByText('Contenido privado del profesor')).toBeNull()
 })
 it('restaura la sesión desde /me y muestra el menú de estudiante', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify(usuario)))))
+  const fetchMock = vi.fn().mockImplementation((url: string) => {
+    if (url === '/api/v1/me') {
+      return Promise.resolve(
+        new Response(JSON.stringify(usuario)),
+      )
+    }
+
+    if (url === '/api/v1/me/enrollments') {
+      return Promise.resolve(
+        new Response(JSON.stringify([])),
+      )
+    }
+
+    return Promise.resolve(
+      new Response('{}', { status: 404 }),
+    )
+  })
+
+  vi.stubGlobal('fetch', fetchMock)
+
   abrir()
-  expect(await screen.findByText('Hola, Estudiante de prueba.')).toBeTruthy()
-  expect(screen.getByRole('link', { name: 'Mi aprendizaje' })).toBeTruthy()
-  expect(screen.queryByRole('link', { name: 'Mis cursos' })).toBeNull()
+
+  expect(
+    await screen.findByRole('heading', { name: 'Mis cursos' }),
+  ).toBeTruthy()
+
+  expect(
+    screen.getByRole('link', { name: 'Mi aprendizaje' }),
+  ).toBeTruthy()
+
+  expect(
+    screen.getAllByRole('link', { name: 'Explorar cursos' }).length,
+  ).toBeGreaterThan(0)
 })
 it('inicia sesión, verifica la cookie con /me y cierra la sesión', async () => {
   const fetchMock = vi.fn()
-    .mockResolvedValueOnce(new Response('{"error":{"message":"no autenticado"}}', { status: 401 }))
-    .mockResolvedValueOnce(new Response(JSON.stringify({ user: usuario, token: 'no-almacenar' })))
-    .mockResolvedValueOnce(new Response(JSON.stringify(usuario)))
-    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(
+      new Response(
+        '{"error":{"message":"no autenticado"}}',
+        { status: 401 },
+      ),
+    )
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          user: usuario,
+          token: 'no-almacenar',
+        }),
+      ),
+    )
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify(usuario)),
+    )
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify([])),
+    )
+    .mockResolvedValueOnce(
+      new Response(null, { status: 204 }),
+    )
+
   vi.stubGlobal('fetch', fetchMock)
+
   abrir('/login')
-  fireEvent.change(await screen.findByLabelText('Correo electrónico'), { target: { value: usuario.email } })
-  fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'contraseña-de-prueba' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Entrar a mi espacio' }))
-  expect(await screen.findByText('Hola, Estudiante de prueba.')).toBeTruthy()
+
+  fireEvent.change(
+    await screen.findByLabelText('Correo electrónico'),
+    { target: { value: usuario.email } },
+  )
+
+  fireEvent.change(
+    screen.getByLabelText('Contraseña'),
+    { target: { value: 'contraseña-de-prueba' } },
+  )
+
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'Entrar a mi espacio',
+    }),
+  )
+
+  expect(
+    await screen.findByRole('heading', { name: 'Mis cursos' }),
+  ).toBeTruthy()
+
   expect(localStorage.length).toBe(0)
   expect(sessionStorage.length).toBe(0)
-  fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Entrar a mi espacio' })).toBeTruthy())
-  expect(fetchMock.mock.calls.map(c => c[0])).toEqual(['/api/v1/me', '/api/v1/auth/login', '/api/v1/me', '/api/v1/auth/logout'])
+
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Cerrar sesión' }),
+  )
+
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', {
+        name: 'Entrar a mi espacio',
+      }),
+    ).toBeTruthy(),
+  )
+
+  expect(fetchMock.mock.calls.map(c => c[0])).toEqual([
+    '/api/v1/me',
+    '/api/v1/auth/login',
+    '/api/v1/me',
+    '/api/v1/me/enrollments',
+    '/api/v1/auth/logout',
+  ])
 })
 it('muestra errores de login sin dar acceso', async () => {
   vi.stubGlobal('fetch', vi.fn()
@@ -65,10 +148,43 @@ it('pide login al abrir directamente una ruta protegida sin sesión', async () =
   expect(screen.queryByText('Mis cursos')).toBeNull()
 })
 it('vuelve al login cuando otra petición detecta una sesión expirada', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(usuario))))
+  const fetchMock = vi.fn().mockImplementation((url: string) => {
+    if (url === '/api/v1/me') {
+      return Promise.resolve(
+        new Response(JSON.stringify(usuario)),
+      )
+    }
+
+    if (url === '/api/v1/me/enrollments') {
+      return Promise.resolve(
+        new Response(JSON.stringify([])),
+      )
+    }
+
+    return Promise.resolve(
+      new Response('{}', { status: 404 }),
+    )
+  })
+
+  vi.stubGlobal('fetch', fetchMock)
+
   abrir('/mis-cursos')
-  expect(await screen.findByText('Hola, Estudiante de prueba.')).toBeTruthy()
+
+  expect(
+    await screen.findByRole('heading', { name: 'Mis cursos' }),
+  ).toBeTruthy()
+
   const { act } = await import('@testing-library/react')
-  await act(async () => { window.dispatchEvent(new Event('mooc:sesion-expirada')) })
-  expect(await screen.findByRole('button', { name: 'Entrar a mi espacio' })).toBeTruthy()
+
+  await act(async () => {
+    window.dispatchEvent(
+      new Event('mooc:sesion-expirada'),
+    )
+  })
+
+  expect(
+    await screen.findByRole('button', {
+      name: 'Entrar a mi espacio',
+    }),
+  ).toBeTruthy()
 })
