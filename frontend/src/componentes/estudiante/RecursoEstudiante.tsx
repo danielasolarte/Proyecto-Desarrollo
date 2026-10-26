@@ -5,6 +5,7 @@ import {
   nombreTipo,
   type TipoRecurso,
 } from '../../api/cursos'
+import { VisorRecurso } from '../media/VisorRecurso'
 
 type RecursoEstudianteResumen = {
   id: string
@@ -242,9 +243,7 @@ export function RecursoEstudiante({
               <p>Este recurso no tiene contenido embebido configurado.</p>
             )
           ) : (
-            <p>
-              El visor de este tipo de recurso se integrará posteriormente.
-            </p>
+            <VisorRecurso recurso={recurso} />
           )}
 
           {!completado && (
