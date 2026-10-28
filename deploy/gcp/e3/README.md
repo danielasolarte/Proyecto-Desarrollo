@@ -74,3 +74,18 @@ El navegador del profesor sube los archivos directo al bucket con URL prefirmada
 .\deploy\gcp\e3\06-cors-bucket.ps1 -Origen "http://<IP o dominio del balanceador>"
 .\deploy\gcp\e3\06-cors-bucket.ps1 -Ver
 ```
+
+## Balanceador HTTPS y frontend (Samara)
+
+Un solo dominio, `https://<IP del balanceador>.sslip.io`: `/api/*` va al servicio de backend `mooc-api-bs` (grupo `mooc-api-mig`) y todo lo demás al bucket del frontend. HTTP redirige a HTTPS con un 301. Como el frontend y la API comparten origen, las cookies `mooc_session` y `mooc_csrf` funcionan sin CORS, y la API no necesitó cambios. `/metrics` y `/health` no se publican.
+
+| Paso | Comando | Qué deja |
+| --- | --- | --- |
+| 1 | `.\deploy\gcp\e3\08-balanceador.ps1 -Fase Crear` | IP `mooc-e3-lb-ip`, bucket `mooc-e3-frontend-<proyecto>` y backend bucket, `mooc-api-bs` (health check `mooc-api-hc-listo`, drenaje de 30 s, logs), mapas de URL, certificado administrado, proxies y reglas 443/80 |
+| 2 | `.\deploy\gcp\e3\08-balanceador.ps1 -Fase Publicar` | Compila `frontend/` con el commit, agrega `version.json` y sincroniza con el bucket |
+| 3 | `.\deploy\gcp\e3\06-cors-bucket.ps1 -Origen "https://<dominio>","http://localhost:5173"` | CORS del bucket de medios para las cargas desde el dominio nuevo |
+| 4 | `.\deploy\gcp\e3\08-balanceador.ps1 -Fase Probar` | Estado del certificado, salud por instancia, rutas y reparto por `X-Instance-Id` |
+| 5 | `.\deploy\gcp\e3\08-balanceador.ps1 -Fase Sesion` | Login, `/me` entre réplicas, CSRF (403 sin encabezado) y logout. Usa `MOOC_STUDENT_EMAIL` y `MOOC_STUDENT_PASSWORD` |
+| 6 | `.\deploy\gcp\e3\08-balanceador.ps1 -Fase Excluir -Segundos 60` | Escenario 3A: con 2 instancias sanas, bloquea Redis en una, `/health/ready` pasa a 503 y el balanceador la saca sin que la autorreparación la recree. Al final la reincorpora. CSV en `capacity-planning/results/` |
+
+El certificado tarda entre 15 y 60 minutos en pasar de `PROVISIONING` a `ACTIVE`. `-Fase Estado` muestra los recursos. `-Fase Borrar -Confirmar` quita el balanceador, pero conserva la IP (y con ella el dominio y el certificado al recrear) y el bucket.
