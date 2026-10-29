@@ -45,9 +45,6 @@ export function RecursoEstudiante({
         recurso.id,
         posicionRef.current,
       )
-      recurso.id,
-      posicionRef.current,
-
       setAbierto(true)
       setCompletado(progreso.Status === 'completed')
       setSegundosActivos(progreso.ActiveSeconds ?? 0)
