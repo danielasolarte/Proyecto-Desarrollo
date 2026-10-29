@@ -42,6 +42,9 @@ export function RecursoEstudiante({
 
     try {
       const progreso = await api.heartbeatRecurso(
+        recurso.id,
+        posicionRef.current,
+      )
       recurso.id,
       posicionRef.current,
     )
@@ -74,7 +77,10 @@ export function RecursoEstudiante({
 
   async function heartbeat() {
     try {
-      const progreso = await api.heartbeatRecurso(recurso.id)
+      const progreso = await api.heartbeatRecurso(
+        recurso.id,
+        posicionRef.current,
+      )
 
       setSegundosActivos(progreso.ActiveSeconds ?? 0)
 
