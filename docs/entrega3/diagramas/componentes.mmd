@@ -1,0 +1,39 @@
+%% Modelo de componentes - Entrega 3 (fuente del diagrama de docs/entrega3/arquitectura.md)
+flowchart LR
+    nav["Navegador<br/>(SPA React)"]
+
+    subgraph api["API Go - monolito modular (mooc-api-mig)"]
+        auth["auth / admin"]
+        courses["courses / catalog"]
+        media["media"]
+        quizzes["quizzes / progress / badges"]
+        health["health<br/>/health y /health/ready"]
+    end
+
+    subgraph async["Procesamiento asíncrono"]
+        redis[("Redis 7<br/>cola asynq 'media' y sesiones")]
+        worker["Workers asynq<br/>(mooc-worker-mig)<br/>ffmpeg, LibreOffice, clamdscan"]
+        clamav["ClamAV clamd :3310"]
+        exportador["cola-exportador"]
+    end
+
+    pg[("Cloud SQL<br/>PostgreSQL 16")]
+    gcs[("Cloud Storage<br/>originales, HLS, PDF")]
+    mon["Cloud Monitoring"]
+
+    nav -- "HTTPS REST JSON + cookies + CSRF" --> api
+    nav -- "PUT por partes / GET (URLs prefirmadas)" --> gcs
+
+    api -- "SQL" --> pg
+    api -- "sesiones (síncrono)" --> redis
+    api -- "encola trabajos (asíncrono)" --> redis
+    api -- "firma URLs, multipart" --> gcs
+
+    redis -- "consume trabajos" --> worker
+    worker -- "estado de jobs y recursos" --> pg
+    worker -- "lee originales, escribe derivados" --> gcs
+    worker -- "escaneo" --> clamav
+
+    exportador -- "pendientes + activos" --> redis
+    exportador -- "métrica demanda cada 30 s" --> mon
+    mon -- "señal de autoscaling" --> worker

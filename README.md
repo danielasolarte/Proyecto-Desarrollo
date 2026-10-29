@@ -28,7 +28,7 @@ medio privado del curso; no están en el repositorio.
 
 ### Documentación
 
-- Arquitectura: `docs/entrega3/arquitectura.md` (_pendiente_).
+- Arquitectura (componentes, despliegue, escalamiento, operación, costos y limitaciones): [`docs/entrega3/arquitectura.md`](docs/entrega3/arquitectura.md).
 - Cola compartida, workers elásticos y retiro seguro: [`docs/entrega3/arquitectura-workers.md`](docs/entrega3/arquitectura-workers.md).
 - Verificación funcional del frontend (matriz de recorridos y rutas): [`docs/entrega3/matriz-verificacion-frontend.md`](docs/entrega3/matriz-verificacion-frontend.md).
 - Informe de capacidad (escenarios 1, 2, 3A y 3B): `capacity-planning/pruebas_de_carga_entrega3.md` (_pendiente_).
