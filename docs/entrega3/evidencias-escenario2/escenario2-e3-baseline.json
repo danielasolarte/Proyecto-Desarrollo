@@ -301,16 +301,16 @@
         "students": [
             {
                 "email": "student.e2.1793242236267.0@mooc.test",
-                "token": "TC5dTcYWG9cCeV1HhoyuRtfBlntnKxiYFpaCLD2mCew"
+                "token": "<redactado>"
             },
             {
-                "token": "5a4SJhoXh5sUPK63lNUZN3OxXBTklVonp9vYqFfaWZ4",
+                "token": "<redactado>",
                 "email": "student.e2.1793242236267.1@mooc.test"
             }
         ],
         "teacher": {
             "email": "teacher.e2.1793242236267@mooc.test",
-            "token": "-ZqHSSilinCfbDBrvwWVMWVz_ffRRKyBjJ9BjKmhjrM"
+            "token": "<redactado>"
         },
         "uploadUnitId": "13876f25-a88a-4090-b4bf-8b74adcbce19"
     }
