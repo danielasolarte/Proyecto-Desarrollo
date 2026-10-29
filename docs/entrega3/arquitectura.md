@@ -403,7 +403,20 @@ Después de conservar las evidencias:
 
 ### 10.3 Consumo observado
 
-*Pendiente de completar con el reporte de Facturación del proyecto:* **Facturación → Informes**, filtro por el proyecto `proyecto1-entrega2-desarrollo` y fechas del 12/10/2026 al cierre, agrupado por servicio. Registrar aquí el total, el costo por servicio y las horas aproximadas de uso, y contrastarlo con la estimación de 10.2.
+Fuente: **Facturación → Informes** del proyecto `proyecto1-entrega2-desarrollo`, agrupado por servicio, período de cargo del 12/10/2026 (inicio de la E3) al 29/10/2026, consultado el 29/10/2026 ([captura](evidencias-costos/facturacion-servicios-12-29oct.jpg)). Valores en USD.
+
+| Servicio | Costo por uso | Créditos | Neto |
+| --- | ---: | ---: | ---: |
+| Compute Engine (VM de los grupos, `mooc-servicios`, discos e imágenes) | 7,38 | −7,38 | 0,00 |
+| Cloud SQL | 2,82 | −2,82 | 0,00 |
+| Networking (balanceador, Cloud NAT, IP) | 1,78 | −1,78 | 0,00 |
+| VM Manager | 0,07 | −0,07 | 0,00 |
+| Otros (Cloud Storage, Artifact Registry, Secret Manager, Monitoring) | < 0,01 | | 0,00 |
+| **Total** | **≈ 12,05** | **−12,05** | **0,00** |
+
+Para comparar, todo octubre (incluida la operación de la E2 del 1 al 11 de octubre) suma 30,57 USD de costo por uso: Compute Engine 17,94, Cloud SQL 8,29, Networking 3,48 y VM Manager 0,86. El costo lo cubren por completo los créditos de la cuenta educativa.
+
+**Contraste con la estimación de 10.2:** 12 USD en 18 días equivalen a unas 70 horas de la configuración mínima (≈ 0,17 USD/h). El gasto real es mucho menor que el de un mes 24/7 (≈ 125 USD) porque el entorno se encendió solo para desplegar y probar, y se apagó con los scripts de la sección 9.3. La facturación de Google Cloud se consolida con hasta un día de retraso, así que las corridas del 28/10 pueden no estar completas en esta consulta.
 
 ### 10.4 Relación con los resultados de las pruebas
 
