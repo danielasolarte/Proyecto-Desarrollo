@@ -1,0 +1,49 @@
+TIMESTAMP: 2026-10-28T20:58:53.750-07:00
+TYPE: delete
+TARGET: mooc-worker-pdxt
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-28T20:45:16.332-07:00
+TYPE: insert
+TARGET: mooc-worker-pdxt
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-28T20:44:52.526-07:00
+TYPE: delete
+TARGET: mooc-worker-zp1h
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-28T20:44:50.796-07:00
+TYPE: compute.instanceGroupManagers.deleteInstances
+TARGET: mooc-worker-mig
+USER: camilafajardo32@gmail.com
+
+TIMESTAMP: 2026-10-28T20:36:28.582-07:00
+TYPE: insert
+TARGET: mooc-worker-zp1h
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-28T20:31:06.268-07:00
+TYPE: delete
+TARGET: mooc-worker-f0sv
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-28T20:17:44.808-07:00
+TYPE: insert
+TARGET: mooc-worker-f0sv
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-28T17:13:07.684-07:00
+TYPE: insert
+TARGET: mooc-worker-b7zl
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-25T20:07:06.700-07:00
+TYPE: delete
+TARGET: mooc-worker-qf0q
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-25T19:42:32.964-07:00
+TYPE: insert
+TARGET: mooc-worker-qf0q
+USER: 167186676477@cloudservices.gserviceaccount.com

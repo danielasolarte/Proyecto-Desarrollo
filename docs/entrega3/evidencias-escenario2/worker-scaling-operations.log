@@ -1,0 +1,59 @@
+TIMESTAMP: 2026-10-21T14:38:31.878-07:00
+TYPE: compute.instanceGroupManagers.insert
+TARGET: mooc-worker-mig
+USER: am.juradoc@gmail.com
+
+TIMESTAMP: 2026-10-21T14:40:05.049-07:00
+TYPE: insert
+TARGET: mooc-worker-f3wk
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-22T07:35:36.452-07:00
+TYPE: compute.autoscalers.insert
+TARGET: mooc-worker-mig-nvbn
+USER: am.juradoc@gmail.com
+
+TIMESTAMP: 2026-10-22T07:39:25.688-07:00
+TYPE: insert
+TARGET: mooc-worker-5h39
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-22T07:39:26.912-07:00
+TYPE: insert
+TARGET: mooc-worker-bbmg
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-22T07:58:28.273-07:00
+TYPE: delete
+TARGET: mooc-worker-f3wk
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-22T08:09:02.871-07:00
+TYPE: delete
+TARGET: mooc-worker-bbmg
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-22T08:21:30.148-07:00
+TYPE: delete
+TARGET: mooc-worker-5h39
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-25T19:42:32.964-07:00
+TYPE: insert
+TARGET: mooc-worker-qf0q
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-25T20:07:06.700-07:00
+TYPE: delete
+TARGET: mooc-worker-qf0q
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-28T17:13:07.684-07:00
+TYPE: insert
+TARGET: mooc-worker-b7zl
+USER: 167186676477@cloudservices.gserviceaccount.com
+
+TIMESTAMP: 2026-10-28T20:17:44.808-07:00
+TYPE: insert
+TARGET: mooc-worker-f0sv
+USER: 167186676477@cloudservices.gserviceaccount.com
