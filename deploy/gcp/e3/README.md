@@ -71,9 +71,21 @@ Permisos que necesita `sa-mooc-servicios` para el exportador: `roles/monitoring.
 El navegador del profesor sube los archivos directo al bucket con URL prefirmadas. El bucket debe aceptar el origen del frontend:
 
 ```powershell
-.\deploy\gcp\e3\06-cors-bucket.ps1 -Origen "http://<IP o dominio del balanceador>"
+.\deploy\gcp\e3\06-cors-bucket.ps1 -Origen "https://136.68.98.101.sslip.io","http://localhost:5173"
 .\deploy\gcp\e3\06-cors-bucket.ps1 -Ver
 ```
+
+## Cuentas de administrador
+
+La API no permite cambiar la clave de otro usuario y en la nube no hay correo para recuperarla. `09-cuenta-admin.ps1` lo hace desde `mooc-servicios` (Cloud SQL y esa VM encendidas):
+
+```powershell
+.\deploy\gcp\e3\09-cuenta-admin.ps1 -Fase Listar
+.\deploy\gcp\e3\09-cuenta-admin.ps1 -Fase Clave -Correo <correo de una cuenta admin>
+.\deploy\gcp\e3\09-cuenta-admin.ps1 -Fase Clave -Correo <correo nuevo> -Nombre "Nombre"
+```
+
+`Clave` genera una clave aleatoria, guarda solo su hash bcrypt y la muestra una vez en la consola (no queda en ningún registro). Si el correo no existe, crea la cuenta admin activa. Nunca cambia el rol de una cuenta que no sea admin.
 
 ## Balanceador HTTPS y frontend (Samara)
 
