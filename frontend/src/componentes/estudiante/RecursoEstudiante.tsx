@@ -29,6 +29,7 @@ export function RecursoEstudiante({
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
   const [contenido, setContenido] = useState<string | null>(null)
+  const posicionRef = useRef<number | undefined>(undefined)
 
   const heartbeatRef = useRef<number | null>(null)
   const contadorRef = useRef<number | null>(null)
@@ -40,7 +41,10 @@ export function RecursoEstudiante({
     setError('')
 
     try {
-      const progreso = await api.abrirRecurso(recurso.id)
+      const progreso = await api.heartbeatRecurso(
+      recurso.id,
+      posicionRef.current,
+    )
 
       setAbierto(true)
       setCompletado(progreso.Status === 'completed')
@@ -91,7 +95,10 @@ export function RecursoEstudiante({
     try {
       // Sincroniza primero el tiempo activo con el backend.
       const progresoActualizado =
-        await api.heartbeatRecurso(recurso.id)
+        await api.heartbeatRecurso(
+          recurso.id,
+          posicionRef.current,
+        )
 
       setSegundosActivos(
         progresoActualizado.ActiveSeconds ?? 0,
@@ -243,7 +250,12 @@ export function RecursoEstudiante({
               <p>Este recurso no tiene contenido embebido configurado.</p>
             )
           ) : (
-            <VisorRecurso recurso={recurso} />
+            <VisorRecurso
+              recurso={recurso}
+              onPositionChange={seconds => {
+                posicionRef.current = seconds
+              }}
+            />
           )}
 
           {!completado && (
