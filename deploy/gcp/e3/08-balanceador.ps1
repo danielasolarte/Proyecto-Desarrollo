@@ -395,9 +395,9 @@ function FaseSesion {
         Write-Host "  GET /me x6 con la cookie -> $($instancias -join '  ')"
         Write-Host "  (Si aparecen instancias distintas, la misma sesion es valida en varias replicas.)"
 
-        $resp = Pedir "$api/auth/logout" @("-b", $jar, "-X", "POST")
+        $resp = Pedir "$api/auth/logout" @("-b", $jar, "-X", "POST", "-H", "Content-Length: 0")
         Write-Host "  POST /auth/logout SIN X-CSRF-Token -> $($resp.Codigo) (esperado 403)"
-        $resp = Pedir "$api/auth/logout" @("-b", $jar, "-X", "POST", "-H", "X-CSRF-Token: $csrf")
+        $resp = Pedir "$api/auth/logout" @("-b", $jar, "-X", "POST", "-H", "Content-Length: 0", "-H", "X-CSRF-Token: $csrf")
         Write-Host "  POST /auth/logout CON X-CSRF-Token -> $($resp.Codigo) (esperado 2xx)"
         $resp = Pedir "$api/me" @("-b", $jar)
         Write-Host "  GET /me despues del logout -> $($resp.Codigo) (esperado 401)"
