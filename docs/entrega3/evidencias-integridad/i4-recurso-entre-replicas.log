@@ -1,0 +1,87 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6/integridad-i4-recursos.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 10m30s max duration (incl. graceful stop):
+              * default: 1 iterations shared among 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+time="2026-10-29T01:37:11Z" level=info msg="========================================" source=console
+time="2026-10-29T01:37:11Z" level=info msg="I4 — RECURSO ENTRE REPLICAS" source=console
+time="2026-10-29T01:37:11Z" level=info msg="========================================" source=console
+time="2026-10-29T01:37:11Z" level=info msg="I4 solicitud 1: mooc-api-w28n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:11Z" level=info msg="I4 solicitud 2: mooc-api-w28n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:11Z" level=info msg="I4 solicitud 3: mooc-api-w28n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 4: mooc-api-p89n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 5: mooc-api-w28n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 6: mooc-api-w28n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 7: mooc-api-p89n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 8: mooc-api-w28n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 9: mooc-api-p89n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+
+running (00m01.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+default   [   0% ] 1 VUs  00m01.0s/10m0s  0/1 shared iters
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 10: mooc-api-w28n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 11: mooc-api-p89n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 12: mooc-api-w28n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 13: mooc-api-w28n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 14: mooc-api-p89n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 15: mooc-api-p89n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 16: mooc-api-p89n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 17: mooc-api-p89n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:12Z" level=info msg="I4 solicitud 18: mooc-api-w28n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:13Z" level=info msg="I4 solicitud 19: mooc-api-w28n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:13Z" level=info msg="I4 solicitud 20: mooc-api-p89n → quiz c923aada-da26-4707-9d36-12ee4e956018" source=console
+time="2026-10-29T01:37:13Z" level=info source=console
+time="2026-10-29T01:37:13Z" level=info msg="I4 instancias observadas: mooc-api-w28n, mooc-api-p89n" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    http_req_failed
+    ✓ 'rate==0' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 62      38.418282/s
+    checks_succeeded...: 100.00% 62 out of 62
+    checks_failed......: 0.00%   0 out of 62
+
+    ✓ login responde 200
+    ✓ I4 recurso responde 200
+    ✓ I4 quiz consistente entre respuestas
+    ✓ I4 corresponde al quiz esperado
+    ✓ I4 recurso atendido por al menos 2 replicas
+
+    HTTP
+    http_req_duration..............: avg=63.79ms min=47.48ms med=53.41ms max=181.54ms p(90)=78.73ms p(95)=104.76ms
+      { expected_response:true }...: avg=63.79ms min=47.48ms med=53.41ms max=181.54ms p(90)=78.73ms p(95)=104.76ms
+    http_req_failed................: 0.00%  0 out of 21
+    http_reqs......................: 21     13.012644/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.61s   min=1.61s   med=1.61s   max=1.61s    p(90)=1.61s   p(95)=1.61s   
+    iterations.....................: 1      0.61965/s
+    vus............................: 1      min=1       max=1
+    vus_max........................: 1      min=1       max=1
+
+    NETWORK
+    data_received..................: 127 kB 79 kB/s
+    data_sent......................: 43 kB  26 kB/s
+
+
+
+
+running (00m01.6s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default ✓ [ 100% ] 1 VUs  00m01.6s/10m0s  1/1 shared iters
