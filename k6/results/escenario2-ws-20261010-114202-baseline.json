@@ -300,17 +300,17 @@
         "runId": "1791651157699",
         "students": [
             {
-                "token": "QWh5jSB-JjoBZYRKQVCINi5VYmD9b4Ri65lJm5PKGFw",
+                "token": "<redactado>",
                 "email": "student.e2.1791651157699.0@mooc.test"
             },
             {
                 "email": "student.e2.1791651157699.1@mooc.test",
-                "token": "0H-ByAQrsRyAMhEdVJvdx-zlb2JcgrY3asfsK4_yBGE"
+                "token": "<redactado>"
             }
         ],
         "teacher": {
             "email": "teacher.e2.1791651157699@mooc.test",
-            "token": "-ymheFlAzfAUq0fF7JkvHA_a9H3v_EirxCHYNvjqIw8"
+            "token": "<redactado>"
         },
         "uploadUnitId": "e4f8e6f3-1aa1-42d1-80e8-98c810d25298"
     }

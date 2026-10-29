@@ -28,7 +28,13 @@ export function derivadoListo(tipo: TipoRecurso, media: EstadoMedia): boolean {
   return Boolean(media.original_storage_key)
 }
 
-export function VisorRecurso({ recurso }: { recurso: RecursoVisible }) {
+export function VisorRecurso({
+  recurso,
+  onPositionChange,
+}: {
+  recurso: RecursoVisible
+  onPositionChange?: (seconds: number) => void
+}) {
   const [estado, setEstado] = useState<Estado>({ fase: 'cargando' })
   const [intento, setIntento] = useState(0)
 
@@ -68,16 +74,45 @@ export function VisorRecurso({ recurso }: { recurso: RecursoVisible }) {
     case 'error':
       return <ErrorEstado mensaje={estado.mensaje} reintentar={() => setIntento(n => n + 1)} />
     case 'listo':
-      return <Contenido recurso={recurso} url={estado.url} />
+      return (
+  <Contenido
+    recurso={recurso}
+    url={estado.url}
+    onPositionChange={onPositionChange}
+  />
+)
   }
 }
 
-function Contenido({ recurso, url }: { recurso: RecursoVisible; url: string }) {
+function Contenido({
+  recurso,
+  url,
+  onPositionChange,
+}: {
+  recurso: RecursoVisible
+  url: string
+  onPositionChange?: (seconds: number) => void
+}) {
   switch (recurso.type) {
     case 'video':
-      return <ReproductorHLS url={url} titulo={recurso.title} audio={false} />
-    case 'audio':
-      return <ReproductorHLS url={url} titulo={recurso.title} audio />
+  return (
+    <ReproductorHLS
+      url={url}
+      titulo={recurso.title}
+      audio={false}
+      onPositionChange={onPositionChange}
+    />
+  )
+
+case 'audio':
+  return (
+    <ReproductorHLS
+      url={url}
+      titulo={recurso.title}
+      audio
+      onPositionChange={onPositionChange}
+    />
+  )
     case 'pdf':
     case 'presentation':
       return (
@@ -98,7 +133,17 @@ function Contenido({ recurso, url }: { recurso: RecursoVisible; url: string }) {
 // HLS con hls.js (Chrome, Firefox, Edge). Safari reproduce HLS de forma nativa.
 // hls.js se carga solo cuando hace falta, para no engordar el resto de la app.
 // Los segmentos se piden al bucket con rutas relativas al manifiesto.
-function ReproductorHLS({ url, titulo, audio }: { url: string; titulo: string; audio: boolean }) {
+function ReproductorHLS({
+  url,
+  titulo,
+  audio,
+  onPositionChange,
+}: {
+  url: string
+  titulo: string
+  audio: boolean
+  onPositionChange?: (seconds: number) => void
+}) {
   const medio = useRef<HTMLVideoElement & HTMLAudioElement>(null)
   const [error, setError] = useState('')
 
@@ -136,9 +181,33 @@ function ReproductorHLS({ url, titulo, audio }: { url: string; titulo: string; a
 
   return (
     <div className="visor-medio">
-      {audio
-        ? <audio ref={medio} controls preload="metadata" aria-label={titulo} />
-        : <video ref={medio} controls preload="metadata" playsInline aria-label={titulo} className="visor-video" />}
+      {audio ? (
+        <audio
+          ref={medio}
+          controls
+          preload="metadata"
+          aria-label={titulo}
+          onTimeUpdate={e =>
+            onPositionChange?.(
+              Math.floor(e.currentTarget.currentTime),
+            )
+          }
+        />
+      ) : (
+        <video
+          ref={medio}
+          controls
+          preload="metadata"
+          playsInline
+          aria-label={titulo}
+          className="visor-video"
+          onTimeUpdate={e =>
+            onPositionChange?.(
+              Math.floor(e.currentTarget.currentTime),
+            )
+          }
+        />
+      )}
       {error && <ErrorEstado mensaje={error} />}
     </div>
   )

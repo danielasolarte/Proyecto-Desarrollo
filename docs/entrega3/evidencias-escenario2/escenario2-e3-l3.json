@@ -1,0 +1,389 @@
+{
+    "root_group": {
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "name": "setup",
+                "path": "::setup",
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+                "groups": {},
+                "checks": {
+                        "initiate 201": {
+                            "name": "initiate 201",
+                            "path": "::setup::initiate 201",
+                            "id": "e6d37867a2d6e2a37c61933b1dcc7715",
+                            "passes": 3,
+                            "fails": 0
+                        },
+                        "part url 200": {
+                            "name": "part url 200",
+                            "path": "::setup::part url 200",
+                            "id": "65b887db6ac71b4f8cb8d5b61efb271c",
+                            "passes": 3,
+                            "fails": 0
+                        },
+                        "storage PUT 2xx": {
+                            "id": "70625e8f6d6453e2563ba331576b9e5f",
+                            "passes": 3,
+                            "fails": 0,
+                            "name": "storage PUT 2xx",
+                            "path": "::setup::storage PUT 2xx"
+                        },
+                        "complete 200": {
+                            "name": "complete 200",
+                            "path": "::setup::complete 200",
+                            "id": "7ae3d1197766bbb65481a20810a74a0e",
+                            "passes": 3,
+                            "fails": 0
+                        }
+                    }
+            }
+        },
+        "checks": {
+            "playback 200": {
+                "name": "playback 200",
+                "path": "::playback 200",
+                "id": "8e53b9937e87e7bd6ecd1909d22af7ad",
+                "passes": 180,
+                "fails": 0
+            },
+            "manifest 200": {
+                "fails": 0,
+                "name": "manifest 200",
+                "path": "::manifest 200",
+                "id": "9901f17e1d3c1538a9d4256439eaa66e",
+                "passes": 180
+            },
+            "segment 200": {
+                "name": "segment 200",
+                "path": "::segment 200",
+                "id": "54ffe9a4361f199b99db7f36ddbdd9e4",
+                "passes": 556,
+                "fails": 0
+            },
+            "initiate 201": {
+                "name": "initiate 201",
+                "path": "::initiate 201",
+                "id": "1c360810576573f7fcda0eda13163a3c",
+                "passes": 24,
+                "fails": 0
+            },
+            "part url 200": {
+                "name": "part url 200",
+                "path": "::part url 200",
+                "id": "8fb8a0cae76cb481c199281c766bf1a8",
+                "passes": 24,
+                "fails": 0
+            },
+            "storage PUT 2xx": {
+                "name": "storage PUT 2xx",
+                "path": "::storage PUT 2xx",
+                "id": "8a245dce83caabad277e6d5865f55393",
+                "passes": 24,
+                "fails": 0
+            },
+            "complete 200": {
+                "name": "complete 200",
+                "path": "::complete 200",
+                "id": "2596e0ceacf121d4e6191001050c217a",
+                "passes": 24,
+                "fails": 0
+            }
+        },
+        "name": "",
+        "path": ""
+    },
+    "metrics": {
+        "http_reqs": {
+            "count": 1585,
+            "rate": 5.127336206770605
+        },
+        "upload_transfer_ms": {
+            "p(99)": 2092.0199999999986,
+            "max": 2332,
+            "avg": 760.3333333333334,
+            "min": 184,
+            "med": 746,
+            "p(90)": 1240.2000000000005,
+            "p(95)": 1404.8
+        },
+        "upload_functional_failures": {
+            "passes": 0,
+            "fails": 108,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "upload_time_to_ready_ms": {
+            "p(90)": 94058.80000000002,
+            "p(95)": 99999.59999999999,
+            "p(99)": 149042.51999999987,
+            "max": 164343,
+            "avg": 45038.76,
+            "min": 6125,
+            "med": 33623
+        },
+        "http_req_failed": {
+            "fails": 1585,
+            "passes": 0,
+            "value": 0
+        },
+        "http_req_duration": {
+            "med": 70.257469,
+            "p(90)": 1679.3647692000004,
+            "p(95)": 2348.5175477999996,
+            "p(99)": 3745.75732564,
+            "max": 5839.533786,
+            "avg": 544.2624493394319,
+            "min": 34.710922
+        },
+        "http_req_connecting": {
+            "min": 0,
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 1.0247312000000002,
+            "max": 1019.290908,
+            "avg": 0.6722595028391167
+        },
+        "iteration_duration": {
+            "max": 166622.592185,
+            "avg": 25992.56204951741,
+            "min": 7835.205044,
+            "med": 27304.051153,
+            "p(90)": 33674.271987,
+            "p(95)": 36691.305972,
+            "p(99)": 101293.241465
+        },
+        "vus": {
+            "min": 0,
+            "max": 26,
+            "value": 1
+        },
+        "checks": {
+            "fails": 0,
+            "passes": 1024,
+            "value": 1
+        },
+        "hls_manifest_ms": {
+            "avg": 85.5111111111111,
+            "min": 53,
+            "med": 70,
+            "p(90)": 100.19999999999999,
+            "p(95)": 219.49999999999983,
+            "p(99)": 380.61000000000035,
+            "max": 466
+        },
+        "http_req_receiving": {
+            "p(95)": 2268.9724939999996,
+            "p(99)": 3631.532636520004,
+            "max": 5775.120505,
+            "avg": 459.98599012933784,
+            "min": 0.058854,
+            "med": 0.165959,
+            "p(90)": 1590.9122072000018
+        },
+        "upload_authorize_ms": {
+            "max": 422,
+            "avg": 143.03703703703704,
+            "min": 111,
+            "med": 126,
+            "p(90)": 176.60000000000002,
+            "p(95)": 189.2,
+            "p(99)": 361.9399999999996
+        },
+        "http_req_waiting": {
+            "med": 59.077871,
+            "p(90)": 148.84400560000003,
+            "p(95)": 172.2942752,
+            "p(99)": 279.0492724800013,
+            "max": 794.32724,
+            "avg": 75.80165941514201,
+            "min": 34.362915
+        },
+        "data_received": {
+            "count": 125766974,
+            "rate": 406845.1478903326
+        },
+        "hls_segment_ms": {
+            "p(99)": 4126.150000000006,
+            "max": 5839,
+            "avg": 1399.9190647482014,
+            "min": 146,
+            "med": 1156,
+            "p(90)": 2596,
+            "p(95)": 3239.75
+        },
+        "hls_errors": {
+            "passes": 0,
+            "fails": 916,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(99)": 3745.75732564,
+            "max": 5839.533786,
+            "avg": 544.2624493394319,
+            "min": 34.710922,
+            "med": 70.257469,
+            "p(90)": 1679.3647692000004,
+            "p(95)": 2348.5175477999996
+        },
+        "http_req_blocked": {
+            "p(95)": 0.0009788,
+            "p(99)": 6.2549601200000104,
+            "max": 1025.027374,
+            "avg": 0.8892771949526809,
+            "min": 0.000288,
+            "med": 0.000522,
+            "p(90)": 0.0007786000000000002
+        },
+        "http_req_sending": {
+            "avg": 8.474799794952682,
+            "min": 0.048465,
+            "med": 0.122997,
+            "p(90)": 0.1661254,
+            "p(95)": 0.19445179999999998,
+            "p(99)": 295.7587847200145,
+            "max": 2180.475248
+        },
+        "upload_confirm_ms": {
+            "p(95)": 339.19999999999993,
+            "p(99)": 493.95999999999975,
+            "max": 534,
+            "avg": 204.37037037037038,
+            "min": 155,
+            "med": 182,
+            "p(90)": 233.20000000000005
+        },
+        "data_sent": {
+            "count": 17651870,
+            "rate": 57102.25373388507
+        },
+        "http_req_tls_handshaking": {
+            "min": 0,
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 5.199243600000002,
+            "max": 8.126504,
+            "avg": 0.15557653249211362
+        },
+        "vus_max": {
+            "value": 26,
+            "min": 26,
+            "max": 26
+        },
+        "iterations": {
+            "count": 201,
+            "rate": 0.6502173990920451
+        }
+    },
+    "setup_data": {
+        "availableResources": [
+            {
+                "resourceId": "bcd14188-3f44-46e9-bde7-d05f766e2ed9",
+                "profile": "corto_360p"
+            },
+            {
+                "profile": "medio_720p",
+                "resourceId": "b8487d8c-ccc9-4f72-95a4-17037b0cd369"
+            },
+            {
+                "profile": "largo_1080p",
+                "resourceId": "fb741696-e2c7-407f-ba66-f6648363a3a2"
+            }
+        ],
+        "runId": "1793243702454",
+        "students": [
+            {
+                "email": "student.e2.1793243702454.0@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.1@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.2@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.3@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.4@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.5@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.6@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.7@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.8@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.9@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.10@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.11@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "token": "<redactado>",
+                "email": "student.e2.1793243702454.12@mooc.test"
+            },
+            {
+                "email": "student.e2.1793243702454.13@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.14@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.15@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.16@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.17@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.18@mooc.test",
+                "token": "<redactado>"
+            },
+            {
+                "email": "student.e2.1793243702454.19@mooc.test",
+                "token": "<redactado>"
+            }
+        ],
+        "teacher": {
+            "email": "teacher.e2.1793243702454@mooc.test",
+            "token": "<redactado>"
+        },
+        "uploadUnitId": "fdd10ac7-8900-46a4-9631-d184861942a1"
+    }
+}

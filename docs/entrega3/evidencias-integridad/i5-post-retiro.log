@@ -1,0 +1,63 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6/integridad-i5-post-retiro.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 10m30s max duration (incl. graceful stop):
+              * default: 1 iterations shared among 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+time="2026-10-29T02:11:21Z" level=info msg="========================================" source=console
+time="2026-10-29T02:11:21Z" level=info msg="I5 — ESTADO DESPUES DEL RETIRO" source=console
+time="2026-10-29T02:11:21Z" level=info msg="========================================" source=console
+time="2026-10-29T02:11:21Z" level=info msg="Attempt: 4765a80e-e2c3-4c5b-bd39-3f64f6ff84da" source=console
+time="2026-10-29T02:11:21Z" level=info msg="Instancia anterior: mooc-api-k3wg" source=console
+time="2026-10-29T02:11:21Z" level=info msg="Instancia actual: mooc-api-p89n" source=console
+time="2026-10-29T02:11:21Z" level=info msg="========================================" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    http_req_failed
+    ✓ 'rate==0' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 4       6.940181/s
+    checks_succeeded...: 100.00% 4 out of 4
+    checks_failed......: 0.00%   0 out of 4
+
+    ✓ I5 login después del retiro responde 200
+    ✓ I5 dato continúa existiendo
+    ✓ I5 responde una instancia diferente
+    ✓ I5 attempt conserva identificador
+
+    HTTP
+    http_req_duration..............: avg=171.67ms min=77.55ms  med=171.67ms max=265.78ms p(90)=246.96ms p(95)=256.37ms
+      { expected_response:true }...: avg=171.67ms min=77.55ms  med=171.67ms max=265.78ms p(90)=246.96ms p(95)=256.37ms
+    http_req_failed................: 0.00%  0 out of 2
+    http_reqs......................: 2      3.47009/s
+
+    EXECUTION
+    iteration_duration.............: avg=576.12ms min=576.12ms med=576.12ms max=576.12ms p(90)=576.12ms p(95)=576.12ms
+    iterations.....................: 1      1.735045/s
+
+    NETWORK
+    data_received..................: 7.6 kB 13 kB/s
+    data_sent......................: 2.2 kB 3.8 kB/s
+
+
+
+
+running (00m00.6s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default ✓ [ 100% ] 1 VUs  00m00.6s/10m0s  1/1 shared iters

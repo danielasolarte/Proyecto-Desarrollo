@@ -1,11 +1,81 @@
 # Plataforma MOOC - Backend
 
-## Entrega 3: base del frontend
+## Entrega 3: Aplicación elástica IaaS (GCP)
 
-Login, logout, sesión por cookies/CSRF, rutas por rol y componentes compartidos en
-[`frontend/`](frontend/README.md). La guía incluye arranque local, preparación de
-cuentas de prueba, contrato de integración y verificación. Las pantallas de cursos,
-multimedia y quizzes están pendientes de integración por sus responsables.
+Plataforma MOOC sobre Google Cloud con escalamiento automático en dos capas:
+un grupo de instancias administradas para la API (`mooc-api-mig`, 1 a 3 VMs por
+CPU) y otro para los workers (`mooc-worker-mig`, 1 a 3 VMs por la demanda de la
+cola), detrás de un balanceador HTTPS externo. La cola Redis y ClamAV viven en
+una VM fija (`mooc-servicios`), fuera de los grupos. PostgreSQL en Cloud SQL y
+archivos en Cloud Storage, ambos compartidos por todas las instancias.
+
+### Aplicación desplegada
+
+- Frontend: https://136.68.98.101.sslip.io
+- API (mismo dominio, detrás del balanceador): https://136.68.98.101.sslip.io/api/v1
+- Versión publicada del frontend: https://136.68.98.101.sslip.io/version.json
+- Tag evaluado: `entrega-3` (_pendiente_, se crea sobre el commit final).
+- Video de sustentación: _pendiente_.
+
+Frontend y API comparten dominio, así que la sesión por cookies y el CSRF
+funcionan sin CORS. El bucket de medios sí tiene CORS para ese origen, porque el
+navegador sube los archivos directo al almacenamiento con URLs prefirmadas.
+
+Los recursos se apagan cuando no se usan, para controlar costos. Si el
+dominio no responde, el entorno está apagado: ver "Encender y apagar" abajo.
+Las credenciales de las cuentas de prueba se entregan al equipo docente por el
+medio privado del curso; no están en el repositorio.
+
+### Documentación
+
+- Arquitectura (componentes, despliegue, escalamiento, operación, costos y limitaciones): [`docs/entrega3/arquitectura.md`](docs/entrega3/arquitectura.md).
+- Cola compartida, workers elásticos y retiro seguro: [`docs/entrega3/arquitectura-workers.md`](docs/entrega3/arquitectura-workers.md).
+- Verificación funcional del frontend (matriz de recorridos y rutas): [`docs/entrega3/matriz-verificacion-frontend.md`](docs/entrega3/matriz-verificacion-frontend.md).
+- Informe de capacidad (escenarios 1, 2, 3A y 3B): `capacity-planning/pruebas_de_carga_entrega3.md` (_pendiente_).
+- Integridad entre réplicas: [`capacity-planning/integridad-replicas-e3.md`](capacity-planning/integridad-replicas-e3.md).
+- Pool de conexiones a Cloud SQL: [`capacity-planning/cloud-sql-pool-e3.md`](capacity-planning/cloud-sql-pool-e3.md).
+- Deuda técnica y calidad del código: `docs/entrega3/deuda-tecnica.md` (_pendiente_).
+- Frontend (arranque local, cuentas de prueba y contrato con la API): [`frontend/README.md`](frontend/README.md).
+
+### Despliegue y operación
+
+Todos los scripts están en [`deploy/gcp/e3/`](deploy/gcp/e3/README.md), con el
+orden completo para reconstruir el entorno:
+
+- `01-secretos-identidades.ps1`: cuentas de servicio por rol y secretos en Secret Manager.
+- `02-imagen-maquina.ps1`: contenedor versionado por commit e imagen de máquina por rol.
+- `03-grupo-api.ps1`: plantilla, health checks, grupo de la API y autoscaling.
+- `04-vm-servicios.ps1`: VM fija con Redis, ClamAV y el exportador de métricas de la cola.
+- `05-migraciones.ps1`: migraciones controladas, una sola vez, desde la VM de servicios.
+- `06-cors-bucket.ps1`: CORS del bucket de medios para el dominio del frontend.
+- `07-grupo-workers.ps1`: plantilla, grupo y autoscaling de los workers.
+- `08-balanceador.ps1`: balanceador HTTPS, publicación del frontend y pruebas de reparto.
+- `09-cuenta-admin.ps1`: listar cuentas admin y asignar una clave nueva desde Cloud SQL.
+
+#### Encender y apagar
+
+Encender, en este orden (Cloud SQL tarda de 3 a 5 minutos):
+
+```powershell
+gcloud sql instances patch mooc-postgres --activation-policy=ALWAYS
+.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Encender
+.\deploy\gcp\e3\03-grupo-api.ps1 -Fase Encender
+.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Encender
+.\deploy\gcp\e3\03-grupo-api.ps1 -Fase Probar
+.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Probar
+```
+
+Apagar, en orden inverso:
+
+```powershell
+.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Apagar
+.\deploy\gcp\e3\03-grupo-api.ps1 -Fase Apagar
+.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Apagar
+gcloud sql instances patch mooc-postgres --activation-policy=NEVER
+```
+
+No se apaga `mooc-servicios` ni Cloud SQL con los grupos encendidos: sin ellos
+los workers no arrancan y la API no puede iniciar sesión.
 
 ## Entrega 2: Despliegue basico en la nube (GCP)
 
@@ -57,9 +127,9 @@ docker compose up -d --build
   Corrida real contra la URL de GCP en `k6/results/e1-gcp-*.json`.
 - Escenario 2 (carga, procesamiento y consumo multimedia): script en `k6/escenario2.js`, a cargo de Andres. Estado a la fecha: **resultado parcial con hallazgo critico**. Las corridas reales (linea base y un nivel adicional) provocaron el colapso total del Worker Server (confirma empiricamente el punto unico de falla documentado en `docs/entrega2/arquitectura_entrega2.md`); faltan los niveles l2/l3/peak y repetir contra el Web Server real (hoy con `REDIS_ADDR` desactualizado). Detalle completo en `capacity-planning/pruebas_de_carga_entrega2.md`.
 
-### Aplicacion desplegada
+### Aplicacion desplegada (Entrega 2)
 
-- URL: https://35.254.78.215.sslip.io
+- URL: https://35.254.78.215.sslip.io (Web Server de la Entrega 2; la VM está apagada y la reemplaza el balanceador de la Entrega 3).
 - Video de sustentacion: _pendiente_
 - Tag evaluado: `entrega-2` (pendiente de crear, se crea al final sobre el commit final)
 

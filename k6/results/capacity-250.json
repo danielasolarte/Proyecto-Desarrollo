@@ -1660,88 +1660,88 @@
         "students": [
             {
                 "email": "student.k6.1789433968482.0@mooc.test",
-                "token": "OiddoURkudQcuoT_A275TsnGEq4Nn7ahNG1uIuW3B8Y"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.1@mooc.test",
-                "token": "kFqZwVKV4PTeJZVFYrqr19bl4zK7rS4rYrIGaDUxSis"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.2@mooc.test",
-                "token": "TB80jA_6ZBdq-CFRq5rEW1EOZjDTijrQTQG11wDlLw0"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.3@mooc.test",
-                "token": "9-JfX8yUo7zYU1ZIrs1FnjwmMk18yOmMZt5qYbJkd18"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.4@mooc.test",
-                "token": "zQoSjrRR1jAJGNWWaoBWXtKqpriEj2N7v0lFvaNPnJE"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.5@mooc.test",
-                "token": "TJ-4-gOBtNFw3yvQZiVbaPGY2OgnYz-CcjBu6yLeonI"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.6@mooc.test",
-                "token": "TuW2ES9BLKUgjosRZU3cYD5L4Op0D35fluZsVTBlFKY"
+                "token": "<redactado>"
             },
             {
-                "token": "Z3tkmm9Di5hKWMyHWDoFD4rKUAoxGn-eF_fBDkVd8oA",
+                "token": "<redactado>",
                 "email": "student.k6.1789433968482.7@mooc.test"
             },
             {
                 "email": "student.k6.1789433968482.8@mooc.test",
-                "token": "crICBfy2RlgCVwRdTb-UeWSJQA0QPu2SyJn0rAJpktc"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.9@mooc.test",
-                "token": "PnxngcAkkZmrPd1LhlstgS_aSNR81Oni161ObaaANV8"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.10@mooc.test",
-                "token": "yToFdCzZwhbQ0szhXlkWLo0NKCtJZhziFTLrU6sKnz8"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.11@mooc.test",
-                "token": "hS_b9X1eq-o03UdOgHENUkIBy9MB2amrfcueb7iGGu4"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.12@mooc.test",
-                "token": "fpHBrUmbdE2q5JKdlwUkJludDT7yBo8LGnjgbonwYjI"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.13@mooc.test",
-                "token": "can2PIwDtnD7ZC3hZB5-IOKX_BMvZ7MLgJYl52nPNOA"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.14@mooc.test",
-                "token": "Kf6v8pjf8rWWoXNazo2aL0qUOCQ4rivUjqugtz_qS3c"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.15@mooc.test",
-                "token": "9JebObfMjGvJrd1x_WzEwyzAXJj7fSNj7GLJLyCHGC0"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.16@mooc.test",
-                "token": "gwoANmYluiLfWyCsU4HcBNcpsnX6gsDg96Yaz8UP2gg"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.17@mooc.test",
-                "token": "JkI1KQkbVV2dv-8n8f1MK5wlru3x2i8IbO2RWWujpyk"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.18@mooc.test",
-                "token": "64isCStD9Pnx6VDHRv7KFLEnI_gTgbMZ5Ket3qbVUGU"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1789433968482.19@mooc.test",
-                "token": "LzZLIBBaBz5qtnyYsIffTkQg8N6Z_igj64d63RfdhVw"
+                "token": "<redactado>"
             }
         ],
         "teacher": {
             "email": "teacher.k6.1789433968482@mooc.test",
-            "token": "KeoA9bMhwQIvDnOyYQo4E3miaS-IId3g6nx4_Gy0tlQ"
+            "token": "<redactado>"
         },
         "adminToken": "EBnQeYmRlSw3ebSWd0lAVOwVezcRuPRRTwAOAx8I6KQ"
     }
