@@ -1,0 +1,63 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6/integridad-i5-pre-retiro.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 10m30s max duration (incl. graceful stop):
+              * default: 1 iterations shared among 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+time="2026-10-29T01:43:19Z" level=info msg="========================================" source=console
+time="2026-10-29T01:43:19Z" level=info msg="I5 — ESTADO ANTES DEL RETIRO" source=console
+time="2026-10-29T01:43:19Z" level=info msg="========================================" source=console
+time="2026-10-29T01:43:19Z" level=info msg="I5_ATTEMPT_ID=4765a80e-e2c3-4c5b-bd39-3f64f6ff84da" source=console
+time="2026-10-29T01:43:19Z" level=info msg="I5_INSTANCE_ID=mooc-api-k3wg" source=console
+time="2026-10-29T01:43:19Z" level=info msg="I5_READ_INSTANCE=mooc-api-p89n" source=console
+time="2026-10-29T01:43:19Z" level=info msg="========================================" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    http_req_failed
+    ✓ 'rate==0' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 4       8.403785/s
+    checks_succeeded...: 100.00% 4 out of 4
+    checks_failed......: 0.00%   0 out of 4
+
+    ✓ I5 login 200
+    ✓ I5 attempt creado 201
+    ✓ I5 respuesta guardada 200
+    ✓ I5 lectura previa 200
+
+    HTTP
+    http_req_duration..............: avg=95.42ms  min=56.02ms  med=89.84ms  max=146ms    p(90)=136.52ms p(95)=141.26ms
+      { expected_response:true }...: avg=95.42ms  min=56.02ms  med=89.84ms  max=146ms    p(90)=136.52ms p(95)=141.26ms
+    http_req_failed................: 0.00%  0 out of 4
+    http_reqs......................: 4      8.403785/s
+
+    EXECUTION
+    iteration_duration.............: avg=475.59ms min=475.59ms med=475.59ms max=475.59ms p(90)=475.59ms p(95)=475.59ms
+    iterations.....................: 1      2.100946/s
+
+    NETWORK
+    data_received..................: 8.8 kB 19 kB/s
+    data_sent......................: 2.6 kB 5.4 kB/s
+
+
+
+
+running (00m00.5s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default ✓ [ 100% ] 1 VUs  00m00.5s/10m0s  1/1 shared iters

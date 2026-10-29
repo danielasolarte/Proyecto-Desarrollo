@@ -6,3 +6,12 @@
 .carga-avance { display: flex; align-items: center; gap: 12px; margin: 8px 0; font-size: 13px; color: #4f5f53 }
 .carga-avance progress { flex: 1 1 200px; height: 10px; accent-color: #234f3f }
 .carga-archivo .aviso { margin: 8px 0 }
+
+/* Visor de recursos del estudiante (componente VisorRecurso). */
+.visor-medio { margin: 8px 0 }
+.visor-video { width: 100%; max-height: 70vh; background: #000; border-radius: 6px }
+.visor-medio audio { width: 100% }
+.visor-documento { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin: 8px 0 }
+.visor-pdf { width: 100%; height: 70vh; border: 1px solid #d7ddd8; border-radius: 6px; background: #fff }
+.visor-imagen { display: block; max-width: 100%; height: auto; margin: 8px 0; border-radius: 6px }
+.visor-procesando { display: flex; flex-wrap: wrap; align-items: center; gap: 12px }

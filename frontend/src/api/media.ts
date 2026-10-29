@@ -13,6 +13,13 @@ export interface SesionCarga {
 }
 export interface ParteSubida { part_number: number; etag: string; size_bytes: number }
 export interface Asset { id: string; resource_id: string; kind: string; original_size_bytes?: number }
+/** Respuesta de GET /resources/:id/media. Los derivados aparecen cuando el worker termina. */
+export interface EstadoMedia extends Asset {
+  original_storage_key?: string
+  hls_manifest_key?: string
+  converted_pdf_key?: string
+  duration_seconds?: number
+}
 
 export const apiMedia = {
   iniciar: (resourceId: string, datos: { mime_type: string; size_bytes: number; checksum_sha256?: string }) =>
@@ -24,6 +31,11 @@ export const apiMedia = {
     cliente<{ url: string }>(`/uploads/${encodeURIComponent(sesionId)}/parts/${n}/url`),
   completar: (sesionId: string) =>
     cliente<Asset>(`/uploads/${encodeURIComponent(sesionId)}/complete`, { method: 'POST' }),
+  estado: (resourceId: string) =>
+    cliente<EstadoMedia>(`/resources/${encodeURIComponent(resourceId)}/media`),
+  /** URL de lectura prefirmada: manifiesto HLS (video/audio), PDF convertido (presentación) u original. */
+  reproduccion: (resourceId: string) =>
+    cliente<{ url: string }>(`/resources/${encodeURIComponent(resourceId)}/playback`),
 }
 
 export const PARTE_POR_DEFECTO = 8 * 1024 * 1024
