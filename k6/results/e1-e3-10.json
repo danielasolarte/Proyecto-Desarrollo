@@ -4,140 +4,140 @@
         "id": "d41d8cd98f00b204e9800998ecf8427e",
         "groups": {},
         "checks": {
-                "enroll responde 201": {
-                    "name": "enroll responde 201",
-                    "path": "::enroll responde 201",
-                    "id": "e4f552ab272b098f9fec576db6219f2b",
-                    "passes": 10,
-                    "fails": 0
-                },
-                "catalog_search responde 200": {
-                    "name": "catalog_search responde 200",
-                    "path": "::catalog_search responde 200",
-                    "id": "c95772a6e023c14bc599452afb80fafb",
-                    "passes": 119,
-                    "fails": 0
-                },
-                "el catálogo lista el curso sembrado": {
-                    "name": "el catálogo lista el curso sembrado",
-                    "path": "::el catálogo lista el curso sembrado",
-                    "id": "0f23b8f86e32883c4b1c8959d36d1eec",
-                    "passes": 119,
-                    "fails": 0
-                },
-                "course_get responde 200": {
-                    "name": "course_get responde 200",
-                    "path": "::course_get responde 200",
-                    "id": "b77ee615ef7a396abddff5c0a1a9cb5d",
-                    "passes": 119,
-                    "fails": 0
-                },
-                "el detalle corresponde al curso": {
-                    "fails": 0,
-                    "name": "el detalle corresponde al curso",
-                    "path": "::el detalle corresponde al curso",
-                    "id": "dbef50f570865dd64c8553f1c00d3d01",
-                    "passes": 119
-                },
-                "progress_open responde 200": {
-                    "name": "progress_open responde 200",
-                    "path": "::progress_open responde 200",
-                    "id": "b244ea7f4ef9bd6620506abe2daf2eef",
-                    "passes": 19,
-                    "fails": 0
-                },
-                "course_preview responde 200": {
-                    "name": "course_preview responde 200",
-                    "path": "::course_preview responde 200",
-                    "id": "cc02905bc26ae90a69e0b7916d13644d",
-                    "passes": 119,
-                    "fails": 0
-                },
-                "quiz_start responde 201": {
-                    "id": "0ea41f097dc15562817af4e81536e337",
-                    "passes": 62,
-                    "fails": 0,
-                    "name": "quiz_start responde 201",
-                    "path": "::quiz_start responde 201"
-                },
-                "el intento no expone is_correct": {
-                    "passes": 62,
-                    "fails": 0,
-                    "name": "el intento no expone is_correct",
-                    "path": "::el intento no expone is_correct",
-                    "id": "84bf22f16e0891649e83caea9f607282"
-                },
-                "my_enrollments responde 200": {
-                    "name": "my_enrollments responde 200",
-                    "path": "::my_enrollments responde 200",
-                    "id": "bca3fc4744c78903dbc3d83995660888",
-                    "passes": 119,
-                    "fails": 0
-                },
-                "mis inscripciones incluyen el curso": {
-                    "passes": 119,
-                    "fails": 0,
-                    "name": "mis inscripciones incluyen el curso",
-                    "path": "::mis inscripciones incluyen el curso",
-                    "id": "853a510071119c49ad85cdbf2ba2967d"
-                },
-                "quiz_answer responde 200": {
-                    "name": "quiz_answer responde 200",
-                    "path": "::quiz_answer responde 200",
-                    "id": "fedf939b0174ffeae4a7004043e09aca",
-                    "passes": 62,
-                    "fails": 0
-                },
-                "envío duplicado: mismo intento y misma nota": {
-                    "name": "envío duplicado: mismo intento y misma nota",
-                    "path": "::envío duplicado: mismo intento y misma nota",
-                    "id": "ce1bbfa3f05163c13a61fa55a859d4f4",
-                    "passes": 62,
-                    "fails": 0
-                },
-                "quiz_get_attempt responde 200": {
-                    "name": "quiz_get_attempt responde 200",
-                    "path": "::quiz_get_attempt responde 200",
-                    "id": "6851c8c8b0dbe46423f4a24430a0eef3",
-                    "passes": 62,
-                    "fails": 0
-                },
-                "el intento quedó submitted y aprobado": {
-                    "id": "4da4903579a41f6cfe2aaab3d70b5d16",
-                    "passes": 62,
-                    "fails": 0,
-                    "name": "el intento quedó submitted y aprobado",
-                    "path": "::el intento quedó submitted y aprobado"
-                },
-                "course_progress responde 200": {
-                    "fails": 0,
-                    "name": "course_progress responde 200",
-                    "path": "::course_progress responde 200",
-                    "id": "e1438bc69e4bbb33ba9dfc92cae103be",
-                    "passes": 81
-                },
-                "progress_heartbeat responde 200": {
-                    "name": "progress_heartbeat responde 200",
-                    "path": "::progress_heartbeat responde 200",
-                    "id": "49900d1247b902a22f00e58ad080af35",
-                    "passes": 38,
-                    "fails": 0
-                },
-                "progress_complete responde 200": {
-                    "path": "::progress_complete responde 200",
-                    "id": "ddc2dfa8d69fc86b1c90765b67e7e8ec",
-                    "passes": 19,
-                    "fails": 0,
-                    "name": "progress_complete responde 200"
-                },
-                "el recurso queda completed": {
-                    "name": "el recurso queda completed",
-                    "path": "::el recurso queda completed",
-                    "id": "f1471b682fafb46e4a1527bcf751c215",
-                    "passes": 19,
-                    "fails": 0
-                }
+            "enroll responde 201": {
+                "name": "enroll responde 201",
+                "path": "::enroll responde 201",
+                "id": "e4f552ab272b098f9fec576db6219f2b",
+                "passes": 10,
+                "fails": 0
             },
+            "catalog_search responde 200": {
+                "name": "catalog_search responde 200",
+                "path": "::catalog_search responde 200",
+                "id": "c95772a6e023c14bc599452afb80fafb",
+                "passes": 119,
+                "fails": 0
+            },
+            "el catálogo lista el curso sembrado": {
+                "name": "el catálogo lista el curso sembrado",
+                "path": "::el catálogo lista el curso sembrado",
+                "id": "0f23b8f86e32883c4b1c8959d36d1eec",
+                "passes": 119,
+                "fails": 0
+            },
+            "course_get responde 200": {
+                "name": "course_get responde 200",
+                "path": "::course_get responde 200",
+                "id": "b77ee615ef7a396abddff5c0a1a9cb5d",
+                "passes": 119,
+                "fails": 0
+            },
+            "el detalle corresponde al curso": {
+                "fails": 0,
+                "name": "el detalle corresponde al curso",
+                "path": "::el detalle corresponde al curso",
+                "id": "dbef50f570865dd64c8553f1c00d3d01",
+                "passes": 119
+            },
+            "progress_open responde 200": {
+                "name": "progress_open responde 200",
+                "path": "::progress_open responde 200",
+                "id": "b244ea7f4ef9bd6620506abe2daf2eef",
+                "passes": 19,
+                "fails": 0
+            },
+            "course_preview responde 200": {
+                "name": "course_preview responde 200",
+                "path": "::course_preview responde 200",
+                "id": "cc02905bc26ae90a69e0b7916d13644d",
+                "passes": 119,
+                "fails": 0
+            },
+            "quiz_start responde 201": {
+                "id": "0ea41f097dc15562817af4e81536e337",
+                "passes": 62,
+                "fails": 0,
+                "name": "quiz_start responde 201",
+                "path": "::quiz_start responde 201"
+            },
+            "el intento no expone is_correct": {
+                "passes": 62,
+                "fails": 0,
+                "name": "el intento no expone is_correct",
+                "path": "::el intento no expone is_correct",
+                "id": "84bf22f16e0891649e83caea9f607282"
+            },
+            "my_enrollments responde 200": {
+                "name": "my_enrollments responde 200",
+                "path": "::my_enrollments responde 200",
+                "id": "bca3fc4744c78903dbc3d83995660888",
+                "passes": 119,
+                "fails": 0
+            },
+            "mis inscripciones incluyen el curso": {
+                "passes": 119,
+                "fails": 0,
+                "name": "mis inscripciones incluyen el curso",
+                "path": "::mis inscripciones incluyen el curso",
+                "id": "853a510071119c49ad85cdbf2ba2967d"
+            },
+            "quiz_answer responde 200": {
+                "name": "quiz_answer responde 200",
+                "path": "::quiz_answer responde 200",
+                "id": "fedf939b0174ffeae4a7004043e09aca",
+                "passes": 62,
+                "fails": 0
+            },
+            "envío duplicado: mismo intento y misma nota": {
+                "name": "envío duplicado: mismo intento y misma nota",
+                "path": "::envío duplicado: mismo intento y misma nota",
+                "id": "ce1bbfa3f05163c13a61fa55a859d4f4",
+                "passes": 62,
+                "fails": 0
+            },
+            "quiz_get_attempt responde 200": {
+                "name": "quiz_get_attempt responde 200",
+                "path": "::quiz_get_attempt responde 200",
+                "id": "6851c8c8b0dbe46423f4a24430a0eef3",
+                "passes": 62,
+                "fails": 0
+            },
+            "el intento quedó submitted y aprobado": {
+                "id": "4da4903579a41f6cfe2aaab3d70b5d16",
+                "passes": 62,
+                "fails": 0,
+                "name": "el intento quedó submitted y aprobado",
+                "path": "::el intento quedó submitted y aprobado"
+            },
+            "course_progress responde 200": {
+                "fails": 0,
+                "name": "course_progress responde 200",
+                "path": "::course_progress responde 200",
+                "id": "e1438bc69e4bbb33ba9dfc92cae103be",
+                "passes": 81
+            },
+            "progress_heartbeat responde 200": {
+                "name": "progress_heartbeat responde 200",
+                "path": "::progress_heartbeat responde 200",
+                "id": "49900d1247b902a22f00e58ad080af35",
+                "passes": 38,
+                "fails": 0
+            },
+            "progress_complete responde 200": {
+                "path": "::progress_complete responde 200",
+                "id": "ddc2dfa8d69fc86b1c90765b67e7e8ec",
+                "passes": 19,
+                "fails": 0,
+                "name": "progress_complete responde 200"
+            },
+            "el recurso queda completed": {
+                "name": "el recurso queda completed",
+                "path": "::el recurso queda completed",
+                "id": "f1471b682fafb46e4a1527bcf751c215",
+                "passes": 19,
+                "fails": 0
+            }
+        },
         "name": ""
     },
     "metrics": {
@@ -489,50 +489,50 @@
         "students": [
             {
                 "email": "student.e1.1793458569225.0@mooc.test",
-                "token": "8aVL7s3i57Tuvtv6YjPimBIZloDekdHLEhAM5nV9l4Y"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793458569225.1@mooc.test",
-                "token": "ccZR2kHsQP5kueFT8T9PPuj-4ybjdQRFRRHIO3E9n0s"
+                "token": "<redactado>"
             },
             {
-                "token": "sRwovduMl6lpjwWO_mk045gTXA-ZoBJMbzQDfXqgPpI",
+                "token": "<redactado>",
                 "email": "student.e1.1793458569225.2@mooc.test"
             },
             {
                 "email": "student.e1.1793458569225.3@mooc.test",
-                "token": "X4WUFpFBcsgSssR6-TlyyrX9dSfLJ4Tt6r0N9cRuZAA"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793458569225.4@mooc.test",
-                "token": "vk87UnAHhua28UZ1CoA60D0VYVhAs9h_HxWN8Dl6kF4"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793458569225.5@mooc.test",
-                "token": "yxb3CxCm7ROHnfdoOZ-pvISJbof2mdyXMNOZPhakp4Q"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793458569225.6@mooc.test",
-                "token": "BsJTUwPQLQ_tId4m--E3B1z7ZxDTBT5fjBYIlAwedo4"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793458569225.7@mooc.test",
-                "token": "5MCo9Uskktu1oUhkSJQGla5PpdP7KO0YU9SrOJL1Mug"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793458569225.8@mooc.test",
-                "token": "diwGYfxytmpyVyTeVvyVUz1jZjd4Px-bO8cg1ieJOQg"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793458569225.9@mooc.test",
-                "token": "mmaWEutfEHq52K2qaBZ2133_HP8NTrW7mQ0VQk-r2A8"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793458569225.10@mooc.test",
-                "token": "wSuG0_gBOUhpk9MFxdAyvTtkWNVTnpDj1rDVPZVH5k0"
+                "token": "<redactado>"
             },
             {
-                "token": "cZDP-dIGSsmlOupj-1iSM-2Ibdoz0YTpYY0WgG9BE3I",
+                "token": "<redactado>",
                 "email": "student.e1.1793458569225.11@mooc.test"
             }
         ],

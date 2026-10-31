@@ -5,140 +5,140 @@
         "id": "d41d8cd98f00b204e9800998ecf8427e",
         "groups": {},
         "checks": {
-                "enroll responde 201": {
-                    "path": "::enroll responde 201",
-                    "id": "e4f552ab272b098f9fec576db6219f2b",
-                    "passes": 100,
-                    "fails": 0,
-                    "name": "enroll responde 201"
-                },
-                "catalog_search responde 200": {
-                    "name": "catalog_search responde 200",
-                    "path": "::catalog_search responde 200",
-                    "id": "c95772a6e023c14bc599452afb80fafb",
-                    "passes": 1227,
-                    "fails": 0
-                },
-                "el catálogo lista el curso sembrado": {
-                    "name": "el catálogo lista el curso sembrado",
-                    "path": "::el catálogo lista el curso sembrado",
-                    "id": "0f23b8f86e32883c4b1c8959d36d1eec",
-                    "passes": 1227,
-                    "fails": 0
-                },
-                "progress_open responde 200": {
-                    "name": "progress_open responde 200",
-                    "path": "::progress_open responde 200",
-                    "id": "b244ea7f4ef9bd6620506abe2daf2eef",
-                    "passes": 191,
-                    "fails": 0
-                },
-                "quiz_start responde 201": {
-                    "name": "quiz_start responde 201",
-                    "path": "::quiz_start responde 201",
-                    "id": "0ea41f097dc15562817af4e81536e337",
-                    "passes": 618,
-                    "fails": 0
-                },
-                "el intento no expone is_correct": {
-                    "passes": 618,
-                    "fails": 0,
-                    "name": "el intento no expone is_correct",
-                    "path": "::el intento no expone is_correct",
-                    "id": "84bf22f16e0891649e83caea9f607282"
-                },
-                "course_get responde 200": {
-                    "path": "::course_get responde 200",
-                    "id": "b77ee615ef7a396abddff5c0a1a9cb5d",
-                    "passes": 1227,
-                    "fails": 0,
-                    "name": "course_get responde 200"
-                },
-                "el detalle corresponde al curso": {
-                    "name": "el detalle corresponde al curso",
-                    "path": "::el detalle corresponde al curso",
-                    "id": "dbef50f570865dd64c8553f1c00d3d01",
-                    "passes": 1227,
-                    "fails": 0
-                },
-                "course_preview responde 200": {
-                    "passes": 1227,
-                    "fails": 0,
-                    "name": "course_preview responde 200",
-                    "path": "::course_preview responde 200",
-                    "id": "cc02905bc26ae90a69e0b7916d13644d"
-                },
-                "quiz_answer responde 200": {
-                    "id": "fedf939b0174ffeae4a7004043e09aca",
-                    "passes": 618,
-                    "fails": 0,
-                    "name": "quiz_answer responde 200",
-                    "path": "::quiz_answer responde 200"
-                },
-                "envío duplicado: mismo intento y misma nota": {
-                    "name": "envío duplicado: mismo intento y misma nota",
-                    "path": "::envío duplicado: mismo intento y misma nota",
-                    "id": "ce1bbfa3f05163c13a61fa55a859d4f4",
-                    "passes": 618,
-                    "fails": 0
-                },
-                "quiz_get_attempt responde 200": {
-                    "path": "::quiz_get_attempt responde 200",
-                    "id": "6851c8c8b0dbe46423f4a24430a0eef3",
-                    "passes": 618,
-                    "fails": 0,
-                    "name": "quiz_get_attempt responde 200"
-                },
-                "el intento quedó submitted y aprobado": {
-                    "name": "el intento quedó submitted y aprobado",
-                    "path": "::el intento quedó submitted y aprobado",
-                    "id": "4da4903579a41f6cfe2aaab3d70b5d16",
-                    "passes": 618,
-                    "fails": 0
-                },
-                "course_progress responde 200": {
-                    "path": "::course_progress responde 200",
-                    "id": "e1438bc69e4bbb33ba9dfc92cae103be",
-                    "passes": 809,
-                    "fails": 0,
-                    "name": "course_progress responde 200"
-                },
-                "my_enrollments responde 200": {
-                    "name": "my_enrollments responde 200",
-                    "path": "::my_enrollments responde 200",
-                    "id": "bca3fc4744c78903dbc3d83995660888",
-                    "passes": 1227,
-                    "fails": 0
-                },
-                "mis inscripciones incluyen el curso": {
-                    "name": "mis inscripciones incluyen el curso",
-                    "path": "::mis inscripciones incluyen el curso",
-                    "id": "853a510071119c49ad85cdbf2ba2967d",
-                    "passes": 1227,
-                    "fails": 0
-                },
-                "progress_heartbeat responde 200": {
-                    "passes": 382,
-                    "fails": 0,
-                    "name": "progress_heartbeat responde 200",
-                    "path": "::progress_heartbeat responde 200",
-                    "id": "49900d1247b902a22f00e58ad080af35"
-                },
-                "progress_complete responde 200": {
-                    "path": "::progress_complete responde 200",
-                    "id": "ddc2dfa8d69fc86b1c90765b67e7e8ec",
-                    "passes": 191,
-                    "fails": 0,
-                    "name": "progress_complete responde 200"
-                },
-                "el recurso queda completed": {
-                    "name": "el recurso queda completed",
-                    "path": "::el recurso queda completed",
-                    "id": "f1471b682fafb46e4a1527bcf751c215",
-                    "passes": 191,
-                    "fails": 0
-                }
+            "enroll responde 201": {
+                "path": "::enroll responde 201",
+                "id": "e4f552ab272b098f9fec576db6219f2b",
+                "passes": 100,
+                "fails": 0,
+                "name": "enroll responde 201"
+            },
+            "catalog_search responde 200": {
+                "name": "catalog_search responde 200",
+                "path": "::catalog_search responde 200",
+                "id": "c95772a6e023c14bc599452afb80fafb",
+                "passes": 1227,
+                "fails": 0
+            },
+            "el catálogo lista el curso sembrado": {
+                "name": "el catálogo lista el curso sembrado",
+                "path": "::el catálogo lista el curso sembrado",
+                "id": "0f23b8f86e32883c4b1c8959d36d1eec",
+                "passes": 1227,
+                "fails": 0
+            },
+            "progress_open responde 200": {
+                "name": "progress_open responde 200",
+                "path": "::progress_open responde 200",
+                "id": "b244ea7f4ef9bd6620506abe2daf2eef",
+                "passes": 191,
+                "fails": 0
+            },
+            "quiz_start responde 201": {
+                "name": "quiz_start responde 201",
+                "path": "::quiz_start responde 201",
+                "id": "0ea41f097dc15562817af4e81536e337",
+                "passes": 618,
+                "fails": 0
+            },
+            "el intento no expone is_correct": {
+                "passes": 618,
+                "fails": 0,
+                "name": "el intento no expone is_correct",
+                "path": "::el intento no expone is_correct",
+                "id": "84bf22f16e0891649e83caea9f607282"
+            },
+            "course_get responde 200": {
+                "path": "::course_get responde 200",
+                "id": "b77ee615ef7a396abddff5c0a1a9cb5d",
+                "passes": 1227,
+                "fails": 0,
+                "name": "course_get responde 200"
+            },
+            "el detalle corresponde al curso": {
+                "name": "el detalle corresponde al curso",
+                "path": "::el detalle corresponde al curso",
+                "id": "dbef50f570865dd64c8553f1c00d3d01",
+                "passes": 1227,
+                "fails": 0
+            },
+            "course_preview responde 200": {
+                "passes": 1227,
+                "fails": 0,
+                "name": "course_preview responde 200",
+                "path": "::course_preview responde 200",
+                "id": "cc02905bc26ae90a69e0b7916d13644d"
+            },
+            "quiz_answer responde 200": {
+                "id": "fedf939b0174ffeae4a7004043e09aca",
+                "passes": 618,
+                "fails": 0,
+                "name": "quiz_answer responde 200",
+                "path": "::quiz_answer responde 200"
+            },
+            "envío duplicado: mismo intento y misma nota": {
+                "name": "envío duplicado: mismo intento y misma nota",
+                "path": "::envío duplicado: mismo intento y misma nota",
+                "id": "ce1bbfa3f05163c13a61fa55a859d4f4",
+                "passes": 618,
+                "fails": 0
+            },
+            "quiz_get_attempt responde 200": {
+                "path": "::quiz_get_attempt responde 200",
+                "id": "6851c8c8b0dbe46423f4a24430a0eef3",
+                "passes": 618,
+                "fails": 0,
+                "name": "quiz_get_attempt responde 200"
+            },
+            "el intento quedó submitted y aprobado": {
+                "name": "el intento quedó submitted y aprobado",
+                "path": "::el intento quedó submitted y aprobado",
+                "id": "4da4903579a41f6cfe2aaab3d70b5d16",
+                "passes": 618,
+                "fails": 0
+            },
+            "course_progress responde 200": {
+                "path": "::course_progress responde 200",
+                "id": "e1438bc69e4bbb33ba9dfc92cae103be",
+                "passes": 809,
+                "fails": 0,
+                "name": "course_progress responde 200"
+            },
+            "my_enrollments responde 200": {
+                "name": "my_enrollments responde 200",
+                "path": "::my_enrollments responde 200",
+                "id": "bca3fc4744c78903dbc3d83995660888",
+                "passes": 1227,
+                "fails": 0
+            },
+            "mis inscripciones incluyen el curso": {
+                "name": "mis inscripciones incluyen el curso",
+                "path": "::mis inscripciones incluyen el curso",
+                "id": "853a510071119c49ad85cdbf2ba2967d",
+                "passes": 1227,
+                "fails": 0
+            },
+            "progress_heartbeat responde 200": {
+                "passes": 382,
+                "fails": 0,
+                "name": "progress_heartbeat responde 200",
+                "path": "::progress_heartbeat responde 200",
+                "id": "49900d1247b902a22f00e58ad080af35"
+            },
+            "progress_complete responde 200": {
+                "path": "::progress_complete responde 200",
+                "id": "ddc2dfa8d69fc86b1c90765b67e7e8ec",
+                "passes": 191,
+                "fails": 0,
+                "name": "progress_complete responde 200"
+            },
+            "el recurso queda completed": {
+                "name": "el recurso queda completed",
+                "path": "::el recurso queda completed",
+                "id": "f1471b682fafb46e4a1527bcf751c215",
+                "passes": 191,
+                "fails": 0
             }
+        }
     },
     "metrics": {
         "data_received": {
@@ -540,411 +540,411 @@
         "students": [
             {
                 "email": "student.e1.1793461576125.0@mooc.test",
-                "token": "m0g9y0lqqCm_zWrIpe_PAEEBp5F7Kzbsns_c6uo4NXc"
+                "token": "<redactado>"
             },
             {
-                "token": "CHf0lP4uXAFoftBjD3vp22EO52_B9s57XbUM_rg1Fdg",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.1@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.2@mooc.test",
-                "token": "s43vE4FTkiizBAiYb24h9W8usQX1hwiVeRVqFzXneE8"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.3@mooc.test",
-                "token": "Dew1zVMsMl3MctQLhO3BzogwX0TXSvgpmK5J6lu0N8I"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.4@mooc.test",
-                "token": "6SvhO01LPCRXBDmJQwoVPLI15EwKyj6UA4in5oZQ3gA"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.5@mooc.test",
-                "token": "KmDV0W34I4Ed7t_RCHbG_NMPiHxbeQPljxRIzoIgbjM"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.6@mooc.test",
-                "token": "iSZfUih92RP5y-w38DT2ABBgduj6nVQbDvm53VOsefA"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.7@mooc.test",
-                "token": "lDFbdLuY6VnpsJoH8ijLkuhFMPueAEMP6w1xM1IhSlk"
+                "token": "<redactado>"
             },
             {
-                "token": "Op5uGV9YiHl4-DAsHBQktSEaRynGQWkLd92cjUfESq0",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.8@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.9@mooc.test",
-                "token": "thUoNh8-Jk07KUWv8vITBtCaOp3WRxX2v6MkvsVr-vA"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.10@mooc.test",
-                "token": "RZYRPaBRQZmxT6LGnK_pG9oEz7ojSKZmJHUhZWMI__g"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.11@mooc.test",
-                "token": "NpLeldNHzia0rRbrt-ygOsVwqcFo-CBsS6nu62cnnLU"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.12@mooc.test",
-                "token": "V6R1z3aBFhp7jpsX_ywOox0WffAzYBjU-cdEkyCx31I"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.13@mooc.test",
-                "token": "8eSbO8oXWT5l8dljA5sE0Y6hQqX1gdiph3bGkqLQ4ds"
+                "token": "<redactado>"
             },
             {
-                "token": "QUswJhoLJ5G597uy2lKLttT3yX-CJDCFye4Lf4sHV3o",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.14@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.15@mooc.test",
-                "token": "UOq5fT0ItOyQIanFFPxLswLdqL_5abQkbdQE02PyQig"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.16@mooc.test",
-                "token": "WgEEfen4hg_RZaw20hBQtCJgEv36_fdL34t6S3zvlmw"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.17@mooc.test",
-                "token": "KzI2HWeL11V7QPj6wf2JEy65NooiqD6aTgmw_aFHerc"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.18@mooc.test",
-                "token": "PJxhl0BrYvp8uDFr1LWioxk8W0Ki7W-HeZT8T-YLpeo"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.19@mooc.test",
-                "token": "-WD4T_i4lBi2veWCWpCdEq1dpWG0JttkAJz8nSrmHyc"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.20@mooc.test",
-                "token": "sZ6GNqu-B_8uBj2IXFH6yo0jwAA7hwAnjRu3yXsqhjs"
+                "token": "<redactado>"
             },
             {
-                "token": "tdUVSvQvQk1mPYLo7kB4i_Ib9yUMPTDjDNx8jEN9neg",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.21@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.22@mooc.test",
-                "token": "e6n-axQTe0USRU-g7fM5etSf4Bp4zMUXp5KtpohOCLI"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.23@mooc.test",
-                "token": "AUO2gDKufhLYRHxtSh9sgeUWlVALSSLvl_U6uhVlEB0"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.24@mooc.test",
-                "token": "HYkL2tpHFReyG_h7fjuX_OPNC2b26ggjOGQYWqi8cNg"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.25@mooc.test",
-                "token": "r-Ky4GROUhl_FZzwIZqIXglH8uoZuCeTmVmhlPBcb6s"
+                "token": "<redactado>"
             },
             {
-                "token": "fYxZ5rp8ny-2zWsMZhdY2j5izVYKdw7Bu1jIvcvvcSU",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.26@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.27@mooc.test",
-                "token": "n6PNXfoakZmgJoydgZ8Q-pbd9eCUnHj2wCjfnqxYs5s"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.28@mooc.test",
-                "token": "sMHrWFrCQGIdHoCQ-WglGPYC6Sno62rNRToPLgmbVCw"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.29@mooc.test",
-                "token": "cNARE5-Lq3_CEut_07U2BrSW4T95f7W2L0nB1tB11qA"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.30@mooc.test",
-                "token": "aUFMOXbYjCiemINTsB3VPzX-MvxHaHthwkqvBkwq-bs"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.31@mooc.test",
-                "token": "DaL2NUANv-klXQNL1R25PsaCel4NXCye4sc7zy2M2sk"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.32@mooc.test",
-                "token": "vP4Uw3mHx3qdpCc2O_PFHQ-C1izb-46tlFmlaPRwEv0"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.33@mooc.test",
-                "token": "mHM0wQaeIePS5WGrGlH-bFSAlSKnweYTZWjq-KM8cxk"
+                "token": "<redactado>"
             },
             {
-                "token": "fWCH5lg40i-on6UtopQjGsv6RO-99wfRVmf8NR3W6-Q",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.34@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.35@mooc.test",
-                "token": "lQ0bClzDjJ3xKo3fqHe-fPNv0A2RgpyLQui--qUKeYg"
+                "token": "<redactado>"
             },
             {
-                "token": "ozmTsjic9ayh71NpBjhjrOaAOhQOJPH1MpMZS1pBlA0",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.36@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.37@mooc.test",
-                "token": "YeL60aIFeZX9RN5nP9IKGTzeYLzmBniBJFGwFjmum0s"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.38@mooc.test",
-                "token": "HiO4-DaP-2WanEDQsrQhVmKcCCb2RHWENyXdWIs9YcQ"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.39@mooc.test",
-                "token": "1v_pX9xPE4jErq-u_tNDkVzhyJKD6a5I7EzLiHQyxVY"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.40@mooc.test",
-                "token": "zEqtDDHB71jqSn3fmD7g5cONoOx26fxWyNiRu7Cm1Is"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.41@mooc.test",
-                "token": "9y-5NMoHUAYSmca3pGtd6P8cFISGY1q1FOH_bXLvFDM"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.42@mooc.test",
-                "token": "wti_QWBceaMbMQ1iCdvB9VfJzLWMKlfVf1asu4eWAD8"
+                "token": "<redactado>"
             },
             {
-                "token": "D8BojQ_9rBRgolae4pzNGHjKIKXDaAjvwZq4k4Ta8p0",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.43@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.44@mooc.test",
-                "token": "y4pQl1ZexHaHTVC9WzMFbhkL6XAI12N2qj96bSJnRn4"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.45@mooc.test",
-                "token": "727S2rN_5_BIgoXFPHDPuiyiBpvBpAzkgVU3HTPlNAU"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.46@mooc.test",
-                "token": "FnAUYUsyZ5RO3oC0k4vwHtoPZFLHlzbIdoygoxI_sj4"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.47@mooc.test",
-                "token": "5BvB8qoUxFechDPTRuTcUl6s3NgJMEy0dvn-9nfcFIE"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.48@mooc.test",
-                "token": "oTR6q-MBUgVydy7BycpBtKZKQK8oBjOZo4jg29p5Uhw"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.49@mooc.test",
-                "token": "5LVLGAeNMZSbCb8F2DxxwVaAwbzkVtpIXCiU2Es__2k"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.50@mooc.test",
-                "token": "MbJR7ZxWEageqLS3R1421LW-J6IByFhwItonkEl_k74"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.51@mooc.test",
-                "token": "3CVnGzRFnDUuZf7HekUDe_GDSDooiNVBeBzcn1hn-l0"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.52@mooc.test",
-                "token": "6uFktbUAqXFjqFbXsZJP60y3YBS83a_8x8nFhjdXI6k"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.53@mooc.test",
-                "token": "zOyK0GvT4VqHZGZHEyDmkPEW05N6uhyKBcgTvqP2oXM"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.54@mooc.test",
-                "token": "m-sfbbUe_H9K3ihgeMfB9KSfkjDYo67Rcxx_c76kd7k"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.55@mooc.test",
-                "token": "j0PN0V04jw7WLVUBEqvDlOJwZquWnlWlRdLh_7u8tAw"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.56@mooc.test",
-                "token": "fhvldMTkGvdmgGKHBzQy_4LWRA0ggi9MrDyjdU-Zdm8"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.57@mooc.test",
-                "token": "mwcYYBoFmmTesMsJTWOF6cjoQd3CPPdorqkcfLlAXew"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.58@mooc.test",
-                "token": "_04PnhRgtI-tWvWHTyshmQl2tvG2qqQCiohJfmgi60o"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.59@mooc.test",
-                "token": "s13Bcx9yyCRiUreIsHwF0revz_1ZiRJdxnd2RjtPsNI"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.60@mooc.test",
-                "token": "Z1QaliIyc2cihMuwZ2o2MtsoSFI_V4oKnYDwjUW1iAo"
+                "token": "<redactado>"
             },
             {
-                "token": "kQVm4l4VYgY8pwzbOGIl8K-diTo3NQlv9vm6TO6esA0",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.61@mooc.test"
             },
             {
-                "token": "XCFOGAh_Plaa0azcgvjB37Joah_21Ju4DiM0AmBO1P0",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.62@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.63@mooc.test",
-                "token": "KmEgkYVssVeUvF67nGHZAI1p9De3PlS7OkoVlcStUmE"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.64@mooc.test",
-                "token": "L1Gs_kcXCEgiHym-E_SXssIppGCOBHZN6hotzY4nvVw"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.65@mooc.test",
-                "token": "5RNfE8F23clt7rbbCMxGX5HYm5PHf2hytT54QlZLNEE"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.66@mooc.test",
-                "token": "sMQLVbxRLKUq6c4Jozfe8xdtkyxtTYqOmjRBZnWJ_9k"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.67@mooc.test",
-                "token": "YtLIhGd-qom1uPfv878a0iNi8d7kcIP0e-WZW35XsSE"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.68@mooc.test",
-                "token": "eGHSxcgvcLrufBcT1nVmAd7G8reZhJbimpRte3XmBHc"
+                "token": "<redactado>"
             },
             {
-                "token": "3JbnIcdlQXvshDoY0Bun-yIEE7SfXHvNxPIEn8zF-1I",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.69@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.70@mooc.test",
-                "token": "tcipfoht4G-9iDTX4nZ8QVMGTB8ZGO4P-Dqf7OFqmMU"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.71@mooc.test",
-                "token": "bBjzXL8ifW-aFkNEPTnGM5ojZWVz3ANxSLh-Bx5_LuA"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.72@mooc.test",
-                "token": "cuzoS5gMRouAFD1axGF4WgeozgXeFezyqe9wG0JjWfU"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.73@mooc.test",
-                "token": "TUQ1hMDCGGrqumoUWVJ5k7yG-u5W4zgVWU2NXg5OyDk"
+                "token": "<redactado>"
             },
             {
-                "token": "Yp0Mpli7NcyNYl9fpWcEQteHQvgIuWhU49KRWrp23no",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.74@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.75@mooc.test",
-                "token": "I2tse8VFXA01Z_76AnrFkJHgCmDRxZLC92qDJcHBqp8"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.76@mooc.test",
-                "token": "Vf211QuQlHsK5In7WyLwyVS_H89GFSn2kEuT--jHwIc"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.77@mooc.test",
-                "token": "kz64pa_3WVwhm33iR_oJwsuDKUHqFd3zhR6H1lWvGf8"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.78@mooc.test",
-                "token": "sSaXSGQbN4LbdQ3uswnU_KUEpgjP71XGty-1AJoj5qc"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.79@mooc.test",
-                "token": "ZJ5kt8SxuX6AgsZJntfI2O3nr5_m15hppHijeJVjdm8"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.80@mooc.test",
-                "token": "RT6ALMpNOycNeg6wcaCbWyllvjwh41Rckme0AroZyso"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.81@mooc.test",
-                "token": "8BjjiBU3T5MNeZNlQ1a69ut7VPJ-AygqTKOkLJxskVg"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.82@mooc.test",
-                "token": "f_xafw1ZDF8Jzrhlohghs5J9tBTx7v06yXQpfTtoq34"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.83@mooc.test",
-                "token": "iUwLY1RknR6PxqvA6khtPjuOmZtKBJTnRqC4CKxuwjQ"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.84@mooc.test",
-                "token": "ss7WkHdm7PY6quJeAAO-c7asTMQzOr-iku_wofGT7Y8"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.85@mooc.test",
-                "token": "kdgyG5tJSsHn83ilRgg7GqP1D9iVCHDyguvBnhaM5gw"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.86@mooc.test",
-                "token": "XkXeUJ4g9wzvnIXYUSQU_78xWBEitBAD2bGh3Gmymog"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.87@mooc.test",
-                "token": "oBX7D4ntm3C7KajXw7vfarzYAzqgI9J1Or9Ox-k3fSs"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.88@mooc.test",
-                "token": "fyLgXoZ79swh0eI6VJNQo_WLTNJhb1QJfRtlCWai6-E"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.89@mooc.test",
-                "token": "PEKhoIjRyoI2NfVjR7qKuUK5Uro3L9pdrAkJMuDT02M"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.90@mooc.test",
-                "token": "O7bpeu_YG4KmpM_IdOaXMFSnBGagCtQY5mtaypz1E_k"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.91@mooc.test",
-                "token": "ONBX9MB_fv82Em_iFpznujqib_HEUM8moxqazGJp69E"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.92@mooc.test",
-                "token": "ar5CcsHL8jKSkZhv3-MWcucwspZ2CfcLPH1ZnOkXaJc"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.93@mooc.test",
-                "token": "3HIMG9xq8GV-EMupsZUOfQIC_Vi4Q5jV4UvpktZKzQQ"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.94@mooc.test",
-                "token": "jbpsFI2_ZHQt_6nSlkM8B9NXCgzi-RARjbXbggryVvI"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.95@mooc.test",
-                "token": "7jW5VxTAEJr_Pu1Lcanm0KPzOwO4dD36aOca72w8toA"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.96@mooc.test",
-                "token": "h6uVvJA-_wRj3iSHd0mxmj0P9UMiqXvwwpe6GNIDL4w"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e1.1793461576125.97@mooc.test",
-                "token": "cA6GDRqSKTCUwUS3SQ6G19T07nD905slPw5bC8CGEEo"
+                "token": "<redactado>"
             },
             {
-                "token": "sfBHgwzxm6B2R4zpzDxbi8yFGnHQnX740FrZogxYFrI",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.98@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.99@mooc.test",
-                "token": "OKCmYTC-1Bg5lsAzzz1VrlfVg6oDXDOtlYBO04jnoVQ"
+                "token": "<redactado>"
             },
             {
-                "token": "U3Zt4Q8kDRtilL5ptEyZXMrDkQCRaQZSBvy9Uk1-eHU",
+                "token": "<redactado>",
                 "email": "student.e1.1793461576125.100@mooc.test"
             },
             {
                 "email": "student.e1.1793461576125.101@mooc.test",
-                "token": "jtvLqB2UrqCGZt6wgwAun6Zfep6wBtIrMdJ3xapfx9o"
+                "token": "<redactado>"
             }
         ]
     }
