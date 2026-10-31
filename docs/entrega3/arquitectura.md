@@ -223,7 +223,7 @@ Resumen (detalle y justificación en [`arquitectura-workers.md`](arquitectura-wo
 - **Workers:**
   - Verificación del 22/10, con demanda simulada: del aumento de la demanda a la decisión de escalar, 1 min 57 s; de la decisión a la VM procesando, 48 s; primera reducción 11 min después de bajar la demanda.
   - Escenario 3B del 28/10, con carga real: subió a 3 workers, drenó la cola, completó un retiro controlado con trabajos activos y volvió a 1 ([informe, sección 7](../../capacity-planning/pruebas_de_carga_entrega3.md)).
-- **API:** el ciclo de escalamiento (Escenario 3A) se documenta en el informe de capacidad, sección 6. *Pendiente de incorporar los resultados.*
+- **API:** Escenario 3A del 31/10, con carga real por el balanceador ([informe, sección 6](../../capacity-planning/pruebas_de_carga_entrega3.md)): subió de 1 a 2 instancias 4 min después de iniciar la carga y a 3 durante la meseta; cada VM nueva recibió tráfico 55–58 s después de crearse. Al terminar la carga bajó a 2 a los ~4 min y a 1 10 min 23 s después (1 VM cada 600 s), con drenaje previo en el balanceador. Una réplica con `/health/ready` en 503 salió del balanceador en ~8–18 s y volvió en ~14 s al recuperarse, sin ser recreada por la autorreparación.
 
 ## 6. Balanceador y verificaciones de salud
 
