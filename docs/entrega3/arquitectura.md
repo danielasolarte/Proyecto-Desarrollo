@@ -434,7 +434,8 @@ Para comparar, todo octubre (incluida la operación de la E2 del 1 al 11 de octu
   - I5: datos conservados al retirar una réplica de la API.
 
   El retiro de un worker con trabajos activos se verificó en el Escenario 3B.
-- **Escenario 1 y 3A:** *pendiente de incorporar los resultados* (latencias, réplicas activas y su relación con la CPU y con PostgreSQL).
+- **Escenario 1** ([informe, sección 4](../../capacity-planning/pruebas_de_carga_entrega3.md)): con los mismos parámetros de la E2 (10 a 100 VUs), 0 % de errores y 100 % de checks en todos los niveles. En 100 VUs, donde la E2 se saturaba (p95 1 049 ms, p99 30 s, 1,76 % de errores), la E3 queda en p95 147 ms y p99 403 ms, y atiende 48 % más peticiones.
+- **Escenario 3A** ([informe, sección 6](../../capacity-planning/pruebas_de_carga_entrega3.md)): con 30 req/s (10 % logins) el grupo subió a 2 cuando la CPU de la única réplica pasó del objetivo (pico de 85 %) y a 3 durante la meseta; con 3 réplicas la CPU quedó entre 27 % y 46 % por VM, p95 236 ms y 0,04 % de errores (logins durante la prueba de exclusión). La CPU de la API (sobre todo por bcrypt en los logins) fue la que guió el escalamiento; en estas corridas no se registró la CPU de Cloud SQL.
 
 ### 10.5 Puntos únicos de falla y limitaciones
 
