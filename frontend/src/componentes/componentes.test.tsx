@@ -75,10 +75,12 @@ describe('EditorQuiz', () => {
     fireEvent.change(screen.getByLabelText('Texto de la opción 2'), { target: { value: '4' } })
     fireEvent.click(screen.getByLabelText('Opción 2 es la correcta'))
     fireEvent.click(screen.getByRole('button', { name: 'Guardar pregunta' }))
-    expect(await screen.findByText('¿2+2?')).toBeTruthy()
+    // '¿2+2?' tambien esta en el formulario mientras guarda; se espera a que la
+    // lista recargada marque la opcion correcta antes de revisar las llamadas.
+    const correcta = await screen.findByText('(correcta)')
+    expect(correcta.parentElement?.textContent).toContain('4')
     const opciones = llamadas(f, 'POST', '/api/v1/questions/p1/options').map(([, i]) => JSON.parse(String(i?.body)))
     expect(opciones).toEqual([{ text: '3', position: 1, is_correct: false }, { text: '4', position: 2, is_correct: true }])
-    expect(screen.getByText('(correcta)').parentElement?.textContent).toContain('4')
   })
 
   it('no permite guardar una pregunta sin opción correcta con texto', async () => {

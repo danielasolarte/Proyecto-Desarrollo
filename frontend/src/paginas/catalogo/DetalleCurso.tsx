@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ErrorAPI } from '../../api/cliente'
 import { api, mensaje, nombreTipo, type Temario } from '../../api/cursos'
@@ -20,6 +20,9 @@ export function DetalleCurso() {
   const [inscribiendo, setInscribiendo] = useState(false)
   const [errorInscripcion, setErrorInscripcion] = useState('')
   const [recienInscrito, setRecienInscrito] = useState(false)
+  // Si el estudiante se inscribe mientras una carga anterior sigue en curso,
+  // la respuesta atrasada de /me/enrollments no debe deshacer la inscripcion.
+  const inscritoAqui = useRef(false)
   const esEstudiante = usuario?.role === 'student'
 
   const cargar = useCallback(async () => {
@@ -32,7 +35,7 @@ export function DetalleCurso() {
         esEstudiante ? api.misInscripciones() : Promise.resolve(null),
       ])
       setTemario(t)
-      setInscrito(!!inscripciones?.some(i => i.course_id === id && i.status === 'active'))
+      setInscrito(inscritoAqui.current || !!inscripciones?.some(i => i.course_id === id && i.status === 'active'))
     } catch (e) {
       if (e instanceof ErrorAPI && e.status === 404) setNoExiste(true)
       else setError(mensaje(e, 'No pudimos cargar el curso.'))
@@ -46,11 +49,12 @@ export function DetalleCurso() {
     setErrorInscripcion('')
     try {
       await api.inscribirme(id)
+      inscritoAqui.current = true
       setInscrito(true)
       setRecienInscrito(true)
     } catch (e) {
       // 409: ya estaba inscrito (por ejemplo, en otra pestaña).
-      if (e instanceof ErrorAPI && e.status === 409) setInscrito(true)
+      if (e instanceof ErrorAPI && e.status === 409) { inscritoAqui.current = true; setInscrito(true) }
       else setErrorInscripcion(mensaje(e, 'No pudimos inscribirte.'))
     } finally { setInscribiendo(false) }
   }
