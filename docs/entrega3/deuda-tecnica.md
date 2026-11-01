@@ -16,8 +16,8 @@ Inventario priorizado de la deuda técnica conocida al cierre de la Entrega 3. R
 | Prioridad | Cantidad | Temas principales |
 |---|---:|---|
 | Alta | 4 | Token de verificación expuesto, login sin límite de intentos, `mooc-servicios` como punto único de falla, correo no configurado en la nube |
-| Media | 10 | Pruebas automáticas incompletas, observabilidad sin recolector, Cloud SQL sin HA, despliegue manual desde Windows, cuentas de prueba en la base desplegada, rutas de la SPA con 404, entre otros |
-| Baja | 8 | Duplicación de código, archivos grandes, README desactualizado, higiene de `.gitignore`, credenciales por defecto en k6, entre otros |
+| Media | 11 | Pruebas automáticas incompletas, observabilidad sin recolector, Cloud SQL sin HA, despliegue manual desde Windows, cuentas de prueba en la base desplegada, rutas de la SPA con 404, entre otros |
+| Baja | 9 | Duplicación de código, archivos grandes, README desactualizado, higiene de `.gitignore`, credenciales por defecto en k6, entre otros |
 
 ---
 
@@ -25,17 +25,23 @@ Inventario priorizado de la deuda técnica conocida al cierre de la Entrega 3. R
 
 El análisis se ejecuta en GitHub Actions con SonarQube Cloud en cada push a `main` (job `sonarqube` de `.github/workflows/ci.yml`).
 
-| Métrica | Meta del enunciado | Diagnóstico inicial | Commit final (`entrega-3`) |
+| Métrica | Meta del enunciado | Resultado (análisis del 31/10/2026, rama `main`) | Cumple |
 |---|---|---|---|
-| Duplicación | ≤ 20 % | _pendiente_ | _pendiente_ |
-| Mantenibilidad (rating) | C o mejor | _pendiente_ | _pendiente_ |
-| Confiabilidad (rating) | — | _pendiente_ | _pendiente_ |
-| Seguridad (rating) | — | _pendiente_ | _pendiente_ |
-| Security hotspots | — | _pendiente_ | _pendiente_ |
-| Code smells | — | _pendiente_ | _pendiente_ |
-| Deuda técnica total | registrar | _pendiente_ | _pendiente_ |
+| Quality gate | — | **Passed** (todas las condiciones) | ✅ |
+| Líneas de código analizadas | — | 14 k (backend Go + frontend React/TypeScript) | — |
+| Duplicación | ≤ 20 % | **2,3 %** | ✅ |
+| Mantenibilidad (rating) | C o mejor | **A** (1 issue de mantenibilidad) | ✅ |
+| Confiabilidad (rating) | — | **C** (3 issues, severidad media) | — |
+| Seguridad (rating) | — | **B** (4 issues, severidad baja) | — |
+| Issues totales | — | 7 | — |
+| Cobertura de pruebas | — | 5,3 % (solo pruebas de Go; ver D13) | — |
+| Deuda técnica total | registrar | _completar con el esfuerzo estimado de la pestaña Issues_ | — |
 
-> Completar con los valores del panel de SonarQube Cloud (pestaña *Overview* del proyecto) y agregar a la sección 3 los hallazgos de severidad *Blocker*, *Critical* o *High* que reporte.
+Lectura:
+- Las dos metas del enunciado se cumplen con margen: la duplicación (2,3 %) está muy por debajo del 20 % y la mantenibilidad es A.
+- El rating de **confiabilidad C** se debe a 3 issues de severidad media y el de **seguridad B** a 4 issues de severidad baja; se registran como D23 y D24 (sección 3.3) para revisarlos en la siguiente iteración.
+- La **cobertura de 5,3 %** confirma el hallazgo D13: solo se mide la cobertura de Go (`go test -coverprofile`) y la mayor parte de los módulos no tiene pruebas unitarias. Las pruebas del frontend (Vitest) corren en el CI pero no reportan cobertura a SonarQube.
+- La configuración del análisis está en `sonar-project.properties`: se analizan `cmd/`, `internal/` y `frontend/src/`; las pruebas cuentan como pruebas y quedan fuera `k6/`, `deploy/` y `postman/` (herramientas, no producto).
 
 ---
 
@@ -68,11 +74,13 @@ El análisis se ejecuta en GitHub Actions con SonarQube Cloud en cada push a `ma
 | Id | Prioridad | Hallazgo | Dónde | Impacto | Propuesta | Esfuerzo | Responsable |
 |---|---|---|---|---|---|---|---|
 | D13 | Media | Las pruebas automáticas de Go cubren auth, cursos y health, pero no quizzes, progreso, insignias, catálogo ni multimedia (no hay archivos `_test.go` en esos módulos). | `internal/quizzes`, `internal/progress`, `internal/badges`, `internal/catalog`, `internal/media` | Las reglas más delicadas (calificación en servidor, idempotencia del submit, cálculo de progreso, procesamiento HLS) solo se verifican con Postman y k6. | Pruebas de casos de uso con repositorios en memoria, empezando por el submit idempotente y el cálculo de `approved`. | L | Camila, Mateo |
-| D14 | Media | El CI no corre SonarQube contra un umbral (*quality gate*) que bloquee el merge. | `.github/workflows/ci.yml` | Las regresiones de calidad se ven en el panel pero no detienen un pull request. | Activar la *quality gate* de SonarQube Cloud como check requerido en `main`. | S | Samara |
+| D14 | Media | El análisis de SonarQube corre en el CI y la *quality gate* pasa, pero no está configurada como check requerido, así que no bloquea un merge. | `.github/workflows/ci.yml` | Las regresiones de calidad se ven en el panel pero no detienen un pull request. | Activar la *quality gate* de SonarQube Cloud como check requerido en `main`. | S | Samara |
 | D15 | Baja | Duplicación entre módulos: cada uno tiene su propio `http/errors.go` con el mapeo de errores de dominio a HTTP, y los scripts de k6 repiten los mismos helpers (`login`, `hdr`, `json`, manejo de cookies). | `internal/*/http/errors.go`, `k6/*.js` | Más código que mantener; cambios de formato de error que hay que repetir en varios lugares. | Mapeo común en `internal/platform/apierror` y un módulo `k6/lib/comun.js`. | M | Daniela |
 | D16 | Baja | Archivos muy largos con varias responsabilidades: `courses/http/handler.go` (~21 KB), `courses/postgres/course_repository.go` (~21 KB), `quizzes/http/handler.go` (~19 KB), `media/worker/processor.go` y `progress/usecase/service.go` (~15 KB). | `internal/...` | Más difíciles de revisar y probar; SonarQube suele reportarlos por complejidad cognitiva. | Separar por subrecurso (autoría, editor, publicación; preguntas e intentos; etapas del procesador). | M | Daniela, Camila, Mateo |
 | D17 | Baja | `FakeAuthMiddleware` sigue en el código, aunque el middleware real reemplazó a los encabezados falsos desde la E1. | `internal/platform/authctx` | Código muerto que podría usarse por error. | Eliminarlo junto con las pruebas antiguas que lo usen. | S | Samara |
 | D18 | Baja | Los scripts de k6 traen credenciales por defecto (`admin.k6@mooc.test` / `Admin12345`). | `k6/escenario1.js`, `k6/escenario2.js`, `k6/full-project.js` | Valores de prueba en el código; en la nube no sirven y confunden (pasó en el Escenario 1 de la E3). | Exigirlos por variable de entorno y fallar con un mensaje claro si faltan. | S | Samara |
+| D23 | Media | SonarQube reporta 3 issues de confiabilidad de severidad media (rating C). | Pestaña *Issues* de SonarQube Cloud, filtro *Reliability* | Posibles errores en tiempo de ejecución en casos borde. | Revisar y corregir los 3 issues; el rating debería subir a A. | S | Según el módulo de cada issue |
+| D24 | Baja | SonarQube reporta 4 issues de seguridad de severidad baja (rating B). | Pestaña *Issues* de SonarQube Cloud, filtro *Security* | Bajo; endurecimiento recomendado. | Revisar cada issue y corregirlo o marcarlo como aceptado con justificación. | S | Según el módulo de cada issue |
 
 ### 3.4 Repositorio y documentación
 
