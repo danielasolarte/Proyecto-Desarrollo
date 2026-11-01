@@ -1,0 +1,48 @@
+%% Modelo de despliegue - Entrega 3 (fuente del diagrama de docs/entrega3/arquitectura.md)
+flowchart TB
+    usuario["Navegador"]
+
+    subgraph global["Balanceador HTTPS externo global (EXTERNAL_MANAGED)"]
+        ip["IP mooc-e3-lb-ip 136.68.98.101<br/>https://136.68.98.101.sslip.io<br/>certificado administrado mooc-e3-cert"]
+        mapa["Mapa de URL mooc-e3-lb<br/>/api/* -> mooc-api-bs<br/>resto -> bucket del frontend<br/>HTTP 80 -> 301 HTTPS"]
+    end
+
+    front[("Bucket mooc-e3-frontend-*<br/>SPA + version.json")]
+    media[("Bucket mooc-e2-media-proyecto1-entrega2<br/>CORS: dominio del balanceador")]
+
+    subgraph region["Región us-central1 - VPC mooc-e2-vpc - subred mooc-e2-subnet 10.20.0.0/24"]
+        subgraph zona["Zona us-central1-a (sin IP externa, salida por Cloud NAT)"]
+            subgraph migapi["mooc-api-mig: 1 a 3 x e2-small (CPU 60 %)"]
+                api1["VM API<br/>contenedor mooc :8080"]
+            end
+            subgraph migw["mooc-worker-mig: 1 a 3 x e2-medium (demanda de cola, 4 por VM)"]
+                w1["VM worker<br/>contenedor mooc, health :8081"]
+            end
+            serv["mooc-servicios (VM fija, e2-medium)<br/>10.20.0.7: Redis 6379, ClamAV 3310,<br/>cola-exportador"]
+        end
+        nat["Cloud NAT mooc-e2-nat"]
+    end
+
+    sql[("Cloud SQL mooc-postgres<br/>IP privada 10.235.0.3 (PSA)")]
+    sm["Secret Manager<br/>mooc-database-url, mooc-s3-*"]
+    ar["Artifact Registry mooc-e2<br/>imágenes por commit"]
+    mon["Cloud Monitoring<br/>custom.googleapis.com/mooc/cola/demanda"]
+
+    usuario --> ip --> mapa
+    mapa -- "/api/*" --> api1
+    mapa -- "/*" --> front
+    usuario -- "URLs prefirmadas" --> media
+
+    api1 -- "6379" --> serv
+    w1 -- "6379 y 3310" --> serv
+    api1 --> sql
+    w1 --> sql
+    serv -- "migraciones controladas" --> sql
+    api1 --> media
+    w1 --> media
+    api1 -.-> sm
+    w1 -.-> sm
+    zona -.-> nat
+    nat -.-> ar
+    serv -- "métrica" --> mon
+    mon -- "autoscaler" --> migw

@@ -207,28 +207,28 @@
         "students": [
             {
                 "email": "student.e2.1791648933874.0@mooc.test",
-                "token": "h3cKj4VnhZ9fS0T_7B1fUnO349tUtL7WoTMRtSWjJlM"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e2.1791648933874.1@mooc.test",
-                "token": "eqadNW51qu3b8MaR2r0s7kIt8ZZ5-uY2OEgTpKFqn5I"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e2.1791648933874.2@mooc.test",
-                "token": "VQVnham_YD_FMiJAGksGJiMqVE89ezr0TxNyIYcivnw"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e2.1791648933874.3@mooc.test",
-                "token": "RouS8dgHP5N0ed9gUu1oUbuXiAS6WmypYKhqCgvABNM"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e2.1791648933874.4@mooc.test",
-                "token": "9cTu3sFZmQUw2fcYcp7vZRghTJpgsD6nx4aHxeES--Q"
+                "token": "<redactado>"
             }
         ],
         "teacher": {
             "email": "teacher.e2.1791648933874@mooc.test",
-            "token": "IwRbja6k1gdtkwYzn_lss-3abgaeJ5cOQI7zpeYZaig"
+            "token": "<redactado>"
         },
         "uploadUnitId": "099c95ec-287f-41a6-a450-635dabe7f47b"
     },

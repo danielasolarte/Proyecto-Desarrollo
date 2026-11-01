@@ -41,7 +41,7 @@ export function VisorRecurso({
   useEffect(() => {
     let vigente = true
     setEstado({ fase: 'cargando' })
-    ;(async () => {
+    void (async () => {
       try {
         const media = await apiMedia.estado(recurso.id)
         if (!derivadoListo(recurso.type, media)) {

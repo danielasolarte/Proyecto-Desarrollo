@@ -438,8 +438,11 @@ function login(email, password) {
     { headers: hdr(''), tags: { op: 'setup', phase: 'setup' }, jar: jarLogin() },
   );
   descartarCookies();
+  ultimoLoginStatus = res.status;
   return res.status === 200 ? json(res) : null;
 }
+
+let ultimoLoginStatus = 0;
 
 function ensureAdmin() {
   let logged = login(ADMIN_EMAIL, ADMIN_PASSWORD);
@@ -455,7 +458,7 @@ function ensureAdmin() {
   }
   logged = login(ADMIN_EMAIL, ADMIN_PASSWORD);
   if (!logged || !logged.token) {
-    fail('No fue posible iniciar sesión como admin; usa -e ADMIN_EMAIL y -e ADMIN_PASSWORD.');
+    fail(`No fue posible iniciar sesión como admin (${ADMIN_EMAIL}, login HTTP ${ultimoLoginStatus}); usa -e ADMIN_EMAIL y -e ADMIN_PASSWORD.`);
   }
   return logged.token;
 }

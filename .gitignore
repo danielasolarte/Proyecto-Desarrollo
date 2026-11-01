@@ -10,3 +10,9 @@ frontend/dist/
 frontend/coverage/
 frontend/.env.local
 frontend/.env.*.local
+
+# Generados o locales (no versionar)
+coverage.out
+.DS_Store
+Video y doc/
+Claude outputs/

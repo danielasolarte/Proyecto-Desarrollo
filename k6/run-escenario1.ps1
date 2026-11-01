@@ -11,7 +11,12 @@ param(
     [int]$PauseBetweenS = 60,
     [string]$Tag = "local",
     [string]$K6Image = "grafana/k6:latest",
-    [switch]$SaveTimeSeries
+    [switch]$SaveTimeSeries,
+    # Admin existente en la nube (k6 lo usa en setup para crear el profesor y el curso).
+    [string]$AdminEmail,
+    [string]$AdminPassword,
+    # k6 instalado en Windows (winget install GrafanaLabs.k6) en vez de Docker.
+    [switch]$Nativo
 )
 
 # Continue (no Stop): k6 escribe sus avisos por stderr y con Stop PowerShell 5.1
@@ -20,7 +25,7 @@ $ErrorActionPreference = "Continue"
 New-Item -ItemType Directory -Force "k6/results" | Out-Null
 
 Write-Host "Version de k6 usada:"
-docker run --rm $K6Image version
+if ($Nativo) { k6 version } else { docker run --rm $K6Image version }
 
 for ($i = 0; $i -lt $Levels.Count; $i++) {
     $level = $Levels[$i]
@@ -32,20 +37,27 @@ for ($i = 0; $i -lt $Levels.Count; $i++) {
 
     $extra = @()
     if ($SaveTimeSeries) { $extra += @("--out", "csv=/project/$prefix.csv.gz") }
+    if ($AdminEmail) { $extra += @("-e", "ADMIN_EMAIL=$AdminEmail", "-e", "ADMIN_PASSWORD=$AdminPassword") }
 
-    docker run --rm `
-        -v "${PWD}:/project" `
-        -w /project `
-        $K6Image run `
-        -e PROFILE=level `
-        -e TOTAL_VUS=$level `
-        -e WARMUP_S=$WarmupS `
-        -e HOLD_S=$HoldS `
-        -e BASE_URL=$BaseUrl `
-        --summary-export "/project/$prefix.json" `
-        --summary-trend-stats "avg,min,med,p(90),p(95),p(99),max" `
-        @extra `
-        k6/escenario1.js 2>&1 | Tee-Object -FilePath "$prefix.log"
+    $argsK6 = @("-e", "PROFILE=level", "-e", "TOTAL_VUS=$level", "-e", "WARMUP_S=$WarmupS", "-e", "HOLD_S=$HoldS", "-e", "BASE_URL=$BaseUrl")
+    if ($Nativo) {
+        $extraNativo = @($extra | ForEach-Object { $_ -replace "^csv=/project/", "csv=" })
+        k6 run @argsK6 --summary-export "$prefix.json" --summary-trend-stats "avg,min,med,p(90),p(95),p(99),max" @extraNativo k6/escenario1.js 2>&1 | Tee-Object -FilePath "$prefix.log"
+    } else {
+        docker run --rm `
+            -v "${PWD}:/project" `
+            -w /project `
+            $K6Image run `
+            -e PROFILE=level `
+            -e TOTAL_VUS=$level `
+            -e WARMUP_S=$WarmupS `
+            -e HOLD_S=$HoldS `
+            -e BASE_URL=$BaseUrl `
+            --summary-export "/project/$prefix.json" `
+            --summary-trend-stats "avg,min,med,p(90),p(95),p(99),max" `
+            @extra `
+            k6/escenario1.js 2>&1 | Tee-Object -FilePath "$prefix.log"
+    }
 
     if ($i -lt $Levels.Count - 1) {
         Write-Host "Pausa de $PauseBetweenS s para que la cola y las conexiones se estabilicen..."

@@ -230,29 +230,29 @@
         "runId": "1790484291338",
         "students": [
             {
-                "token": "heVQCn5XPbKQhkBEyy1i9hlmkhPVguQ6VIb5LiNLXm8",
+                "token": "<redactado>",
                 "email": "student.k6.1790484291338.0@mooc.test"
             },
             {
-                "token": "OvL57JmX4Vz3D96C9X1ZQokrDp-0tggPCD8-YFWFXik",
+                "token": "<redactado>",
                 "email": "student.k6.1790484291338.1@mooc.test"
             },
             {
                 "email": "student.k6.1790484291338.2@mooc.test",
-                "token": "xhwyBXO87uNvI4Y2r6guk9yL46vbWYRm2cEyHIF7ptk"
+                "token": "<redactado>"
             },
             {
                 "email": "student.k6.1790484291338.3@mooc.test",
-                "token": "OvZjbTPQB7tdtau0iyYfRMQKGOCKscdeLhnEBzYTOGU"
+                "token": "<redactado>"
             },
             {
-                "token": "jJM2Yx9UM22PtNSqCuzwCeiZb4LGHlXHbiLVEJ8QmCc",
+                "token": "<redactado>",
                 "email": "student.k6.1790484291338.4@mooc.test"
             }
         ],
         "teacher": {
             "email": "teacher.k6.1790484291338@mooc.test",
-            "token": "ar6lOYrU3bsdvHrayEdCm8Slw6HQx6TTyKfJyL-6MrA"
+            "token": "<redactado>"
         },
         "adminToken": "XqMetjiGbdWnK6t1Mg3znVjQMLIl_-rYkTPkjR0Kyzw"
     },

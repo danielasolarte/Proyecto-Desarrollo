@@ -191,7 +191,7 @@
     "setup_data": {
         "teacher": {
             "email": "teacher.e2.1791658718990@mooc.test",
-            "token": "2EoRXDl9-ZlC_dXHO7tsENSDtEQxPbJ9Mn-aXVgbDvw"
+            "token": "<redactado>"
         },
         "uploadUnitId": "bb199083-7b79-40eb-be02-d56e82c5772f",
         "availableResources": [
@@ -212,23 +212,23 @@
         "students": [
             {
                 "email": "student.e2.1791658718990.0@mooc.test",
-                "token": "rbx6yfouat7EbTCFmOardOD-1GZqTt8iyl-KoZBjgJ0"
+                "token": "<redactado>"
             },
             {
-                "token": "WvmMBvwe4-8MrbmT9oV31heS9lqcekrMAwvkMXp-Ie4",
+                "token": "<redactado>",
                 "email": "student.e2.1791658718990.1@mooc.test"
             },
             {
-                "token": "ReCndB2HcQef6soyLRWOjHMl9nrs9Kdz5yS4xgdLELM",
+                "token": "<redactado>",
                 "email": "student.e2.1791658718990.2@mooc.test"
             },
             {
                 "email": "student.e2.1791658718990.3@mooc.test",
-                "token": "E1yFEPZ86weI1aWg_FX2btPGLBINgXe7PjDKe_54c9g"
+                "token": "<redactado>"
             },
             {
                 "email": "student.e2.1791658718990.4@mooc.test",
-                "token": "ARIxYlmeNZwZ-Cgojq89DT5B5lRDmc848g82U8bUwOo"
+                "token": "<redactado>"
             }
         ]
     },

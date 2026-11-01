@@ -1,6 +1,18 @@
-# Plataforma MOOC - Backend
+# Plataforma MOOC
 
-## Entrega 3: Aplicación elástica IaaS (GCP)
+Plataforma web de cursos masivos abiertos en línea: backend en Go (monolito
+modular con API REST bajo `/api/v1` y workers asíncronos con asynq) y frontend
+en React. PostgreSQL es la fuente transaccional, Redis guarda sesiones y la cola
+de trabajos, y los archivos multimedia van a un almacenamiento de objetos
+(MinIO en local, Cloud Storage en la nube).
+
+Este README está organizado por entrega, con la más reciente arriba:
+
+- [Entrega 3: aplicación elástica IaaS](#entrega-3-aplicación-elástica-iaas-gcp--estado-actual) (estado actual).
+- [Estructura del repositorio](#estructura-del-repositorio) y [desarrollo local](#desarrollo-local).
+- [Entregas anteriores](#entregas-anteriores): Entrega 2 (despliegue básico en GCP) y Entrega 1 (backend).
+
+## Entrega 3: Aplicación elástica IaaS (GCP) — estado actual
 
 Plataforma MOOC sobre Google Cloud con escalamiento automático en dos capas:
 un grupo de instancias administradas para la API (`mooc-api-mig`, 1 a 3 VMs por
@@ -28,14 +40,20 @@ medio privado del curso; no están en el repositorio.
 
 ### Documentación
 
-- Arquitectura: `docs/entrega3/arquitectura.md` (_pendiente_).
+- Arquitectura (componentes, despliegue, escalamiento, operación, costos y limitaciones): [`docs/entrega3/arquitectura.md`](docs/entrega3/arquitectura.md).
 - Cola compartida, workers elásticos y retiro seguro: [`docs/entrega3/arquitectura-workers.md`](docs/entrega3/arquitectura-workers.md).
 - Verificación funcional del frontend (matriz de recorridos y rutas): [`docs/entrega3/matriz-verificacion-frontend.md`](docs/entrega3/matriz-verificacion-frontend.md).
-- Informe de capacidad (escenarios 1, 2, 3A y 3B): `capacity-planning/pruebas_de_carga_entrega3.md` (_pendiente_).
+- Informe de capacidad (escenarios 1, 2, 3A y 3B, gráficas y limitaciones): [`capacity-planning/pruebas_de_carga_entrega3.md`](capacity-planning/pruebas_de_carga_entrega3.md).
 - Integridad entre réplicas: [`capacity-planning/integridad-replicas-e3.md`](capacity-planning/integridad-replicas-e3.md).
 - Pool de conexiones a Cloud SQL: [`capacity-planning/cloud-sql-pool-e3.md`](capacity-planning/cloud-sql-pool-e3.md).
-- Deuda técnica y calidad del código: `docs/entrega3/deuda-tecnica.md` (_pendiente_).
+- Deuda técnica y calidad del código (SonarQube): [`docs/entrega3/deuda-tecnica.md`](docs/entrega3/deuda-tecnica.md).
 - Frontend (arranque local, cuentas de prueba y contrato con la API): [`frontend/README.md`](frontend/README.md).
+
+### Calidad y pruebas
+
+- CI en GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): pruebas y build de Go, análisis de SonarQube Cloud, validación de los compose, guardia de secretos, y pruebas (Vitest) y build del frontend.
+- SonarQube Cloud: [resumen del proyecto](https://sonarcloud.io/summary/overall?id=danielasolarte_Proyecto-Desarrollo&branch=main). Configuración en [`sonar-project.properties`](sonar-project.properties); el token vive solo en el secreto `SONAR_TOKEN` del repositorio.
+- Pruebas de carga: scripts de k6 en [`k6/`](k6/README.md) y resultados crudos en `k6/results/` y `capacity-planning/results/`.
 
 ### Despliegue y operación
 
@@ -51,6 +69,8 @@ orden completo para reconstruir el entorno:
 - `07-grupo-workers.ps1`: plantilla, grupo y autoscaling de los workers.
 - `08-balanceador.ps1`: balanceador HTTPS, publicación del frontend y pruebas de reparto.
 - `09-cuenta-admin.ps1`: listar cuentas admin y asignar una clave nueva desde Cloud SQL.
+- `09-admin-prueba.ps1`: promover cuentas de prueba a administrador para las pruebas de carga.
+- `10-escenario3a.ps1`: línea de tiempo y CPU del grupo de la API para el Escenario 3A.
 
 #### Encender y apagar
 
@@ -77,225 +97,36 @@ gcloud sql instances patch mooc-postgres --activation-policy=NEVER
 No se apaga `mooc-servicios` ni Cloud SQL con los grupos encendidos: sin ellos
 los workers no arrancan y la API no puede iniciar sesión.
 
-## Entrega 2: Despliegue basico en la nube (GCP)
+## Estructura del repositorio
 
-Despliegue de la plataforma MOOC en Google Cloud, con dos maquinas virtuales fijas
-(Web Server y Worker Server), PostgreSQL administrado (Cloud SQL), almacenamiento
-de objetos administrado (Cloud Storage) y una red privada con firewall.
-
-Artefactos principales de la entrega:
-
-- Arquitectura: `docs/entrega2/arquitectura_entrega2.md`.
-- Modelo de componentes: `docs/entrega2/modelo-componentes.md`.
-- Modelo de despliegue, red, Web Server y HTTPS: `docs/entrega2/modelo-despliegue-red-web.md`.
-- Decisiones y adaptaciones de empaquetado: `docs/entrega2/decisiones-empaquetado-daniela.md`.
-- Secretos, cookies seguras y contrato CSRF: `docs/entrega2/secretos-y-seguridad.md`.
-- Calidad, CI, observabilidad y evidencia E2E: `docs/entrega2/calidad-observabilidad-ci.md`.
-- Correcciones a la retroalimentacion de la Entrega 2: `docs/entrega2/correcciones-retroalimentacion.md`.
-- Proxy HTTPS: `deploy/caddy/Caddyfile.web`.
-- Scripts reproducibles de red y VMs en GCP: `deploy/gcp/`.
-- Compose por VM: `deploy/docker-compose.web.yml` y `deploy/docker-compose.worker.yml`.
-- Migraciones contra Cloud SQL: `deploy/run-migrations.ps1`.
-- Pruebas de carga: `k6/` y resultados en `k6/results/`.
-
-### Ejecutar en local
-
-```
-Copy-Item .env.example .env
-docker compose up -d --build
-```
-
-### Empaquetado
-
-- Imagenes: `mooc-e2-api` y `mooc-e2-worker`, construidas para `linux/amd64`.
-- Publicadas en Artifact Registry: `us-central1-docker.pkg.dev/proyecto1-entrega2-desarrollo/mooc-e2/`.
-- Un compose por maquina virtual en `deploy/` (`docker-compose.web.yml` y
-  `docker-compose.worker.yml`), con sus propios `web.env.example` y
-  `worker.env.example`.
-
-### Contrato CSRF para clientes web con cookies
-
-- Activar `AUTH_COOKIE_ENABLED=true` y `CSRF_ENABLED=true` en Web Server.
-- `POST /api/v1/auth/login` devuelve `csrf_token` y setea cookies `mooc_session` y `mooc_csrf`.
-- Las peticiones autenticadas por cookie con metodos no seguros envian `X-CSRF-Token`.
-- Los clientes HTTP y k6 pueden seguir usando `Authorization: Bearer <token>` sin CSRF.
-
-### Analisis de capacidad
-
-- Escenario 1 (actividad academica concurrente): script de k6 en `k6/escenario1.js`,
-  runner en `k6/run-escenario1.ps1`. Informe: `capacity-planning/pruebas_de_carga_entrega2.md`.
-  Corrida real contra la URL de GCP en `k6/results/e1-gcp-*.json`.
-- Escenario 2 (carga, procesamiento y consumo multimedia): script en `k6/escenario2.js`, a cargo de Andres. Estado a la fecha: **resultado parcial con hallazgo critico**. Las corridas reales (linea base y un nivel adicional) provocaron el colapso total del Worker Server (confirma empiricamente el punto unico de falla documentado en `docs/entrega2/arquitectura_entrega2.md`); faltan los niveles l2/l3/peak y repetir contra el Web Server real (hoy con `REDIS_ADDR` desactualizado). Detalle completo en `capacity-planning/pruebas_de_carga_entrega2.md`.
-
-### Aplicacion desplegada (Entrega 2)
-
-- URL: https://35.254.78.215.sslip.io (Web Server de la Entrega 2; la VM está apagada y la reemplaza el balanceador de la Entrega 3).
-- Video de sustentacion: _pendiente_
-- Tag evaluado: `entrega-2` (pendiente de crear, se crea al final sobre el commit final)
-
-### Secretos
-
-Ningun archivo `.env` real, llave ni credencial esta en este repositorio. Los
-ejemplos (`*.env.example`) no contienen valores secretos.
-
-Backend para una plataforma web de cursos masivos abiertos en linea, construido
-como monolito modular en Go. El sistema expone una API REST bajo `/api/v1`,
-usa PostgreSQL como fuente transaccional, Redis para sesiones/cache/colas,
-MinIO para almacenamiento de objetos, Mailpit para correos locales y ClamAV
-como servicio base para escaneo antimalware.
-
-Este repositorio corresponde a la Entrega 1 del proyecto. El alcance actual es
-backend: se valida con curl/Postman, pruebas automaticas y la especificacion
-OpenAPI.
-
-## Estado actual
-
-Implementado:
-
-- Persona 1: cursos, autoria y catalogo.
-- Persona 2: identidad, sesiones y administracion.
-- Persona 4: quizzes, intentos, progreso de recursos, progreso de cursos e insignias    verificables.
-- Infraestructura local base con Docker Compose: PostgreSQL, Redis, MinIO,
-  Mailpit y ClamAV.
-- API base con Echo.
-- Worker base con asynq.
-- Migraciones SQL con golang-migrate.
-- OpenAPI parcial en api/openapi.yaml.
-
-Pendiente para completar el alcance total del proyecto:
-
-- Persona 3: multimedia, URLs prefirmadas, carga multipart, ClamAV real,
-  procesamiento HLS con ffmpeg, DLQ y endpoints PDF/HLS.
-- Dockerfiles y servicios `api`/`worker` dentro de `docker-compose.yml`.
-- CI, metricas, trazas y pruebas E2E completas.
-
-## Modulos
-
-### Persona 1 - Cursos, Autoria y Catalogo
-
-Documentacion: `docs/modulo-cursos-catalogo.md`
-
-Cubre:
-
-- Migraciones de `courses`, `course_versions`, `modules`, `units`,
-  `resources` y `enrollments`.
-- CRUD de la jerarquia `Curso -> Modulo -> Unidad -> Recurso`.
-- Metadatos, ordenamiento y estados `draft`, `published`, `superseded`.
-- Versiones publicadas inmutables.
-- Preview de cursos con lista de problemas de publicacion.
-- Editor Markdown para recursos `rich_text`.
-- Autosave, recuperacion y publicacion de contenido dentro del borrador.
-- Catalogo de cursos publicados con busqueda, filtros y cursor.
-- Inscripcion, retiro y reinscripcion conservando historial.
-
-### Persona 2 - Identidad y Administracion
-
-Documentacion: `docs/modulo-auth-admin.md`
-
-Cubre:
-
-- Migracion `000002_create_auth_admin_tables` con `users`, `sessions` y
-  `audit_log`.
-- Registro publico de estudiantes.
-- Verificacion de correo con Mailpit.
-- Login con bcrypt y sesiones opacas revocables.
-- Sesiones persistidas en PostgreSQL y cacheadas en Redis.
-- Middleware real de autenticacion y roles.
-- Recuperacion de contrasena por token.
-- Bootstrap del primer administrador.
-- Creacion de profesores desde administracion.
-- Creacion de administradores desde administracion.
-- CRUD administrativo basico de usuarios, roles y estados.
-- Revocacion individual y masiva de sesiones.
-- Auditoria basica append-only.
-- Proteccion del ultimo administrador activo.
-- Pruebas de casos de uso de Auth/Admin.
-
-### Persona 4 - Quizzes, Progreso e Insignias
-
-Cubre:
-
-- Migraciones para quizzes, questions, question_options, attempts,
-  attempt_answers, resource_progress, progress_events,
-  course_progress, badges y badge_issuances.
-
-#### Quizzes
-
-- Creacion de quizzes asociados a recursos de tipo quiz.
-- Creacion de preguntas de seleccion multiple y sus opciones.
-- Configuracion de puntaje minimo de aprobacion, numero maximo de intentos,
-  limite de tiempo y modo de feedback.
-- Inicio de intentos por estudiantes inscritos.
-- Snapshot del quiz al iniciar el intento para conservar su contenido durante
-  la resolucion.
-- El snapshot entregado al estudiante no expone las respuestas correctas.
-- Guardado parcial de respuestas y recuperacion de intentos en progreso.
-- Validacion de que la pregunta y opcion seleccionada pertenezcan al quiz.
-- Calificacion realizada exclusivamente en el servidor.
-- Calculo de puntaje, porcentaje y estado de aprobacion.
-- Manejo de expiracion de intentos.
-- Submit final protegido mediante Idempotency-Key.
-- Reintentos del mismo submit devuelven el resultado existente.
-
-#### Progreso
-
-- Seguimiento de progreso por recurso mediante identificadores estables.
-- Registro de apertura de recursos.
-- Heartbeats para contabilizar tiempo de actividad validado por el servidor.
-- Registro de posicion de reproduccion o lectura.
-- Rechazo de valores de progreso calculados directamente por el cliente.
-- Tiempo minimo de actividad antes de permitir completar recursos normales.
-- Registro de eventos de progreso.
-- Los quizzes se marcan como completados al realizar el submit final.
-- Registro independiente de eventos quiz_submitted y quiz_passed.
-- Calculo del porcentaje del curso a partir de recursos visibles y obligatorios.
-- Estado completed cuando todos los recursos obligatorios fueron completados.
-- Estado approved cuando, ademas, todos los quizzes obligatorios fueron
-  aprobados.
-- Conservacion del progreso mediante stable_id.
-
-#### Insignias
-
-- Definicion de una insignia por curso.
-- Emision automatica cuando el progreso del curso alcanza approved.
-- Una sola emision por estudiante, curso e insignia.
-- Codigo UUID unico de verificacion.
-- Endpoint publico de verificacion sin autenticacion.
-- La verificacion publica no expone el correo del estudiante.
-- Revocacion administrativa de insignias.
-- Una insignia revocada permanece consultable pero se reporta como invalida.
-
-## Estructura
-
+```text
 cmd/
-  api/                  main del servidor HTTP
-  worker/               main del worker asynq
-
+  api/                  servidor HTTP
+  worker/               worker asynq (multimedia)
+  cola-exportador/      publica la demanda de la cola en Cloud Monitoring (E3)
 internal/
-  admin/                endpoints administrativos
-  auth/                 identidad, sesiones y middleware
-  badges/               insignias, emisiones y verificacion publica
-  catalog/              catalogo e inscripciones
-  courses/              cursos, versionado, autoria y editor
-  progress/             progreso por recurso y curso
-  quizzes/              quizzes, preguntas, intentos y calificacion
+  admin/ auth/ badges/ catalog/ courses/ media/ progress/ quizzes/
   platform/             utilidades compartidas
-
+frontend/               SPA en React + Vite (ver frontend/README.md)
 migrations/             migraciones SQL de golang-migrate
 api/                    OpenAPI 3.1
-docs/                   documentacion por modulo
-docker-compose.yml      infraestructura local
+deploy/                 Dockerfiles, compose por VM y scripts de GCP
+  gcp/e3/               scripts de la Entrega 3 (grupos, balanceador, operación)
+k6/                     pruebas de carga y de integridad
+capacity-planning/      informes de capacidad, resultados y gráficas
+docs/
+  entrega2/ entrega3/   documentación de cada entrega
+postman/                colecciones de Postman
+docker-compose.yml      entorno local completo
+```
 
-Cada modulo sigue el patron:
+Cada módulo de `internal/` sigue el patrón `domain/` (entidades, errores e
+interfaces), `usecase/` (reglas de negocio), `postgres/` (SQL) y `http/`
+(handlers y rutas Echo).
 
+## Desarrollo local
 
-domain/    entidades, errores e interfaces
-usecase/   reglas de negocio
-postgres/  implementacion SQL
-http/      handlers y rutas Echo
-
-
-## Requisitos
+### Requisitos
 
 - Go instalado. En esta maquina se uso `go1.26.6`; el proyecto no usa codigo
   especifico de esa version, pero `go mod tidy` dejo `go 1.26.0` en `go.mod`.
@@ -307,7 +138,7 @@ Instalar golang-migrate si no esta disponible:
 go install -tags "postgres" github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 
-## Configuracion
+### Configuracion
 
 Variables de entorno soportadas por la API:
 
@@ -321,7 +152,7 @@ PORT=8080
 
 Si no se definen, la API usa esos valores por defecto.
 
-## Levantar en local
+### Levantar en local
 
 1. Levantar infraestructura:
 
@@ -371,7 +202,7 @@ Respuesta esperada:
 {"status":"ok"}
 ```
 
-## Flujo rapido de Auth/Admin
+### Flujo rapido de Auth/Admin
 
 Crear primer administrador:
 
@@ -494,7 +325,7 @@ curl -X POST localhost:8080/api/v1/auth/login \
   -d "{\"email\":\"ana@example.com\",\"password\":\"claveSegura123\"}"
 ```
 
-## Flujo rapido de Cursos/Catalogo
+### Flujo rapido de Cursos/Catalogo
 
 Crear curso como profesor:
 
@@ -518,7 +349,7 @@ curl -X POST localhost:8080/api/v1/courses/COURSE_ID/enrollments \
   -H "Authorization: Bearer TOKEN_ESTUDIANTE"
 ```
 
-## Flujo rapido de Quizzes
+### Flujo rapido de Quizzes
 
 Crear un quiz para un recurso como profesor:
 
@@ -573,7 +404,7 @@ La calificacion es calculada en el servidor. El cliente nunca recibe la clave
 de respuestas correctas dentro del snapshot utilizado durante el intento.
 
 
-## Flujo rapido de Progeeso
+### Flujo rapido de Progeeso
 
 Abrir un recurso:
 
@@ -607,7 +438,7 @@ curl localhost:8080/api/v1/courses/COURSE_ID/progress \
 El porcentaje de progreso se calcula exclusivamente en el servidor a partir
 de los recursos visibles y obligatorios de la version publicada.
 
-## Flujo rapido de Insignias
+### Flujo rapido de Insignias
 
 Crear la insignia de un curso como profesor propietario o administrador:
 
@@ -641,7 +472,7 @@ Una insignia revocada continua siendo verificable, pero su campo valid
 se reporta como false.
 
 
-## Pruebas
+### Pruebas
 
 Ejecutar toda la suite:
 
@@ -731,7 +562,211 @@ La coleccion de Persona 4 cubre:
 - rechazo de solicitudes sin autenticacion;
 - rechazo de heartbeats multimedia con posiciones invalidas.
 
-## Pruebas de carga con k6
+### OpenAPI
+
+La especificacion esta en:
+
+api/openapi.yaml
+
+
+Incluye endpoints de:
+
+- identidad y autenticacion;
+- administracion de usuarios y sesiones;
+- cursos, autoria y versionado;
+- editor Markdown;
+- catalogo e inscripciones;
+- multimedia y cargas multipart;
+- procesamiento y reproduccion de recursos multimedia;
+- quizzes, preguntas y opciones;
+- intentos, guardado parcial y calificacion;
+- progreso de recursos y cursos;
+- heartbeats y validacion de progreso multimedia;
+- insignias;
+- emision automatica de insignias;
+- verificacion publica de insignias;
+- revocacion de insignias.
+
+La especificacion usa OpenAPI 3.1 y define los esquemas de request/response, parametros de ruta, autenticacion, respuestas de error y endpoints publicos y protegidos de la plataforma.
+
+## Entregas anteriores
+
+### Entrega 2: Despliegue básico en la nube (GCP)
+
+Despliegue de la plataforma MOOC en Google Cloud, con dos maquinas virtuales fijas
+(Web Server y Worker Server), PostgreSQL administrado (Cloud SQL), almacenamiento
+de objetos administrado (Cloud Storage) y una red privada con firewall.
+
+Artefactos principales de la entrega:
+
+- Arquitectura: `docs/entrega2/arquitectura_entrega2.md`.
+- Modelo de componentes: `docs/entrega2/modelo-componentes.md`.
+- Modelo de despliegue, red, Web Server y HTTPS: `docs/entrega2/modelo-despliegue-red-web.md`.
+- Decisiones y adaptaciones de empaquetado: `docs/entrega2/decisiones-empaquetado-daniela.md`.
+- Secretos, cookies seguras y contrato CSRF: `docs/entrega2/secretos-y-seguridad.md`.
+- Calidad, CI, observabilidad y evidencia E2E: `docs/entrega2/calidad-observabilidad-ci.md`.
+- Correcciones a la retroalimentacion de la Entrega 2: `docs/entrega2/correcciones-retroalimentacion.md`.
+- Proxy HTTPS: `deploy/caddy/Caddyfile.web`.
+- Scripts reproducibles de red y VMs en GCP: `deploy/gcp/`.
+- Compose por VM: `deploy/docker-compose.web.yml` y `deploy/docker-compose.worker.yml`.
+- Migraciones contra Cloud SQL: `deploy/run-migrations.ps1`.
+- Pruebas de carga: `k6/` y resultados en `k6/results/`.
+
+#### Ejecutar en local
+
+```
+Copy-Item .env.example .env
+docker compose up -d --build
+```
+
+#### Empaquetado
+
+- Imagenes: `mooc-e2-api` y `mooc-e2-worker`, construidas para `linux/amd64`.
+- Publicadas en Artifact Registry: `us-central1-docker.pkg.dev/proyecto1-entrega2-desarrollo/mooc-e2/`.
+- Un compose por maquina virtual en `deploy/` (`docker-compose.web.yml` y
+  `docker-compose.worker.yml`), con sus propios `web.env.example` y
+  `worker.env.example`.
+
+#### Contrato CSRF para clientes web con cookies
+
+- Activar `AUTH_COOKIE_ENABLED=true` y `CSRF_ENABLED=true` en Web Server.
+- `POST /api/v1/auth/login` devuelve `csrf_token` y setea cookies `mooc_session` y `mooc_csrf`.
+- Las peticiones autenticadas por cookie con metodos no seguros envian `X-CSRF-Token`.
+- Los clientes HTTP y k6 pueden seguir usando `Authorization: Bearer <token>` sin CSRF.
+
+#### Analisis de capacidad
+
+- Escenario 1 (actividad academica concurrente): script de k6 en `k6/escenario1.js`,
+  runner en `k6/run-escenario1.ps1`. Informe: `capacity-planning/pruebas_de_carga_entrega2.md`.
+  Corrida real contra la URL de GCP en `k6/results/e1-gcp-*.json`.
+- Escenario 2 (carga, procesamiento y consumo multimedia): script en `k6/escenario2.js`, a cargo de Andres. Estado a la fecha: **resultado parcial con hallazgo critico**. Las corridas reales (linea base y un nivel adicional) provocaron el colapso total del Worker Server (confirma empiricamente el punto unico de falla documentado en `docs/entrega2/arquitectura_entrega2.md`); faltan los niveles l2/l3/peak y repetir contra el Web Server real (hoy con `REDIS_ADDR` desactualizado). Detalle completo en `capacity-planning/pruebas_de_carga_entrega2.md`. *Actualización:* el colapso se corrigió en la corrección C4 (worker `e2-medium`, concurrencia 2, Redis fuera del worker), ver `docs/entrega2/correcciones-retroalimentacion.md`; en la Entrega 3 Redis vive en `mooc-servicios`.
+
+#### Aplicacion desplegada (Entrega 2)
+
+- URL: https://35.254.78.215.sslip.io (Web Server de la Entrega 2; la VM está apagada y la reemplaza el balanceador de la Entrega 3).
+- Video de sustentacion: _pendiente_
+- Tag evaluado: `entrega-2`.
+
+#### Secretos
+
+Ningun archivo `.env` real, llave ni credencial esta en este repositorio. Los
+ejemplos (`*.env.example`) no contienen valores secretos.
+
+### Entrega 1: Backend
+
+El alcance de la Entrega 1 fue el backend, validado con curl/Postman, pruebas
+automáticas y la especificación OpenAPI. Todo lo que esa entrega dejó pendiente
+(multimedia, Dockerfiles, CI) se completó en las entregas 2 y 3.
+
+Implementado en la Entrega 1:
+
+- Persona 1: cursos, autoría y catálogo.
+- Persona 2: identidad, sesiones y administración.
+- Persona 4: quizzes, intentos, progreso de recursos y de cursos, e insignias verificables.
+- Infraestructura local con Docker Compose (PostgreSQL, Redis, MinIO, Mailpit y ClamAV), API con Echo, worker con asynq, migraciones con golang-migrate y OpenAPI en `api/openapi.yaml`.
+
+Completado en las entregas siguientes: Persona 3 (multimedia, URLs
+prefirmadas, carga multipart, ClamAV, HLS con ffmpeg y PDF), Dockerfiles, CI y
+despliegue en GCP (Entrega 2); frontend, escalamiento automático y SonarQube
+(Entrega 3).
+
+#### Modulos
+
+##### Persona 1 - Cursos, Autoria y Catalogo
+
+Documentacion: `docs/modulo-cursos-catalogo.md`
+
+Cubre:
+
+- Migraciones de `courses`, `course_versions`, `modules`, `units`,
+  `resources` y `enrollments`.
+- CRUD de la jerarquia `Curso -> Modulo -> Unidad -> Recurso`.
+- Metadatos, ordenamiento y estados `draft`, `published`, `superseded`.
+- Versiones publicadas inmutables.
+- Preview de cursos con lista de problemas de publicacion.
+- Editor Markdown para recursos `rich_text`.
+- Autosave, recuperacion y publicacion de contenido dentro del borrador.
+- Catalogo de cursos publicados con busqueda, filtros y cursor.
+- Inscripcion, retiro y reinscripcion conservando historial.
+
+##### Persona 2 - Identidad y Administracion
+
+Documentacion: `docs/modulo-auth-admin.md`
+
+Cubre:
+
+- Migracion `000002_create_auth_admin_tables` con `users`, `sessions` y
+  `audit_log`.
+- Registro publico de estudiantes.
+- Verificacion de correo con Mailpit.
+- Login con bcrypt y sesiones opacas revocables.
+- Sesiones persistidas en PostgreSQL y cacheadas en Redis.
+- Middleware real de autenticacion y roles.
+- Recuperacion de contrasena por token.
+- Bootstrap del primer administrador.
+- Creacion de profesores desde administracion.
+- Creacion de administradores desde administracion.
+- CRUD administrativo basico de usuarios, roles y estados.
+- Revocacion individual y masiva de sesiones.
+- Auditoria basica append-only.
+- Proteccion del ultimo administrador activo.
+- Pruebas de casos de uso de Auth/Admin.
+
+##### Persona 4 - Quizzes, Progreso e Insignias
+
+Cubre:
+
+- Migraciones para quizzes, questions, question_options, attempts,
+  attempt_answers, resource_progress, progress_events,
+  course_progress, badges y badge_issuances.
+
+###### Quizzes
+
+- Creacion de quizzes asociados a recursos de tipo quiz.
+- Creacion de preguntas de seleccion multiple y sus opciones.
+- Configuracion de puntaje minimo de aprobacion, numero maximo de intentos,
+  limite de tiempo y modo de feedback.
+- Inicio de intentos por estudiantes inscritos.
+- Snapshot del quiz al iniciar el intento para conservar su contenido durante
+  la resolucion.
+- El snapshot entregado al estudiante no expone las respuestas correctas.
+- Guardado parcial de respuestas y recuperacion de intentos en progreso.
+- Validacion de que la pregunta y opcion seleccionada pertenezcan al quiz.
+- Calificacion realizada exclusivamente en el servidor.
+- Calculo de puntaje, porcentaje y estado de aprobacion.
+- Manejo de expiracion de intentos.
+- Submit final protegido mediante Idempotency-Key.
+- Reintentos del mismo submit devuelven el resultado existente.
+
+###### Progreso
+
+- Seguimiento de progreso por recurso mediante identificadores estables.
+- Registro de apertura de recursos.
+- Heartbeats para contabilizar tiempo de actividad validado por el servidor.
+- Registro de posicion de reproduccion o lectura.
+- Rechazo de valores de progreso calculados directamente por el cliente.
+- Tiempo minimo de actividad antes de permitir completar recursos normales.
+- Registro de eventos de progreso.
+- Los quizzes se marcan como completados al realizar el submit final.
+- Registro independiente de eventos quiz_submitted y quiz_passed.
+- Calculo del porcentaje del curso a partir de recursos visibles y obligatorios.
+- Estado completed cuando todos los recursos obligatorios fueron completados.
+- Estado approved cuando, ademas, todos los quizzes obligatorios fueron
+  aprobados.
+- Conservacion del progreso mediante stable_id.
+
+###### Insignias
+
+- Definicion de una insignia por curso.
+- Emision automatica cuando el progreso del curso alcanza approved.
+- Una sola emision por estudiante, curso e insignia.
+- Codigo UUID unico de verificacion.
+- Endpoint publico de verificacion sin autenticacion.
+- La verificacion publica no expone el correo del estudiante.
+- Revocacion administrativa de insignias.
+- Una insignia revocada permanece consultable pero se reporta como invalida.
+
+#### Pruebas de carga locales con k6 (Entrega 1)
 
 Se implementó una prueba de carga transversal para validar el comportamiento de
 la plataforma completa bajo concurrencia. El script se encuentra en:
@@ -780,35 +815,7 @@ k6/results/
 
 Estos archivos permiten reproducir y auditar las métricas obtenidas.
 
-
-## OpenAPI
-
-La especificacion esta en:
-
-api/openapi.yaml
-
-
-Incluye endpoints de:
-
-- identidad y autenticacion;
-- administracion de usuarios y sesiones;
-- cursos, autoria y versionado;
-- editor Markdown;
-- catalogo e inscripciones;
-- multimedia y cargas multipart;
-- procesamiento y reproduccion de recursos multimedia;
-- quizzes, preguntas y opciones;
-- intentos, guardado parcial y calificacion;
-- progreso de recursos y cursos;
-- heartbeats y validacion de progreso multimedia;
-- insignias;
-- emision automatica de insignias;
-- verificacion publica de insignias;
-- revocacion de insignias.
-
-La especificacion usa OpenAPI 3.1 y define los esquemas de request/response, parametros de ruta, autenticacion, respuestas de error y endpoints publicos y protegidos de la plataforma.
-
-## Notas de entrega
+#### Notas de entrega
 
 - El backend ya no depende de headers falsos para autenticar: el middleware
   real llena el contexto usado por los modulos de cursos y catalogo.
