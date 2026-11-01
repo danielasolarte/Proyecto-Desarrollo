@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import {
   api, esMultimedia, mensaje, nombreTipo, problemasDePublicacion, siguientePosicion,
@@ -164,9 +164,14 @@ function FilaEditable({ etiqueta, titulo, editable, ocupado, renombrar, eliminar
   const [editando, setEditando] = useState(false)
   const [valor, setValor] = useState(titulo)
   const idCampo = useId()
+  // Al abrir la edición se lleva el foco al campo por código (no con el
+  // atributo autoFocus), para que el teclado y el lector de pantalla sigan
+  // en el lugar donde se activó "Renombrar".
+  const campo = useRef<HTMLInputElement>(null)
+  useEffect(() => { if (editando) campo.current?.focus() }, [editando])
   if (editando) return <form className="fila-editable" onSubmit={async e => { e.preventDefault(); if (await renombrar(valor.trim())) setEditando(false) }}>
     <label className="oculto" htmlFor={idCampo}>Nuevo título de {etiqueta.toLowerCase()}</label>
-    <input id={idCampo} value={valor} onChange={e => setValor(e.target.value)} autoFocus required />
+    <input id={idCampo} ref={campo} value={valor} onChange={e => setValor(e.target.value)} required />
     <button className="boton-secundario" type="submit" disabled={ocupado || !valor.trim()}>Guardar</button>
     <button className="boton-texto" type="button" onClick={() => { setValor(titulo); setEditando(false) }}>Cancelar</button>
   </form>

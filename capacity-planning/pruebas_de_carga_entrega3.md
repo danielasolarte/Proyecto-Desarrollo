@@ -176,6 +176,10 @@ Métricas globales de k6 (`http_req_duration` y `http_req_failed` de toda la cor
 
 Los umbrales del script (`p(95)` por operación, `checks > 99 %`, `functional_errors < 1 %`, `dup_submit_* = 0`, `progress_regressions = 0`) se cumplieron en 25, 50 y 100 VUs. En 10 VUs, `course_preview` y `quiz_answer` superaron su umbral de p95 por pocos valores altos sobre una muestra pequeña; no hubo errores.
 
+![Escenario 1: p95 y errores HTTP por nivel, Entrega 2 frente a Entrega 3](graficas/e1-p95-errores.png)
+
+*Figura 1. p95 de `http_req_duration` y tasa de `http_req_failed` por nivel. Fuente: `k6/results/e1-gcp-*.json` (E2) y `k6/results/e1-e3-*.json` (E3).*
+
 ## 4.3 Análisis
 
 - **De 10 a 50 VUs** el comportamiento es equivalente al de la Entrega 2: el throughput crece de forma lineal con la carga y la mediana se mantiene en 116–130 ms. La diferencia visible es la tasa de error, que pasa de ~0,2 % a **0 %** en todos los niveles, con 100 % de checks.
@@ -236,7 +240,7 @@ Con esta configuración se obtuvieron corridas con:
 
 Esta configuración constituye la línea base para la comparación con E3.
 
-Los valores detallados de latencias y tiempos de procesamiento de E2 deben copiarse de los resultados originales de C4 antes de cerrar el informe.
+Los archivos de resultados de las corridas C4 de la Entrega 2 no conservaron los percentiles de `upload → ready`; por eso la comparación con la E2 se hace con checks y tasa de errores, y no se estiman valores faltantes (ver 8.3).
 
 ---
 
@@ -338,6 +342,10 @@ Las corridas oficiales se ejecutaron contra el balanceador HTTPS usando k6 v2.3.
 | L1 | 312 | 1 | 0.18 % | 26.89 s | 68.13 s | 99.25 s | 1.51 s |
 | L2 | 544 | 0 | 0 % | 47.93 s | 143.94 s | 152.64 s | 2.68 s |
 | L3 | 1024 | 0 | 0 % | 45.04 s | 100.00 s | 164.34 s | 3.24 s |
+
+![Escenario 2: tiempo upload → ready promedio y p95 por nivel](graficas/e2-upload-ready.png)
+
+*Figura 2. Tiempo `upload → ready` (métrica `upload_time_to_ready_ms` de k6) por nivel. Fuente: `docs/entrega3/evidencias-escenario2/escenario2-e3-*.json`.*
 
 ### Baseline
 
@@ -480,6 +488,10 @@ Evidencias: `capacity-planning/results/e3-3a-timeline-20261031-124530.csv`, `e3-
 | 18:20:26 | 1 | `d14w` retirada; queda `6ssn` | 2,5 % |
 | 18:30:26 | 1 | Fin del monitor, grupo estable en 1 | 2,6 % |
 
+![Escenario 3A: CPU por instancia y tamaño del grupo](graficas/e3a-cpu-grupo.png)
+
+*Figura 3. Arriba, CPU por instancia (promedio por minuto, Cloud Monitoring); abajo, tamaño objetivo del grupo e instancias sanas en el balanceador. La caída de las sanas a 1 entre 17:54 y 17:56 es la prueba de exclusión (6.4). Fuente: `capacity-planning/results/e3-3a-cpu-20261031-133449.csv` y `e3-3a-timeline-20261031-124530.csv`.*
+
 Resultado de la carga (k6, 18 min): 26 231 peticiones (24,3 req/s promedio), p50 124 ms, p95 236 ms, p99 325 ms, máximo 5,5 s; **0,04 % de errores** (11 de 26 231, todos en `POST /auth/login`) y 19 iteraciones descartadas por el ejecutor de llegadas.
 
 ## 6.4 Exclusión de una instancia que falla el health check
@@ -497,6 +509,10 @@ Con dos instancias sanas se bloqueó, en `mooc-api-9gm4`, la salida a Redis (`ip
 | 17:56:07 | Recuperada | `9gm4` vuelve a recibir tráfico; `HEALTHY` a las 17:56:12 (~14 s) |
 | 17:56:13–17:56:33 | Recuperada | Reparto de nuevo entre las dos (35 y 15) |
 
+![Escenario 3A: respuestas por instancia durante la exclusión](graficas/e3a-exclusion.png)
+
+*Figura 4. Respuestas por instancia en ventanas de 5 s; la franja gris es el intervalo con Redis bloqueado en `9gm4`. Fuente: `capacity-planning/results/e3-3a-exclusion-20261031-125402.csv`.*
+
 La VM `9gm4` no fue recreada (siguió en el grupo hasta la reducción de las 18:10), lo que confirma la separación entre el health check de tráfico y el de autorreparación.
 
 ## 6.5 Análisis
@@ -509,6 +525,35 @@ La VM `9gm4` no fue recreada (siguió en el grupo hasta la reducción de las 18:
 - **Límite:** en el máximo de 3 instancias el autoscaler queda en `CAPPED_AT_MAX_NUM_REPLICAS`; más carga se traduciría en mayor latencia, no en rechazos del autoscaler. En esta prueba la meseta con 3 réplicas se mantuvo con p95 de 236 ms.
 
 ---
+
+# 7. Escenario 3B — Elasticidad de los workers
+
+**Responsable:** Camila  
+**Acompañamiento:** Mateo
+
+## 7.1 Objetivo
+
+Demostrar que el grupo de workers (`mooc-worker-mig`) crece y decrece de forma automática según la demanda de la cola multimedia, y que retirar un worker mientras procesa trabajos no hace perder trabajos ni deja recursos atascados en procesamiento.
+
+## 7.2 Configuración
+
+| Elemento | Valor |
+|---|---|
+| Grupo | `mooc-worker-mig`, e2-medium, zona us-central1-a, 1 a 3 instancias |
+| Señal | Métrica personalizada `custom.googleapis.com/mooc/cola/demanda` = pendientes + activos de la cola `media` |
+| Objetivo | 4 trabajos de demanda por instancia (`--update-stackdriver-metric ... --stackdriver-metric-single-instance-assignment=4`) |
+| Exportador | `cola-exportador` en `mooc-servicios`, publica la métrica cada 30 s |
+| Concurrencia | `WORKER_CONCURRENCY=2` por VM (igual que la corrección C4 de la E2) |
+| Apagado ordenado | `WORKER_SHUTDOWN_TIMEOUT_SECONDS=300`: al recibir la señal de apagado el worker deja de tomar trabajos y espera a que terminen los activos |
+| Reducción | 1 VM cada 10 min como máximo (`scale-in-control`) |
+| Cola | Redis en `mooc-servicios` (10.20.0.7), fuera del grupo |
+
+## 7.3 Carga y método
+
+- **Carga:** `k6/escenario2.js` en el nivel `peak` (8 uploaders y 30 viewers durante 3 min) contra el balanceador HTTPS, con los perfiles de video de la sección 5.3. Se hicieron dos corridas el 29/10/2026 (UTC): la primera para observar la subida y bajada del grupo (03:34–03:41) y la segunda para el retiro con trabajo activo (desde ~03:45).
+- **Observación:** registro del exportador (demanda, pendientes, activos y reintentos cada 30 s), estado de las instancias con `gcloud compute instance-groups managed list-instances mooc-worker-mig` y operaciones del grupo con `gcloud compute operations list` filtrado por `mooc-worker`.
+- **Retiro:** con `activos=3` se eliminó `mooc-worker-zp1h` con `gcloud compute instance-groups managed delete-instances mooc-worker-mig --instances=mooc-worker-zp1h` (03:44:50 UTC). Se verificó que la instancia pasara a `DELETING`, que el grupo recuperara la capacidad y que la cola terminara en `pendientes=0`, `activos=0` y `reintentos=0`.
+- **Evidencias:** `docs/entrega3/evidencias-escenario3b/` (estados del grupo antes, durante y después del retiro; operaciones de inserción y eliminación; estado final).
 
 ## 7.4 Línea de tiempo del autoscaling
 
@@ -528,6 +573,10 @@ Una muestra representativa de la corrida fue:
 | 03:40:03 | 1 | 0 | 1 | Último trabajo en ejecución |
 | 03:40:33 | 0 | 0 | 0 | Procesamiento terminado |
 
+![Escenario 3B: demanda, pendientes y activos de la cola](graficas/e3b-cola.png)
+
+*Figura 5. Muestras del exportador de la cola durante la primera corrida `peak` (tabla anterior); la línea vertical marca la creación automática de `mooc-worker-zp1h`.*
+
 Las operaciones del MIG también registraron creación y eliminación automática de instancias. Entre los eventos observados se encuentran:
 
 ```text
@@ -538,7 +587,7 @@ Las operaciones del MIG también registraron creación y eliminación automátic
 
 La creación por `cloudservices.gserviceaccount.com` confirma que las nuevas instancias fueron creadas por la infraestructura administrada y no mediante escalamiento manual.
 
-Durante la corrida se observaron hasta tres workers en el MIG. El nuevo worker pasó por los estados de verificación de salud hasta quedar `HEALTHY / NONE` y comenzó a contribuir al procesamiento de la cola.
+Según el registro de operaciones, en la primera corrida el grupo pasó de 1 a 2 workers (`mooc-worker-b7zl`, siempre activo, y `mooc-worker-zp1h`, creado a las 03:36:28 UTC); las 3 instancias se vieron durante el retiro de la sección 7.5 (`b7zl`, `pdxt` y `zp1h` en `DELETING`). Los valores de `activos` por encima de 2 × número de workers (por ejemplo 4 a las 03:35:33 con un worker y 6 a las 03:37:03 con dos) no se explican solo con la concurrencia configurada; ver la limitación en 8.3. El nuevo worker pasó por los estados de verificación de salud hasta quedar `HEALTHY / NONE` y comenzó a contribuir al procesamiento de la cola.
 
 Después de finalizar la carga y drenar completamente la cola, el MIG redujo nuevamente su capacidad hasta el mínimo configurado de una instancia, validando el ciclo completo de scale-up y scale-down.
 
@@ -674,8 +723,22 @@ En la API, el Escenario 1 mostró que la nueva arquitectura elimina el punto de 
 
 Estos resultados son coherentes con la decisión de arquitectura de separar Redis y la cola del MIG de workers: la cola permanece disponible aunque una VM de procesamiento sea creada, reemplazada o retirada.
 
-## 8.2 Pendientes
+## 8.2 Gráficas
 
-- Métricas C4 adicionales de E2 para el Escenario 2, si el equipo decide incluir percentiles que no están presentes en la evidencia actualmente disponible.
+Las figuras 1 a 5 se generan desde los resultados crudos del repositorio con:
+
+```powershell
+python capacity-planning/graficas/generar_graficas.py
+```
+
+## 8.3 Limitaciones
+
+- **Una corrida por nivel.** La metodología (sección 3) pedía repetir las corridas comparadas; por tiempo y créditos cada nivel se ejecutó una sola vez (salvo el nivel 50 del Escenario 1, repetido por una falla de red del generador). Los resultados son indicativos: no hay dispersión entre corridas ni intervalos de confianza, y diferencias pequeñas (por ejemplo 225 frente a 234 ms de p95 en 50 VUs) no son significativas.
+- **Sin métricas de infraestructura de Cloud SQL ni de red.** No se registraron CPU, memoria ni conexiones de Cloud SQL, ni red o disco de las VM durante las corridas. Por eso no se puede afirmar qué recurso se saturaría primero por encima de lo probado; la CPU de la API solo se midió en el Escenario 3A.
+- **Escenario 1 sin línea de tiempo del grupo.** No se registró cuántas réplicas de la API atendieron cada nivel; la mejora en 100 VUs se atribuye a la arquitectura en conjunto (API sola en su VM, TLS en el balanceador y escalamiento), sin separar el aporte de cada factor.
+- **Escenario 2 sin percentiles de la E2.** La evidencia de la corrección C4 de la Entrega 2 solo conserva checks y errores, así que el tiempo `upload → ready` no se puede comparar entre entregas. El nivel `peak` del Escenario 2 se usó solo para el 3B, no como corrida del Escenario 2.
+- **Escenario 3B con muestras parciales.** La serie de la cola de la figura 5 son las muestras transcritas del exportador (no hay un CSV completo en el repositorio). El valor de `activos` puede incluir trabajos cuyo worker ya no los procesa (asynq los mantiene como activos hasta que vence su plazo), lo que explicaría los valores por encima de 2 × workers; no se verificó con los registros de asynq.
+- **Generador de carga en un equipo personal.** k6 corrió en un portátil Windows por Internet; su red y su CPU no se midieron y en una ocasión degradaron una corrida (nivel 50 del Escenario 1).
+- **Datos sintéticos.** Las cuentas, cursos y archivos son de prueba; el tamaño de la base y de los videos es menor que el de un uso real.
 
 Las secciones de los Escenarios 1, 2, 3A y 3B quedan completas con las corridas y evidencias de la Entrega 3.

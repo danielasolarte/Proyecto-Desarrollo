@@ -25,6 +25,15 @@ Inventario priorizado de la deuda técnica conocida al cierre de la Entrega 3. R
 
 El análisis se ejecuta en GitHub Actions con SonarQube Cloud en cada push a `main` (paso `SonarQube Cloud` del job `backend-ci` en `.github/workflows/ci.yml`, con la cobertura de `go test -coverprofile`).
 
+**Datos del análisis**
+- **Herramienta y versión:** SonarQube Cloud (servicio SaaS, siempre en la última versión), invocado desde GitHub Actions con la acción `SonarSource/sonarqube-scan-action@v5`.
+- **Perfil de reglas:** *Sonar way* (perfil por defecto de SonarQube) para Go, TypeScript, JavaScript y CSS, sin reglas desactivadas.
+- **Quality gate:** *Sonar way* (por defecto de la organización).
+- **Commit evaluado:** `1cbf2ca` de la rama `main` (31/10/2026), ejecución **#48** del workflow `CI`.
+- **Alcance:** `cmd/`, `internal/` y `frontend/src/`. Las pruebas (`*_test.go`, `*.test.ts(x)`) cuentan como pruebas y no como código; `k6/`, `deploy/` y `postman/` quedan fuera. Configuración en `sonar-project.properties`.
+- **Reporte:** [resumen en SonarQube Cloud](https://sonarcloud.io/summary/overall?id=danielasolarte_Proyecto-Desarrollo&branch=main) · [issues abiertos](https://sonarcloud.io/project/issues?id=danielasolarte_Proyecto-Desarrollo&resolved=false) · [ejecuciones del pipeline en GitHub Actions](https://github.com/danielasolarte/Proyecto-Desarrollo/actions/workflows/ci.yml).
+- **Credenciales:** el token del análisis vive solo en el secreto `SONAR_TOKEN` del repositorio; no está en el código ni en este documento.
+
 | Métrica | Meta del enunciado | Resultado (análisis del 31/10/2026, rama `main`) | Cumple |
 |---|---|---|---|
 | Quality gate | — | **Passed** (todas las condiciones) | ✅ |
@@ -39,9 +48,20 @@ El análisis se ejecuta en GitHub Actions con SonarQube Cloud en cada push a `ma
 
 Lectura:
 - Las dos metas del enunciado se cumplen con margen: la duplicación (2,3 %) está muy por debajo del 20 % y la mantenibilidad es A. La deuda de mantenibilidad que mide SonarQube es de solo 5 minutos; la deuda relevante del proyecto es la de diseño y operación de la sección 3, que el análisis estático no ve.
-- El rating de **confiabilidad C** se debe a 3 issues de severidad media y el de **seguridad B** a 4 issues de severidad baja; se registran como D23 y D24 (sección 3.3) para revisarlos en la siguiente iteración.
+- El rating de **confiabilidad C** se debe a 3 issues de severidad media y el de **seguridad B** a 4 issues de severidad baja; se registran como D23 y D24 (sección 3.3). Los 3 de confiabilidad se corrigieron después del análisis (ver 2.1); los 4 de seguridad se aceptan con justificación y quedan para la siguiente iteración.
 - La **cobertura de 5,3 %** confirma el hallazgo D13: solo se mide la cobertura de Go (`go test -coverprofile`) y la mayor parte de los módulos no tiene pruebas unitarias. Las pruebas del frontend (Vitest) corren en el CI pero no reportan cobertura a SonarQube.
 - La configuración del análisis está en `sonar-project.properties`: se analizan `cmd/`, `internal/` y `frontend/src/`; las pruebas cuentan como pruebas y quedan fuera `k6/`, `deploy/` y `postman/` (herramientas, no producto).
+
+### 2.1 Detalle de los issues del análisis
+
+| Issue | Cualidad / severidad | Regla | Ubicación | Decisión |
+|---|---|---|---|---|
+| 1 | Confiabilidad / media | Las promesas deben esperarse o marcarse como ignoradas (promesa sin `await` ni `void`) | `frontend/src/componentes/media/VisorRecurso.tsx`, línea 44 | **Corregido:** la función asíncrona que carga la URL firmada se invoca con `void (async () => …)()`; los errores ya se manejaban dentro. |
+| 2 | Confiabilidad / media | No usar el atributo `autoFocus` (accesibilidad) | `frontend/src/paginas/profesor/EditorCurso.tsx`, línea 169 | **Corregido:** el foco se lleva al campo con `useRef` + `useEffect` solo al abrir la edición, y se quitó `autoFocus`. |
+| 3 | Confiabilidad / media | Las listas `font-family` deben terminar en una familia genérica | `frontend/src/styles.css`, línea 176 | **Corregido:** `font: 400 60px Manrope, sans-serif`. |
+| 4–7 | Seguridad / baja | *Make sure the PATH variable only contains fixed, unwriteable directories* (antes *security hotspot*, CWE-426/427) | `internal/media/worker/processor.go`, líneas 176 (`clamdscan`), 235 (`ffmpeg`), 279 (`ffprobe`) y 314 (`libreoffice`) | **Aceptado y diferido (D24):** `exec.Command` resuelve el binario por `PATH`. En la imagen del worker (`deploy/Dockerfile.worker`, base `debian:bookworm-slim`) el `PATH` es el de Debian y solo contiene directorios del sistema que pertenecen a root; los argumentos se pasan como lista, sin shell. Se corregirá usando rutas absolutas configurables. |
+
+Las correcciones de los issues 1–3 pasan las 38 pruebas de Vitest y el build del frontend; el siguiente análisis del CI sobre `main` debe mostrar confiabilidad **A** (0 issues).
 
 ---
 
@@ -79,8 +99,8 @@ Lectura:
 | D16 | Baja | Archivos muy largos con varias responsabilidades: `courses/http/handler.go` (~21 KB), `courses/postgres/course_repository.go` (~21 KB), `quizzes/http/handler.go` (~19 KB), `media/worker/processor.go` y `progress/usecase/service.go` (~15 KB). | `internal/...` | Más difíciles de revisar y probar; SonarQube suele reportarlos por complejidad cognitiva. | Separar por subrecurso (autoría, editor, publicación; preguntas e intentos; etapas del procesador). | M | Daniela, Camila, Mateo |
 | D17 | Baja | `FakeAuthMiddleware` sigue en el código, aunque el middleware real reemplazó a los encabezados falsos desde la E1. | `internal/platform/authctx` | Código muerto que podría usarse por error. | Eliminarlo junto con las pruebas antiguas que lo usen. | S | Samara |
 | D18 | Baja | Los scripts de k6 traen credenciales por defecto (`admin.k6@mooc.test` / `Admin12345`). | `k6/escenario1.js`, `k6/escenario2.js`, `k6/full-project.js` | Valores de prueba en el código; en la nube no sirven y confunden (pasó en el Escenario 1 de la E3). | Exigirlos por variable de entorno y fallar con un mensaje claro si faltan. | S | Samara |
-| D23 | Media | SonarQube reporta 3 issues de confiabilidad de severidad media (rating C). | Pestaña *Issues* de SonarQube Cloud, filtro *Reliability* | Posibles errores en tiempo de ejecución en casos borde. | Revisar y corregir los 3 issues; el rating debería subir a A. | S | Según el módulo de cada issue |
-| D24 | Baja | SonarQube reporta 4 issues de seguridad de severidad baja (rating B). | Pestaña *Issues* de SonarQube Cloud, filtro *Security* | Bajo; endurecimiento recomendado. | Revisar cada issue y corregirlo o marcarlo como aceptado con justificación. | S | Según el módulo de cada issue |
+| D23 | Media | SonarQube reportó 3 issues de confiabilidad de severidad media (rating C): promesa sin manejar, `autoFocus` y familia tipográfica sin genérica. | `VisorRecurso.tsx` L44, `EditorCurso.tsx` L169, `styles.css` L176 (detalle en 2.1) | Promesa rechazada sin manejar en el visor; foco que salta al abrir el editor (accesibilidad); tipografía distinta si Manrope no carga. | Corregidos (ver 2.1). | S | Daniela |
+| D24 | Baja | SonarQube reporta 4 issues de seguridad de severidad baja (rating B): el worker ejecuta `clamdscan`, `ffmpeg`, `ffprobe` y `libreoffice` buscándolos en el `PATH`. | `internal/media/worker/processor.go` L176, L235, L279, L314 | Bajo: si alguien pudiera escribir en un directorio del `PATH`, el worker ejecutaría otro binario. En la imagen actual el `PATH` solo tiene directorios de sistema de root. | Rutas absolutas configurables por variable de entorno (`FFMPEG_BIN`, etc.) o validar con `exec.LookPath` contra una lista fija al arrancar. | S | Mateo |
 
 ### 3.4 Repositorio y documentación
 
@@ -90,6 +110,37 @@ Lectura:
 | D20 | Baja | Archivos que no deberían estar en el repositorio o que el `.gitignore` no cubre: `.DS_Store` versionados, el archivo vacío `sh` en la raíz y carpetas locales sin ignorar (`Video y doc/`, `Claude outputs/`). | raíz, `internal/.DS_Store`, `internal/media/.DS_Store` | Riesgo de subir archivos pesados (el video pesa ~300 MB) o personales. | Borrar los archivos sobrantes y agregar `.DS_Store`, `Video y doc/` y `Claude outputs/` al `.gitignore`. | S | Samara |
 | D21 | Baja | El dominio `sslip.io` depende de un DNS público gratuito. | Balanceador (`mooc-e3-cert`) | Si el servicio falla o cambia, el certificado deja de renovarse. | Dominio propio con zona en Cloud DNS. | S | Daniela |
 | D22 | Baja | Heredado de la E2: 3 filas de `media_assets` en estado `failed` y objetos sin fila asociada en Cloud Storage. | `docs/entrega2/integridad-objetos.md` | Ruido en la reconciliación de trabajos. | Script de limpieza o registro definitivo; confirmar estado con Camila y Mateo. | S | Camila, Mateo |
+
+### 3.5 Evidencia, plazo y estado
+
+Plazos: **P1** antes de cualquier uso real del sistema; **P2** siguiente iteración (primeras 2 semanas después de la entrega); **P3** mantenimiento continuo. La evidencia apunta a dónde se puede verificar el hallazgo.
+
+| Id | Evidencia | Plazo | Estado y decisión |
+|---|---|---|---|
+| D01 | Código de `Register` en `internal/auth/http/handler.go`; la respuesta de `POST /api/auth/register` en la nube incluye `verification_token_dev`. | P1 | Abierto. Se mantiene a propósito durante la entrega porque la nube no tiene correo (D07) y las pruebas de carga registran cuentas; se cierra junto con D07. |
+| D02 | `internal/auth/usecase/auth.go`; Escenario 3A (`capacity-planning/pruebas_de_carga_entrega3.md` §6): el login con bcrypt es lo que más CPU consume. | P1 | Abierto. Aceptado para la entrega (entorno académico sin usuarios reales). |
+| D03 | `deploy/gcp/e3/09-admin-prueba.ps1`; tabla `audit_log` sin registros de esas promociones. | P1 | Mitigado: `deploy/gcp/e3/09-cuenta-admin.ps1` crea o restablece el administrador sin tocar roles de otras cuentas. Falta desactivar las cuentas de prueba al cerrar. |
+| D04 | `deploy/docker-compose.servicios.yml` (Redis sin `requirepass`); regla de firewall de 6379 limitada a las etiquetas `mooc-api` y `mooc-worker`. | P2 | Abierto, mitigado por firewall. Aceptado. |
+| D05 | `.\deploy\gcp\e3\06-cors-bucket.ps1 -Ver` muestra los orígenes permitidos. | P3 | Abierto. Se deja mientras el equipo prueba la carga de archivos desde local; se quita al cerrar la entrega. |
+| D06 | `docs/entrega3/arquitectura.md` §10.5; VM `mooc-servicios` única. | P2 | Abierto. Aceptado por costo (Memorystore no cabe en los créditos). |
+| D07 | `deploy/gcp/e3/config/api.config` sin `SMTP_ADDR`. | P1 | Abierto. Se compensa con D01 durante la entrega. |
+| D08 | `gcloud sql instances describe mooc-postgres` (tier `db-g1-small`, una sola zona). | P2 | Abierto. Aceptado por costo; las pruebas de carga no mostraron saturación de conexiones. |
+| D09 | `deploy/observability/alerts.yml`; en la E3 no hay Prometheus ni se publica `/metrics`. | P2 | Abierto. |
+| D10 | `deploy/gcp/e3/*.ps1`; incidentes de Docker Desktop/WSL durante la entrega. | P3 | Abierto. Aceptado: el enunciado no pide despliegue continuo. |
+| D11 | `curl -I https://136.68.98.101.sslip.io/catalogo` responde 404 con el HTML de la SPA. | P3 | Abierto. |
+| D12 | Cuentas `@mooc.test` en la tabla `users` de Cloud SQL. | P2 | Abierto. Necesarias hasta terminar las pruebas y el video. |
+| D13 | Cobertura de 5,3 % en SonarQube; módulos sin archivos `_test.go`. | P2 | Abierto. |
+| D14 | Configuración de la rama `main` en GitHub (sin checks requeridos). | P2 | Abierto. |
+| D15 | `internal/*/http/errors.go`; helpers repetidos en `k6/*.js` (la duplicación de SonarQube es 2,3 % porque `k6/` no se analiza). | P3 | Abierto. |
+| D16 | Tamaño de los archivos citados en el repositorio. | P3 | Abierto. |
+| D17 | `internal/platform/authctx`. | P3 | Abierto. |
+| D18 | Valores por defecto en `k6/escenario1.js`, `k6/escenario2.js`, `k6/full-project.js`. | P3 | Abierto. |
+| D19 | `README.md`. | — | **Cerrado** en esta entrega: el README se reorganizó por entrega, con la E3 arriba y enlaces a `docs/entrega3/` y al informe de capacidad. |
+| D20 | `git ls-files` muestra `.DS_Store` y `sh`. | P3 | Abierto. |
+| D21 | Certificado administrado `mooc-e3-cert` sobre `136.68.98.101.sslip.io`. | P3 | Abierto. Aceptado para la entrega. |
+| D22 | `docs/entrega2/integridad-objetos.md`. | P3 | Abierto. |
+| D23 | SonarQube Cloud, análisis del commit `1cbf2ca` (detalle en 2.1). | — | **Corregido** en esta entrega; se confirma con el siguiente análisis del CI. |
+| D24 | SonarQube Cloud, análisis del commit `1cbf2ca` (detalle en 2.1). | P2 | Aceptado con justificación y diferido (ver 2.1). |
 
 ---
 
@@ -103,6 +154,8 @@ Lectura:
 - Mailpit publicado por Caddy en el Web Server → no existe en la plantilla de los grupos (ver D07 para el correo real).
 - Migraciones desde un portátil → una sola ejecución desde `mooc-servicios` con bloqueo de golang-migrate.
 - Imagen de la API anterior a cookies y CSRF (C6) → imágenes fijadas por commit; la sesión y el CSRF se verificaron a través del balanceador (`08-balanceador.ps1 -Fase Sesion`).
+- Issues de confiabilidad de SonarQube (D23) → corregidos en el frontend (ver 2.1).
+- README que mezclaba las tres entregas (D19) → reorganizado por entrega.
 
 ---
 
@@ -110,4 +163,4 @@ Lectura:
 
 1. **Antes de cualquier uso real:** D01, D02, D07 (seguridad y correo) y D03 (cuentas de prueba).
 2. **Siguiente iteración:** D06 y D08 (puntos únicos de falla), D09 (alertas), D13 y D14 (pruebas y *quality gate*).
-3. **Mantenimiento continuo:** D10–D12 y D15–D22.
+3. **Mantenimiento continuo:** D10–D12, D15–D18 y D20–D22; D24 junto con la siguiente revisión del worker.
