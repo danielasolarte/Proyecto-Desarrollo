@@ -23,7 +23,7 @@ Inventario priorizado de la deuda técnica conocida al cierre de la Entrega 3. R
 
 ## 2. Análisis estático (SonarQube)
 
-El análisis se ejecuta en GitHub Actions con SonarQube Cloud en cada push a `main` (job `sonarqube` de `.github/workflows/ci.yml`).
+El análisis se ejecuta en GitHub Actions con SonarQube Cloud en cada push a `main` (paso `SonarQube Cloud` del job `backend-ci` en `.github/workflows/ci.yml`, con la cobertura de `go test -coverprofile`).
 
 | Métrica | Meta del enunciado | Resultado (análisis del 31/10/2026, rama `main`) | Cumple |
 |---|---|---|---|
@@ -33,12 +33,12 @@ El análisis se ejecuta en GitHub Actions con SonarQube Cloud en cada push a `ma
 | Mantenibilidad (rating) | C o mejor | **A** (1 issue de mantenibilidad) | ✅ |
 | Confiabilidad (rating) | — | **C** (3 issues, severidad media) | — |
 | Seguridad (rating) | — | **B** (4 issues, severidad baja) | — |
-| Issues totales | — | 7 | — |
+| Issues totales | — | 7 (un mismo issue puede afectar a más de una cualidad, por eso la suma por cualidad da 8) | — |
 | Cobertura de pruebas | — | 5,3 % (solo pruebas de Go; ver D13) | — |
-| Deuda técnica total | registrar | _completar con el esfuerzo estimado de la pestaña Issues_ | — |
+| Deuda técnica total (mantenibilidad) | registrar | **5 min** (ratio 0,0 %, 1 issue; esfuerzo para llegar a A: 0). Código nuevo del último análisis: 0 min | ✅ registrada |
 
 Lectura:
-- Las dos metas del enunciado se cumplen con margen: la duplicación (2,3 %) está muy por debajo del 20 % y la mantenibilidad es A.
+- Las dos metas del enunciado se cumplen con margen: la duplicación (2,3 %) está muy por debajo del 20 % y la mantenibilidad es A. La deuda de mantenibilidad que mide SonarQube es de solo 5 minutos; la deuda relevante del proyecto es la de diseño y operación de la sección 3, que el análisis estático no ve.
 - El rating de **confiabilidad C** se debe a 3 issues de severidad media y el de **seguridad B** a 4 issues de severidad baja; se registran como D23 y D24 (sección 3.3) para revisarlos en la siguiente iteración.
 - La **cobertura de 5,3 %** confirma el hallazgo D13: solo se mide la cobertura de Go (`go test -coverprofile`) y la mayor parte de los módulos no tiene pruebas unitarias. Las pruebas del frontend (Vitest) corren en el CI pero no reportan cobertura a SonarQube.
 - La configuración del análisis está en `sonar-project.properties`: se analizan `cmd/`, `internal/` y `frontend/src/`; las pruebas cuentan como pruebas y quedan fuera `k6/`, `deploy/` y `postman/` (herramientas, no producto).
