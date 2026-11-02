@@ -26,8 +26,8 @@ archivos en Cloud Storage, ambos compartidos por todas las instancias.
 - Frontend: https://136.68.98.101.sslip.io
 - API (mismo dominio, detrás del balanceador): https://136.68.98.101.sslip.io/api/v1
 - Versión publicada del frontend: https://136.68.98.101.sslip.io/version.json
-- Tag evaluado: `entrega-3` (_pendiente_, se crea sobre el commit final).
-- Video de sustentación: _pendiente_.
+- Tag evaluado: `entrega-3` (commit final de la entrega).
+- Video de sustentación: https://canva.link/npbpdsuxienq5w2
 
 Frontend y API comparten dominio, así que la sesión por cookies y el CSRF
 funcionan sin CORS. El bucket de medios sí tiene CORS para ese origen, porque el

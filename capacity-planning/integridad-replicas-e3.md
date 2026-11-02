@@ -200,11 +200,11 @@ operación original.
 
 | ID | Propiedad | Validación local | Validación GCP |
 |---|---|---|---|
-| I1 | Sesión entre réplicas | ✅ PASS | ⏳ Pendiente |
-| I2 | Escritura / lectura consistente | ✅ PASS | ⏳ Pendiente |
-| I3 | Submit idempotente | ✅ PASS | ⏳ Pendiente |
-| I4 | Recursos entre réplicas | ✅ PASS | ⏳ Pendiente |
-| I5 | Persistencia tras retiro | ✅ PASS | ⏳ Pendiente |
+| I1 | Sesión entre réplicas | ✅ PASS | ✅ PASS ([evidencia](../docs/entrega3/evidencias-integridad/README.md)) |
+| I2 | Escritura / lectura consistente | ✅ PASS | ✅ PASS ([evidencia](../docs/entrega3/evidencias-integridad/README.md)) |
+| I3 | Submit idempotente | ✅ PASS | ✅ PASS ([evidencia](../docs/entrega3/evidencias-integridad/README.md)) |
+| I4 | Recursos entre réplicas | ✅ PASS | ✅ PASS ([evidencia](../docs/entrega3/evidencias-integridad/README.md)) |
+| I5 | Persistencia tras retiro | ✅ PASS | ✅ PASS ([evidencia](../docs/entrega3/evidencias-integridad/README.md)) |
 ---
 
 ### Resultado de preparación local
