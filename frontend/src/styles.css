@@ -173,7 +173,7 @@ h2 {
   position:absolute;
   top:-30px;
   right:-47px;
-  font:400 60px Manrope;
+  font:400 60px Manrope, sans-serif;
   color:#d7e9ae
 }
 .estrella {

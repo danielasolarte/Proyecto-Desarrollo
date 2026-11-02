@@ -41,10 +41,8 @@ export function RecursoEstudiante({
     setError('')
 
     try {
-      const progreso = await api.heartbeatRecurso(
-        recurso.id,
-        posicionRef.current,
-      )
+      const progreso = await api.abrirRecurso(recurso.id)
+      
       setAbierto(true)
       setCompletado(progreso.Status === 'completed')
       setSegundosActivos(progreso.ActiveSeconds ?? 0)
