@@ -79,6 +79,22 @@ jobs:
       - name: Unit tests
         run: go test -coverprofile=coverage.out ./cmd/... ./internal/...
 
+      # Cobertura del frontend (Vitest) para SonarQube. Las rutas del lcov
+      # salen relativas a frontend/ y SonarQube las resuelve desde la raiz.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend coverage
+        working-directory: frontend
+        run: |
+          npm ci
+          npx vitest run --coverage --coverage.provider=v8 --coverage.reporter=lcov --coverage.reporter=text-summary
+          sed -i -E 's#^SF:(src/)#SF:frontend/\1#' coverage/lcov.info
+
       - name: Build binaries
         run: |
           mkdir -p build
