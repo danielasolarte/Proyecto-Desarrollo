@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactElement } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ErrorAPI } from '../../api/cliente'
 import { problemasDePublicacion, siguientePosicion } from '../../api/cursos'
@@ -9,6 +9,7 @@ import { ProveedorSesion } from '../../auth/Sesion'
 import { Catalogo } from './Catalogo'
 import { DetalleCurso } from './DetalleCurso'
 import { MisCursos } from '../profesor/MisCursos'
+import { EditorCurso } from '../profesor/EditorCurso'
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
@@ -97,6 +98,18 @@ describe('detalle del curso', () => {
     montar('/cursos/c9', <DetalleCurso />, '/cursos/:id')
     expect(await screen.findByText('Este curso no está publicado.')).toBeTruthy()
   })
+  it('si la API responde 409 (ya estaba inscrito) muestra Ir al curso', async () => {
+    api({
+      'GET /api/v1/me': () => json(estudiante),
+      'GET /api/v1/courses/c1/outline': () => json(temario),
+      'GET /api/v1/me/enrollments': () => json([]),
+      'POST /api/v1/courses/c1/enrollments': () => json({ error: { code: 'conflict', message: 'ya inscrito' } }, 409),
+    })
+    montar('/cursos/c1', <DetalleCurso />, '/cursos/:id')
+    expect(await screen.findByText('Lectura')).toBeTruthy()
+    fireEvent.click(await screen.findByRole('button', { name: /Inscribirme/ }))
+    expect(await screen.findByRole('button', { name: /Ir al curso/ })).toBeTruthy()
+  })
   it('el profesor dueño ve Editar y no puede inscribirse', async () => {
     api({ 'GET /api/v1/me': () => json(profesor), 'GET /api/v1/courses/c1/outline': () => json(temario) })
     montar('/cursos/c1', <DetalleCurso />, '/cursos/:id')
@@ -124,5 +137,41 @@ describe('mis cursos del profesor', () => {
     api({ 'GET /api/v1/me': () => json(profesor), 'GET /api/v1/me/courses': () => json({ courses: [], next_cursor: '' }) })
     montar('/profesor/cursos', <MisCursos />, '/profesor/cursos')
     await waitFor(() => expect(screen.getByText('Todavía no has creado cursos')).toBeTruthy())
+  })
+})
+
+describe('editor del curso', () => {
+  const curso = { id: 'c1', teacher_id: 'profe-1', slug: 'go', latest_draft_version_id: 'v1' }
+  const vista = {
+    tree: {
+      version: { id: 'v1', course_id: 'c1', version_number: 1, status: 'draft', title: 'Introducción a Go', summary: '', category: 'programacion' },
+      modules: [{ module: { id: 'm1', title: 'Fundamentos', position: 1 }, units: [] }],
+    },
+    problems: [],
+  }
+  it('al renombrar lleva el foco al campo y Cancelar lo cierra', async () => {
+    api({
+      'GET /api/v1/me': () => json(profesor),
+      'GET /api/v1/courses/c1': () => json(curso),
+      'GET /api/v1/courses/c1/preview': () => json(vista),
+    })
+    montar('/profesor/cursos/c1/editar', <EditorCurso />, '/profesor/cursos/:id/editar')
+    fireEvent.click(await screen.findByRole('button', { name: 'Renombrar módulo Fundamentos' }))
+    const campo = screen.getByLabelText('Nuevo título de módulo')
+    await waitFor(() => expect(document.activeElement).toBe(campo))
+    fireEvent.click(within(campo.closest('form') as HTMLElement).getByRole('button', { name: 'Cancelar' }))
+    expect(await screen.findByRole('button', { name: 'Renombrar módulo Fundamentos' })).toBeTruthy()
+  })
+  it('eliminar pide confirmación en la pantalla y No la cancela', async () => {
+    api({
+      'GET /api/v1/me': () => json(profesor),
+      'GET /api/v1/courses/c1': () => json(curso),
+      'GET /api/v1/courses/c1/preview': () => json(vista),
+    })
+    montar('/profesor/cursos/c1/editar', <EditorCurso />, '/profesor/cursos/:id/editar')
+    fireEvent.click(await screen.findByRole('button', { name: 'Eliminar módulo Fundamentos' }))
+    expect(screen.getByRole('group', { name: 'Confirmar eliminar módulo Fundamentos' })).toBeTruthy()
+    fireEvent.click(within(screen.getByRole('group', { name: 'Confirmar eliminar módulo Fundamentos' })).getByRole('button', { name: 'No' }))
+    expect(await screen.findByRole('button', { name: 'Eliminar módulo Fundamentos' })).toBeTruthy()
   })
 })
