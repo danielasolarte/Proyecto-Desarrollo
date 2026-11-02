@@ -23,24 +23,25 @@ Inventario priorizado de la deuda técnica conocida al cierre de la Entrega 3. R
 
 ## 2. Análisis estático (SonarQube)
 
-El análisis se ejecuta en GitHub Actions con SonarQube Cloud en cada push a `main` (paso `SonarQube Cloud` del job `backend-ci` en `.github/workflows/ci.yml`, con la cobertura de `go test -coverprofile`).
+El análisis se ejecuta en GitHub Actions con SonarQube Cloud en cada push a `main` (paso `SonarQube Cloud` del job `backend-ci` en `.github/workflows/ci.yml`), con perfil y quality gate *Sonar way*. Recibe la cobertura de Go (`go test -coverprofile`) y la del frontend (Vitest con `@vitest/coverage-v8`, reporte lcov).
 
-| Métrica | Meta del enunciado | Resultado (análisis del 31/10/2026, rama `main`) | Cumple |
-|---|---|---|---|
-| Quality gate | — | **Passed** (todas las condiciones) | ✅ |
-| Líneas de código analizadas | — | 14 k (backend Go + frontend React/TypeScript) | — |
-| Duplicación | ≤ 20 % | **2,3 %** | ✅ |
-| Mantenibilidad (rating) | C o mejor | **A** (1 issue de mantenibilidad) | ✅ |
-| Confiabilidad (rating) | — | **C** (3 issues, severidad media) | — |
-| Seguridad (rating) | — | **B** (4 issues, severidad baja) | — |
-| Issues totales | — | 7 (un mismo issue puede afectar a más de una cualidad, por eso la suma por cualidad da 8) | — |
-| Cobertura de pruebas | — | 5,3 % (solo pruebas de Go; ver D13) | — |
-| Deuda técnica total (mantenibilidad) | registrar | **5 min** (ratio 0,0 %, 1 issue; esfuerzo para llegar a A: 0). Código nuevo del último análisis: 0 min | ✅ registrada |
+| Métrica | Meta del enunciado | Línea base (primer análisis, 31/10/2026) | Último análisis (01/11/2026, rama `main`) | Cumple |
+|---|---|---|---|---|
+| Quality gate | — | Passed | **Passed** (todas las condiciones) | ✅ |
+| Líneas de código analizadas | — | 14 k | 14 k (backend Go + frontend React/TypeScript) | — |
+| Duplicación | ≤ 20 % | 2,3 % | **2,3 %** | ✅ |
+| Mantenibilidad (rating) | C o mejor | A (1 issue) | **A** (0 issues) | ✅ |
+| Confiabilidad (rating) | — | C (3 issues, severidad media) | **A** (0 issues: corregidos, ver D23) | ✅ |
+| Seguridad (rating) | — | B (4 issues, severidad baja) | **B** (4 issues, severidad baja, ver D24) | — |
+| Issues totales | — | 7 | **4** (todos de seguridad) | — |
+| Cobertura de pruebas | — | 5,3 % (solo Go) | **21,3 %** (Go + frontend) | — |
+| Deuda técnica total (mantenibilidad) | registrar | 5 min | **0 min** (ratio 0,0 %) | ✅ registrada |
 
 Lectura:
-- Las dos metas del enunciado se cumplen con margen: la duplicación (2,3 %) está muy por debajo del 20 % y la mantenibilidad es A. La deuda de mantenibilidad que mide SonarQube es de solo 5 minutos; la deuda relevante del proyecto es la de diseño y operación de la sección 3, que el análisis estático no ve.
-- El rating de **confiabilidad C** se debe a 3 issues de severidad media y el de **seguridad B** a 4 issues de severidad baja; se registran como D23 y D24 (sección 3.3) para revisarlos en la siguiente iteración.
-- La **cobertura de 5,3 %** confirma el hallazgo D13: solo se mide la cobertura de Go (`go test -coverprofile`) y la mayor parte de los módulos no tiene pruebas unitarias. Las pruebas del frontend (Vitest) corren en el CI pero no reportan cobertura a SonarQube.
+- Las dos metas del enunciado se cumplen con margen: la duplicación (2,3 %) está muy por debajo del 20 % y la mantenibilidad es A. La deuda de mantenibilidad que mide SonarQube pasó de 5 minutos a 0; la deuda relevante del proyecto es la de diseño y operación de la sección 3, que el análisis estático no ve.
+- **Confiabilidad:** los 3 issues de severidad media del primer análisis estaban en el frontend y se corrigieron; el rating subió de C a A (D23, cerrado).
+- **Seguridad:** quedan 4 issues de severidad baja, relacionados con el PATH del contenedor del worker; se aceptan con justificación y quedan diferidos (D24).
+- **Cobertura:** era de 5,3 % porque SonarQube solo recibía la de Go. Al enviar también la del frontend, la quality gate falló por *Coverage on New Code* (0 % sobre 8 líneas nuevas del frontend que sí tenían pruebas); se agregó el reporte de Vitest al CI y tres pruebas (409 al inscribirse, foco al renombrar y confirmación de eliminar en el editor), y la gate volvió a *Passed* con cobertura general de **21,3 %**. Sigue siendo la métrica más débil por los módulos de Go sin pruebas (D13).
 - La configuración del análisis está en `sonar-project.properties`: se analizan `cmd/`, `internal/` y `frontend/src/`; las pruebas cuentan como pruebas y quedan fuera `k6/`, `deploy/` y `postman/` (herramientas, no producto).
 
 ---
@@ -79,8 +80,8 @@ Lectura:
 | D16 | Baja | Archivos muy largos con varias responsabilidades: `courses/http/handler.go` (~21 KB), `courses/postgres/course_repository.go` (~21 KB), `quizzes/http/handler.go` (~19 KB), `media/worker/processor.go` y `progress/usecase/service.go` (~15 KB). | `internal/...` | Más difíciles de revisar y probar; SonarQube suele reportarlos por complejidad cognitiva. | Separar por subrecurso (autoría, editor, publicación; preguntas e intentos; etapas del procesador). | M | Daniela, Camila, Mateo |
 | D17 | Baja | `FakeAuthMiddleware` sigue en el código, aunque el middleware real reemplazó a los encabezados falsos desde la E1. | `internal/platform/authctx` | Código muerto que podría usarse por error. | Eliminarlo junto con las pruebas antiguas que lo usen. | S | Samara |
 | D18 | Baja | Los scripts de k6 traen credenciales por defecto (`admin.k6@mooc.test` / `Admin12345`). | `k6/escenario1.js`, `k6/escenario2.js`, `k6/full-project.js` | Valores de prueba en el código; en la nube no sirven y confunden (pasó en el Escenario 1 de la E3). | Exigirlos por variable de entorno y fallar con un mensaje claro si faltan. | S | Samara |
-| D23 | Media | SonarQube reporta 3 issues de confiabilidad de severidad media (rating C). | Pestaña *Issues* de SonarQube Cloud, filtro *Reliability* | Posibles errores en tiempo de ejecución en casos borde. | Revisar y corregir los 3 issues; el rating debería subir a A. | S | Según el módulo de cada issue |
-| D24 | Baja | SonarQube reporta 4 issues de seguridad de severidad baja (rating B). | Pestaña *Issues* de SonarQube Cloud, filtro *Security* | Bajo; endurecimiento recomendado. | Revisar cada issue y corregirlo o marcarlo como aceptado con justificación. | S | Según el módulo de cada issue |
+| D23 | ~~Media~~ **Cerrado** | SonarQube reportó 3 issues de confiabilidad de severidad media en el frontend (rating C). | Pestaña *Issues* de SonarQube Cloud, filtro *Reliability* | Posibles errores en tiempo de ejecución en casos borde. | Corregidos en esta entrega; la confiabilidad quedó en A. | S | Daniela |
+| D24 | Baja | SonarQube reporta 4 issues de seguridad de severidad baja (rating B), por el PATH del contenedor del worker. | Pestaña *Issues* de SonarQube Cloud, filtro *Security* | Bajo; endurecimiento recomendado. | Aceptados con justificación y diferidos: fijar un PATH explícito en `deploy/Dockerfile.worker` en la siguiente iteración. | S | Mateo |
 
 ### 3.4 Repositorio y documentación
 
@@ -103,6 +104,8 @@ Lectura:
 - Mailpit publicado por Caddy en el Web Server → no existe en la plantilla de los grupos (ver D07 para el correo real).
 - Migraciones desde un portátil → una sola ejecución desde `mooc-servicios` con bloqueo de golang-migrate.
 - Imagen de la API anterior a cookies y CSRF (C6) → imágenes fijadas por commit; la sesión y el CSRF se verificaron a través del balanceador (`08-balanceador.ps1 -Fase Sesion`).
+
+Del inventario de esta entrega ya quedaron cerrados **D19** (README reorganizado) y **D23** (issues de confiabilidad de SonarQube), y avanzó **D13** (la cobertura del frontend ya se mide: 21,3 % en total).
 
 ---
 
