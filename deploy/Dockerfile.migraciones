@@ -1,0 +1,10 @@
+# Imagen del job de migraciones de la E4 (Cloud Run Job mooc-migraciones).
+# golang-migrate + la carpeta migrations/ del mismo commit que el backend.
+# DATABASE_URL llega como variable de entorno desde Secret Manager.
+#
+#   args: up       aplica las migraciones pendientes (por defecto)
+#   args: version  muestra la versión aplicada
+FROM migrate/migrate:v4.17.1
+COPY migrations /migrations
+ENTRYPOINT ["/bin/sh", "-c", "exec migrate -path /migrations -database \"$DATABASE_URL\" \"$@\"", "--"]
+CMD ["up"]

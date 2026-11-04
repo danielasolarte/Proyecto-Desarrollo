@@ -26,6 +26,41 @@ services:
       timeout: 3s
       retries: 10
 
+  # Emulador de Pub/Sub (Entrega 4). En GCP la cola es un topic de Pub/Sub
+  # con una suscripción push al worker; aquí el emulador cumple ese papel.
+  pubsub:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085 --project=${PUBSUB_PROJECT:-mooc-local}
+    ports:
+      - "${PUBSUB_PORT:-8085}:8085"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8085/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Contenedor de un solo uso: crea en el emulador el topic, el de fallidos
+  # y la suscripción push al worker, con los mismos nombres que Terraform
+  # crea en GCP (infra/terraform/pubsub.tf). Si ya existen, el emulador
+  # responde 409 y se sigue.
+  pubsub-init:
+    image: curlimages/curl:8.11.1
+    depends_on:
+      pubsub:
+        condition: service_healthy
+    environment:
+      E: http://pubsub:8085/v1/projects/${PUBSUB_PROJECT:-mooc-local}
+      TOPIC: ${PUBSUB_TOPIC:-mooc-media-jobs}
+      PUSH_ENDPOINT: ${PUBSUB_PUSH_ENDPOINT:-http://worker:8081/pubsub/push}
+    entrypoint: >
+      /bin/sh -c '
+      curl -s -X PUT "$$E/topics/$$TOPIC" -o /dev/null -w "topic $$TOPIC: %{http_code}\n" &&
+      curl -s -X PUT "$$E/topics/$$TOPIC-dlq" -o /dev/null -w "topic $$TOPIC-dlq: %{http_code}\n" &&
+      curl -s -X PUT "$$E/subscriptions/$$TOPIC-worker" -H "Content-Type: application/json"
+      -d "{\"topic\":\"projects/${PUBSUB_PROJECT:-mooc-local}/topics/$$TOPIC\",\"ackDeadlineSeconds\":600,\"pushConfig\":{\"pushEndpoint\":\"$$PUSH_ENDPOINT\"}}"
+      -o /dev/null -w "suscripción $$TOPIC-worker -> $$PUSH_ENDPOINT: %{http_code}\n"
+      '
+
   minio:
     image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
@@ -89,13 +124,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+      pubsub-init:
+        condition: service_completed_successfully
       minio-init:
         condition: service_completed_successfully
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
-      REDIS_ADDR: redis:6379
+      # Cola de trabajos: Pub/Sub (emulador). Sin Redis desde la E4.
+      PUBSUB_PROJECT: ${PUBSUB_PROJECT:-mooc-local}
+      PUBSUB_TOPIC: ${PUBSUB_TOPIC:-mooc-media-jobs}
+      PUBSUB_EMULATOR_HOST: pubsub:8085
       S3_ENDPOINT: minio:9000
       # Host publico que queda firmado en las URLs de subida/descarga que
       # recibe el navegador/Postman -- "minio:9000" solo resuelve DENTRO

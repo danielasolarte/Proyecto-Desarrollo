@@ -15,7 +15,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/redis/go-redis/v9"
 
 	adminHTTP "github.com/equipo-mooc/plataforma-mooc/internal/admin/http"
 	authHTTP "github.com/equipo-mooc/plataforma-mooc/internal/auth/http"
@@ -27,6 +26,7 @@ import (
 	catalogPG "github.com/equipo-mooc/plataforma-mooc/internal/catalog/postgres"
 	coursesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/courses/http"
 	coursesPG "github.com/equipo-mooc/plataforma-mooc/internal/courses/postgres"
+	mediaDomain "github.com/equipo-mooc/plataforma-mooc/internal/media/domain"
 	mediaHTTP "github.com/equipo-mooc/plataforma-mooc/internal/media/http"
 	mediaPlatform "github.com/equipo-mooc/plataforma-mooc/internal/media/platform"
 	mediaPG "github.com/equipo-mooc/plataforma-mooc/internal/media/postgres"
@@ -64,13 +64,6 @@ func main() {
 		log.Fatalf("no se pudo conectar a postgres: %v", err)
 	}
 
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-	}
-	redisClient := redis.NewClient(&redis.Options{Addr: redisAddr})
-	defer redisClient.Close()
-
 	smtpAddr := os.Getenv("SMTP_ADDR")
 	if smtpAddr == "" {
 		smtpAddr = "localhost:1025"
@@ -98,16 +91,17 @@ func main() {
 	e.Use(middleware.Recover())
 
 	userRepo := authPG.NewUserRepository(db)
-	sessionStore := authPG.NewRedisSessionStore(redisClient)
+	sessionStore := authPG.NewPostgresOnlySessionStore()
 	mailerClient := mailer.NewSMTPMailer(smtpAddr, mailFrom)
 	e.Use(authHTTP.AuthMiddleware(userRepo, sessionStore))
 	e.Use(authHTTP.CSRFMiddleware())
 
-	// /health (vida) y /health/ready (Postgres + Redis, sin detalles de
-	// error). El balanceador usa /health/ready; ver internal/platform/health.
+	// /health (vida) y /health/ready (Postgres, sin detalles de error).
+	// Cloud Run usa /health/ready como sonda de arranque; ver
+	// internal/platform/health. Desde la E4 no hay Redis: las sesiones
+	// viven solo en Postgres y la cola es Pub/Sub.
 	checker := health.New(time.Duration(intEnv("HEALTH_TIMEOUT_MS", 1500)) * time.Millisecond)
 	checker.Add("postgres", func(ctx context.Context) error { return db.Ping(ctx) })
-	checker.Add("redis", func(ctx context.Context) error { return redisClient.Ping(ctx).Err() })
 	checker.Register(e)
 	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
@@ -152,7 +146,7 @@ func main() {
 	quizHandler := quizzesHTTP.NewHandler(quizService, quizRepo, courseRepo, catalogRepo, progressService)
 	quizzesHTTP.RegisterRoutes(e, quizHandler)
 
-	// Media: storage (MinIO/S3) y cola de trabajos (Redis/asynq) son
+	// Media: storage (MinIO/S3) y cola de trabajos (Pub/Sub) son
 	// infraestructura propia del módulo, aparte de userRepo/sessionStore
 	// que ya usan los demás.
 	s3Endpoint := os.Getenv("S3_ENDPOINT")
@@ -200,7 +194,10 @@ func main() {
 		log.Fatalf("no se pudo conectar a minio/s3: %v", err)
 	}
 
-	mediaQueue := mediaPlatform.NewAsynqQueue(redisAddr)
+	mediaQueue, err := newMediaQueue()
+	if err != nil {
+		log.Fatalf("cola de trabajos: %v", err)
+	}
 	defer mediaQueue.Close()
 
 	mediaHandler := mediaHTTP.NewHandler(mediaRepo, courseRepo, catalogRepo, mediaStorage, mediaQueue)
@@ -260,6 +257,36 @@ func serve(e *echo.Echo, checker *health.Checker, addr string) {
 	}
 	log.Println("API apagada sin solicitudes pendientes")
 }
+
+// mediaQueue es la cola de trabajos multimedia que usa la API.
+type mediaQueue interface {
+	EnqueueMediaJob(job *mediaDomain.MediaJob) error
+	Close() error
+}
+
+// newMediaQueue elige la cola según el entorno:
+//
+//   - PUBSUB_TOPIC definido: Pub/Sub (Cloud Run y docker-compose con el
+//     emulador, que se activa con PUBSUB_EMULATOR_HOST).
+//   - Si no, REDIS_ADDR: asynq, solo mientras el worker local termina de
+//     pasar a Pub/Sub. Se elimina cuando el worker ya no use asynq.
+func newMediaQueue() (mediaQueue, error) {
+	if topic := os.Getenv("PUBSUB_TOPIC"); topic != "" {
+		log.Printf("cola de trabajos: Pub/Sub, topic %s", topic)
+		return mediaPlatform.NewPubSubQueue(mediaPlatform.PubSubConfig{
+			ProjectID:    os.Getenv("PUBSUB_PROJECT"),
+			TopicID:      topic,
+			EmulatorHost: os.Getenv("PUBSUB_EMULATOR_HOST"),
+			Timeout:      time.Duration(intEnv("PUBSUB_PUBLISH_TIMEOUT_MS", 5000)) * time.Millisecond,
+		})
+	}
+	if addr := os.Getenv("REDIS_ADDR"); addr != "" {
+		log.Printf("cola de trabajos: asynq en %s (transitorio, solo local)", addr)
+		return mediaPlatform.NewAsynqQueue(addr), nil
+	}
+	return nil, errors.New("define PUBSUB_TOPIC y PUBSUB_PROJECT (o REDIS_ADDR solo en local)")
+}
+
 func intEnv(key string, fallback int) int {
 	value := os.Getenv(key)
 	if value == "" {

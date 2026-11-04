@@ -1,0 +1,15 @@
+# Copia este archivo como terraform.tfvars (git lo ignora) solo si usas un
+# proyecto distinto al del curso. Aquí no van secretos.
+#
+# project_id    = "mi-proyecto"
+# region        = "us-central1"
+# bucket_medios = "mi-bucket-de-medios"
+#
+# image_tag se pasa en cada despliegue:
+#   terraform apply -var "image_tag=$(git rev-parse --short HEAD)"
+#
+# servicios_habilitados = {
+#   frontend = true
+#   backend  = true
+#   worker   = true
+# }
