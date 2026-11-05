@@ -11,7 +11,7 @@
 #   backend     0    3    1   1 GiB         40          60 s  público
 #   worker      0    3    2   4 GiB          1         600 s  solo sa-pubsub-push
 #
-# Todos salen a la VPC de la E2 por salida directa (solo rangos privados)
+# Backend, worker y migraciones salen a la VPC por salida directa (solo rangos privados)
 # para llegar a Cloud SQL por IP privada; el resto (Pub/Sub, Storage) sale
 # directo a internet de Google.
 
@@ -24,7 +24,7 @@ locals {
   # Variables no secretas comunes a backend y worker (las mismas de la E3).
   entorno_almacenamiento = {
     S3_ENDPOINT = "storage.googleapis.com"
-    S3_BUCKET   = data.google_storage_bucket.medios.name
+    S3_BUCKET   = local.nombre_bucket_medios
     S3_USE_SSL  = "true"
     S3_REGION   = var.region
   }
@@ -43,15 +43,10 @@ data "google_artifact_registry_docker_image" "servicio" {
   }
 
   location      = var.region
-  repository_id = var.repositorio_imagenes
+  repository_id = google_artifact_registry_repository.imagenes.repository_id
   image_name    = each.value
 }
 
-data "google_artifact_registry_docker_image" "migraciones" {
-  location      = var.region
-  repository_id = var.repositorio_imagenes
-  image_name    = local.imagen["migraciones"]
-}
 
 # =====================================================================
 # Backend (Daniela)
@@ -77,8 +72,8 @@ resource "google_cloud_run_v2_service" "backend" {
     vpc_access {
       egress = "PRIVATE_RANGES_ONLY"
       network_interfaces {
-        network    = data.google_compute_network.vpc.id
-        subnetwork = data.google_compute_subnetwork.subred.id
+        network    = google_compute_network.vpc.id
+        subnetwork = google_compute_subnetwork.subred.id
       }
     }
 
@@ -125,12 +120,12 @@ resource "google_cloud_run_v2_service" "backend" {
       # Secretos: Cloud Run los inyecta como variables de entorno desde
       # Secret Manager; no pasan por el repositorio ni por el estado.
       dynamic "env" {
-        for_each = { for k, v in var.secretos : k => v if contains(local.lectores_secretos[k], "backend") }
+        for_each = { for k, v in local.secretos : k => v if contains(local.lectores_secretos[k], "backend") }
         content {
           name = env.key
           value_source {
             secret_key_ref {
-              secret  = data.google_secret_manager_secret.app[env.key].secret_id
+              secret  = google_secret_manager_secret.app[env.key].secret_id
               version = "latest"
             }
           }
@@ -230,8 +225,8 @@ resource "google_cloud_run_v2_service" "worker" {
     vpc_access {
       egress = "PRIVATE_RANGES_ONLY"
       network_interfaces {
-        network    = data.google_compute_network.vpc.id
-        subnetwork = data.google_compute_subnetwork.subred.id
+        network    = google_compute_network.vpc.id
+        subnetwork = google_compute_subnetwork.subred.id
       }
     }
 
@@ -267,12 +262,12 @@ resource "google_cloud_run_v2_service" "worker" {
       }
 
       dynamic "env" {
-        for_each = { for k, v in var.secretos : k => v if contains(local.lectores_secretos[k], "worker") }
+        for_each = { for k, v in local.secretos : k => v if contains(local.lectores_secretos[k], "worker") }
         content {
           name = env.key
           value_source {
             secret_key_ref {
-              secret  = data.google_secret_manager_secret.app[env.key].secret_id
+              secret  = google_secret_manager_secret.app[env.key].secret_id
               version = "latest"
             }
           }

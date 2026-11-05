@@ -26,6 +26,5 @@ gcloud storage buckets update "gs://$BUCKET_ESTADO" --versioning --project=$P --
 Ok "Versionado activo."
 
 Titulo "Siguiente paso"
-Write-Host "  cd $TF_DIR"
-Write-Host "  terraform init"
+Write-Host "  .\deploy\gcp\e4\tf.ps1 init"
 CerrarRegistro

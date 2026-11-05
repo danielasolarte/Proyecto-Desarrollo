@@ -7,11 +7,17 @@ Nada de este archivo es secreto.
 # Raiz del repositorio.
 Set-Location (Resolve-Path (Join-Path $PSScriptRoot "..\..\.."))
 
-$P = if ($env:GCP_PROJECT) { $env:GCP_PROJECT } else { "proyecto1-entrega2-desarrollo" }
+. (Join-Path $PSScriptRoot "proyecto.ps1")
+$P = if ($env:GCP_PROJECT) { $env:GCP_PROJECT } else { $PROYECTO_E4 }
 $R = if ($env:GCP_REGION) { $env:GCP_REGION } else { "us-central1" }
+if ($P -like "REEMPLAZAR*") {
+    Write-Host "Falta el proyecto: pon el ID del proyecto de la E4 en deploy/gcp/e4/proyecto.ps1" -ForegroundColor Red
+    throw "Proyecto sin configurar"
+}
 
 $BUCKET_ESTADO = "mooc-tfstate-$P"
-$REPO_AR = "mooc-e2"
+$REPO_AR = "mooc-e4"
+$SQL = "mooc-e4-postgres"
 $REGISTRO = "$R-docker.pkg.dev"
 $TF_DIR = "infra/terraform"
 
@@ -46,4 +52,10 @@ function ArbolLimpio {
     # Una imagen debe corresponder exactamente a un commit.
     $cambios = git status --porcelain --untracked-files=no
     return -not $cambios
+}
+
+function SalidaTerraform($nombre) {
+    $v = terraform "-chdir=$TF_DIR" output -raw $nombre 2>$null
+    if ($LASTEXITCODE -ne 0) { return $null }
+    return "$v".Trim()
 }

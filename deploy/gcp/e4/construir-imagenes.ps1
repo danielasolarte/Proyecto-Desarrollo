@@ -5,7 +5,8 @@ Cada imagen se etiqueta con el commit corto (git rev-parse --short HEAD), asi
 que una etiqueta corresponde exactamente a un commit. Terraform despliega por
 digest la imagen de esa etiqueta (ver infra/terraform/cloudrun.tf).
 
-Requisitos: Docker Desktop corriendo y una sola vez
+Requisitos: Docker Desktop corriendo, la base ya creada con Terraform (el
+repositorio mooc-e4 de Artifact Registry) y una sola vez
   gcloud auth configure-docker us-central1-docker.pkg.dev
 
 Uso:
@@ -14,7 +15,7 @@ Uso:
   .\deploy\gcp\e4\construir-imagenes.ps1 -Servicios backend,frontend,worker,migraciones
   .\deploy\gcp\e4\construir-imagenes.ps1 -PermitirCambios          (solo pruebas: arbol con cambios sin commit)
 
-Al final imprime el comando de terraform apply con la etiqueta.
+Al final imprime el comando de tf.ps1 con la etiqueta.
 #>
 param(
     [ValidateSet("backend", "worker", "frontend", "migraciones")]
@@ -50,7 +51,6 @@ foreach ($s in $Servicios) {
 }
 
 Titulo "Siguiente paso"
-Write-Host "  cd $TF_DIR"
-Write-Host "  terraform plan -var `"image_tag=$tag`" -out tfplan"
-Write-Host "  terraform apply tfplan"
+Write-Host "  .\deploy\gcp\e4\tf.ps1 plan -Tag $tag"
+Write-Host "  .\deploy\gcp\e4\tf.ps1 apply"
 CerrarRegistro

@@ -2,13 +2,13 @@
 Entrega 4 - Migraciones con el Cloud Run Job mooc-migraciones (Daniela).
 
 Reemplaza a deploy/gcp/e3/05-migraciones.ps1: ya no hace falta la VM
-mooc-servicios. El job corre dentro de la VPC (Cloud SQL solo tiene IP
+mooc-servicios de la E3. El job corre dentro de la VPC (Cloud SQL solo tiene IP
 privada), lee DATABASE_URL de Secret Manager con sa-migraciones y ejecuta
 golang-migrate con las migraciones del mismo commit que la imagen.
 
 Orden para publicar una version con migraciones nuevas:
   .\deploy\gcp\e4\construir-imagenes.ps1 -Servicios backend,migraciones
-  terraform apply (actualiza la imagen del job)
+  .\deploy\gcp\e4\tf.ps1 plan ; .\deploy\gcp\e4\tf.ps1 apply   (actualiza la imagen del job)
   .\deploy\gcp\e4\migrar.ps1 -Accion version
   .\deploy\gcp\e4\migrar.ps1 -Accion up
 
@@ -25,9 +25,9 @@ $ErrorActionPreference = "Continue"
 . (Join-Path $PSScriptRoot "comun.ps1")
 IniciarRegistro "migrar-$Accion"
 
-$sql = gcloud sql instances describe mooc-postgres --project=$P --format="value(state)" 2>$null
+$sql = gcloud sql instances describe $SQL --project=$P --format="value(state)" 2>$null
 if ($sql -ne "RUNNABLE") {
-    Falla "Cloud SQL esta '$sql'. Enciendela: gcloud sql instances patch mooc-postgres --activation-policy=ALWAYS --project=$P"
+    Falla "Cloud SQL esta '$sql'. Si esta apagada: gcloud sql instances patch $SQL --activation-policy=ALWAYS --project=$P"
     CerrarRegistro; return
 }
 

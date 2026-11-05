@@ -22,7 +22,25 @@ output "suscripcion_worker" {
 }
 
 output "job_migraciones" {
-  value = google_cloud_run_v2_job.migraciones.name
+  value = var.servicios_habilitados.migraciones ? google_cloud_run_v2_job.migraciones[0].name : null
+}
+
+output "bucket_medios" {
+  value = google_storage_bucket.medios.name
+}
+
+output "sql_instancia" {
+  description = "Nombre de la instancia (para gcloud sql ...)."
+  value       = google_sql_database_instance.postgres.name
+}
+
+output "sql_ip_privada" {
+  description = "IP privada de Postgres; la usa 01-secretos.ps1 para armar DATABASE_URL."
+  value       = google_sql_database_instance.postgres.private_ip_address
+}
+
+output "registro_imagenes" {
+  value = local.registro
 }
 
 output "cuentas_de_servicio" {
@@ -32,8 +50,5 @@ output "cuentas_de_servicio" {
 
 output "imagenes_desplegadas" {
   description = "Imagen exacta (con digest) de cada servicio."
-  value = merge(
-    { for s, img in data.google_artifact_registry_docker_image.servicio : s => img.self_link },
-    { migraciones = data.google_artifact_registry_docker_image.migraciones.self_link },
-  )
+  value       = { for s, img in data.google_artifact_registry_docker_image.servicio : s => img.self_link }
 }

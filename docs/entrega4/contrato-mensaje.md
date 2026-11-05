@@ -28,7 +28,7 @@ El backend publica en el topic `mooc-media-jobs` y Pub/Sub entrega cada mensaje 
     "messageId": "1234567890",
     "publishTime": "2026-11-09T15:04:05Z"
   },
-  "subscription": "projects/proyecto1-entrega2-desarrollo/subscriptions/mooc-media-jobs-worker",
+  "subscription": "projects/<proyecto>/subscriptions/mooc-media-jobs-worker",
   "deliveryAttempt": 1
 }
 ```

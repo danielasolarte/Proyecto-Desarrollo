@@ -7,6 +7,9 @@
 #   sa-worker       publica trabajos encadenados; lee DATABASE_URL y las llaves S3.
 #   sa-pubsub-push  identidad del token OIDC del push; solo puede invocar el worker.
 #   sa-migraciones  corre el job de migraciones; solo lee DATABASE_URL.
+#   sa-medios       dueña de la llave HMAC con la que backend y worker firman
+#                   URL y leen o escriben en el bucket; solo tiene permiso
+#                   sobre ese bucket.
 #
 # Los permisos sobre recursos concretos están junto a cada recurso
 # (secretos.tf, pubsub.tf, cloudrun.tf). Aquí van solo los de proyecto.
@@ -18,6 +21,7 @@ locals {
     worker      = "Workers de medios de la E4 en Cloud Run"
     pubsub-push = "Identidad del push de Pub/Sub hacia el worker"
     migraciones = "Job de migraciones de la E4"
+    medios      = "Dueña de la llave HMAC del bucket de medios"
   }
 }
 
@@ -45,4 +49,11 @@ resource "google_project_iam_member" "observabilidad" {
   project = var.project_id
   role    = each.value.rol
   member  = google_service_account.sa[each.value.cuenta].member
+}
+
+# sa-medios solo puede leer y escribir objetos del bucket de medios.
+resource "google_storage_bucket_iam_member" "medios_objetos" {
+  bucket = google_storage_bucket.medios.name
+  role   = "roles/storage.objectAdmin"
+  member = google_service_account.sa["medios"].member
 }
