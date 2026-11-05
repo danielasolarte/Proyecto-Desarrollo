@@ -1,0 +1,9 @@
+# Copia este archivo como terraform.tfvars (git lo ignora). Aquí no van
+# secretos. El proyecto NO va aquí: lo pasa deploy/gcp/e4/tf.ps1 desde
+# deploy/gcp/e4/proyecto.ps1.
+
+# Correos del grupo: pueden ver el proyecto, los registros y publicar imágenes.
+equipo = [
+  "correo1@example.com",
+  "correo2@example.com",
+]
