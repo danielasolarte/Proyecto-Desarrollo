@@ -103,6 +103,7 @@ resource "google_cloud_run_v2_service" "backend" {
           CSRF_COOKIE_NAME               = "mooc_csrf"
           CSRF_HEADER_NAME               = "X-CSRF-Token"
           SESSION_COOKIE_MAX_AGE_SECONDS = "86400"
+          BOOTSTRAP_ADMIN_EMAIL          = var.correo_admin
           # 3 instancias x 5 conexiones = 15, dentro del límite de Cloud SQL.
           DB_MAX_CONNS      = "5"
           DB_MIN_CONNS      = "0"

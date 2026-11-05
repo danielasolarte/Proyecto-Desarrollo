@@ -57,6 +57,12 @@ variable "nivel_sql" {
   default     = "db-g1-small"
 }
 
+variable "correo_admin" {
+  description = "Correo de la primera cuenta de administrador. El backend la crea al arrancar si la base no tiene ningún administrador; la clave está en el secreto mooc-admin-password."
+  type        = string
+  default     = "admin@mooc.local"
+}
+
 variable "origenes_cors_extra" {
   description = "Orígenes adicionales permitidos para subir al bucket con URL firmadas (por ejemplo el frontend local)."
   type        = list(string)

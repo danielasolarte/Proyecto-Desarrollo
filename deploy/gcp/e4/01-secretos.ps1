@@ -9,6 +9,10 @@ Manager sin mostrarlos:
                        aleatoria y guarda postgres://mooc:<clave>@<ip privada>:5432/mooc
   mooc-s3-access-key   crea una llave HMAC de sa-medios (la que firma las URL
   mooc-s3-secret-key   del bucket) y guarda su id y su secreto
+  mooc-admin-password  clave aleatoria de la primera cuenta de administrador;
+                       el backend crea esa cuenta al arrancar si la base no
+                       tiene ningun administrador. Para verla UNA vez:
+                       gcloud secrets versions access latest --secret=mooc-admin-password
 
 Cada valor viaja en memoria y en un archivo temporal que se borra de
 inmediato. Si un secreto ya tiene version, no se toca (usa -Rotar para
@@ -79,6 +83,15 @@ if ((TieneVersion "mooc-s3-access-key") -and (TieneVersion "mooc-s3-secret-key")
     GuardarSecreto "mooc-s3-secret-key" $hmac.secret
     $hmac = $null; $json = $null
     if ($Rotar) { Aviso "  Desactiva la llave vieja cuando la nueva funcione: gcloud storage hmac list --project=$P" }
+}
+
+Titulo "Clave del administrador inicial (mooc-admin-password)"
+if ((TieneVersion "mooc-admin-password") -and -not $Rotar) {
+    Write-Host "  Ya tiene version. Cambiarla no cambia la clave de una cuenta admin que ya exista."
+} else {
+    GuardarSecreto "mooc-admin-password" (ClaveAleatoria 24)
+    Write-Host "  Correo: el de correo_admin en infra/terraform/variables.tf. Clave, cuando la necesites:"
+    Write-Host "  gcloud secrets versions access latest --secret=mooc-admin-password --project=$P"
 }
 
 Titulo "Resumen (sin valores)"

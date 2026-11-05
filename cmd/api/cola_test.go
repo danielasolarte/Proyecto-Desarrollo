@@ -1,7 +1,10 @@
 package main
 
 import (
+	"errors"
 	"testing"
+
+	authDomain "github.com/equipo-mooc/plataforma-mooc/internal/auth/domain"
 
 	mediaPlatform "github.com/equipo-mooc/plataforma-mooc/internal/media/platform"
 )
@@ -50,4 +53,27 @@ func TestNewMediaQueueRejectsTopicWithoutProject(t *testing.T) {
 	if _, err := newMediaQueue(); err == nil {
 		t.Fatal("topic sin proyecto debía fallar")
 	}
+}
+
+// bootstrapAdmin no debe detener la API aunque falle; sin configuración no
+// toca el repositorio.
+func TestBootstrapAdminWithoutConfigurationDoesNothing(t *testing.T) {
+	t.Setenv("BOOTSTRAP_ADMIN_EMAIL", "")
+	t.Setenv("BOOTSTRAP_ADMIN_PASSWORD", "")
+	bootstrapAdmin(nil)
+}
+
+type adminRepoFalla struct{ authDomain.UserRepository }
+
+func (adminRepoFalla) CountActiveAdmins() (int, error) { return 0, errors.New("postgres caído") }
+
+type adminRepoConAdmin struct{ authDomain.UserRepository }
+
+func (adminRepoConAdmin) CountActiveAdmins() (int, error) { return 1, nil }
+
+func TestBootstrapAdminLogsErrorsWithoutStopping(t *testing.T) {
+	t.Setenv("BOOTSTRAP_ADMIN_EMAIL", "admin@mooc.test")
+	t.Setenv("BOOTSTRAP_ADMIN_PASSWORD", "clave-segura-123")
+	bootstrapAdmin(adminRepoFalla{})
+	bootstrapAdmin(adminRepoConAdmin{})
 }

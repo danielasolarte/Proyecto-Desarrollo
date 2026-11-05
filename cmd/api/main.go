@@ -17,8 +17,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	adminHTTP "github.com/equipo-mooc/plataforma-mooc/internal/admin/http"
+	authDomain "github.com/equipo-mooc/plataforma-mooc/internal/auth/domain"
 	authHTTP "github.com/equipo-mooc/plataforma-mooc/internal/auth/http"
 	authPG "github.com/equipo-mooc/plataforma-mooc/internal/auth/postgres"
+	authUC "github.com/equipo-mooc/plataforma-mooc/internal/auth/usecase"
 	badgesHTTP "github.com/equipo-mooc/plataforma-mooc/internal/badges/http"
 	badgesPG "github.com/equipo-mooc/plataforma-mooc/internal/badges/postgres"
 	badgesUC "github.com/equipo-mooc/plataforma-mooc/internal/badges/usecase"
@@ -93,6 +95,7 @@ func main() {
 	userRepo := authPG.NewUserRepository(db)
 	sessionStore := authPG.NewPostgresOnlySessionStore()
 	mailerClient := mailer.NewSMTPMailer(smtpAddr, mailFrom)
+	bootstrapAdmin(userRepo)
 	e.Use(authHTTP.AuthMiddleware(userRepo, sessionStore))
 	e.Use(authHTTP.CSRFMiddleware())
 
@@ -256,6 +259,23 @@ func serve(e *echo.Echo, checker *health.Checker, addr string) {
 		return
 	}
 	log.Println("API apagada sin solicitudes pendientes")
+}
+
+// bootstrapAdmin crea la primera cuenta de administrador si la base no
+// tiene ninguna (ver authUC.EnsureBootstrapAdmin). La clave llega del
+// secreto mooc-admin-password y nunca se registra. Un error no detiene la
+// API: se registra y se sigue.
+func bootstrapAdmin(repo authDomain.UserRepository) {
+	res, err := authUC.EnsureBootstrapAdmin(repo, authUC.BootstrapAdminInput{
+		Email:    os.Getenv("BOOTSTRAP_ADMIN_EMAIL"),
+		FullName: os.Getenv("BOOTSTRAP_ADMIN_NAME"),
+		Password: os.Getenv("BOOTSTRAP_ADMIN_PASSWORD"),
+	})
+	if err != nil {
+		log.Printf("administrador inicial: %v", err)
+		return
+	}
+	log.Printf("administrador inicial: %s", res)
 }
 
 // mediaQueue es la cola de trabajos multimedia que usa la API.

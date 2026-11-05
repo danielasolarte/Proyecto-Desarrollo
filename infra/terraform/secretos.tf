@@ -6,6 +6,7 @@
 #   mooc-database-url   usuario y clave nuevos de Postgres + IP privada
 #   mooc-s3-access-key  llave HMAC de sa-medios (URL firmadas del bucket)
 #   mooc-s3-secret-key  secreto de esa llave HMAC
+#   mooc-admin-password clave de la primera cuenta de administrador
 #
 # Rotar un valor: volver a correr el script con -Rotar; Cloud Run toma la
 # versión "latest" en la siguiente revisión.
@@ -16,6 +17,9 @@ locals {
     DATABASE_URL  = "mooc-database-url"
     S3_ACCESS_KEY = "mooc-s3-access-key"
     S3_SECRET_KEY = "mooc-s3-secret-key"
+    # Clave de la primera cuenta de administrador (la crea el backend al
+    # arrancar si no hay ninguna; ver usecase.EnsureBootstrapAdmin).
+    BOOTSTRAP_ADMIN_PASSWORD = "mooc-admin-password"
   }
 
   # Quién lee cada secreto.
@@ -23,6 +27,8 @@ locals {
     DATABASE_URL  = ["backend", "worker", "migraciones"]
     S3_ACCESS_KEY = ["backend", "worker"]
     S3_SECRET_KEY = ["backend", "worker"]
+
+    BOOTSTRAP_ADMIN_PASSWORD = ["backend"]
   }
 
   accesos_secretos = merge([

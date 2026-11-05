@@ -55,19 +55,29 @@ Crea la red, Cloud SQL (tarda 10 a 15 minutos), el bucket, Artifact Registry, Pu
 
 Crea el usuario de Postgres con una clave aleatoria y una llave HMAC para el bucket, y los guarda en Secret Manager sin mostrarlos.
 
-## 5. Imágenes, backend y migraciones
+## 5. Imágenes, migraciones y backend
 
 ```powershell
 .\deploy\gcp\e4\construir-imagenes.ps1 -Servicios backend,migraciones
 ```
 
-En `variables.tf`, pon `migraciones = true` y `backend = true`, y luego:
+Primero las migraciones, para que el backend arranque con las tablas creadas. En `variables.tf`, pon `migraciones = true` y luego:
 
 ```powershell
 .\deploy\gcp\e4\tf.ps1 plan -Tag <etiqueta que imprimió el script>
 .\deploy\gcp\e4\tf.ps1 apply
 .\deploy\gcp\e4\migrar.ps1
 ```
+
+Después pon `backend = true` y repite `tf.ps1 plan -Tag <etiqueta>` y `tf.ps1 apply`.
+
+Al arrancar, el backend crea la cuenta de administrador con el correo `correo_admin` de `variables.tf` si la base no tiene ninguno. En los registros del backend debe aparecer `administrador inicial: administrador creado`. La clave se consulta una sola vez, cuando haga falta:
+
+```powershell
+gcloud secrets versions access latest --secret=mooc-admin-password
+```
+
+Con esa cuenta se crean los profesores y estudiantes de prueba desde la aplicación o con `npm run cuentas` del frontend.
 
 ## 6. Frontend y worker
 
@@ -85,7 +95,6 @@ Al final, `.\deploy\gcp\e4\tf.ps1 plan` debe decir `No changes`: lo desplegado e
 
 ## Pendiente
 
-- Cuenta de administrador en la base nueva (la E3 lo hacía desde la VM de servicios, que ya no existe).
 - Mateo: worker y verificación de la suscripción push.
 - Samara: frontend (el CORS del bucket ya toma la URL del frontend desde Terraform).
 - Camila: ejecutar esta guía y corregir lo que falte.
