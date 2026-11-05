@@ -174,3 +174,80 @@ func TestDecodePushEnvelopeRejectsInvalid(t *testing.T) {
 		}
 	}
 }
+
+func TestEmulatorBaseURL(t *testing.T) {
+	for in, want := range map[string]string{
+		"pubsub:8085":        "http://pubsub:8085",
+		"http://pubsub:8085": "http://pubsub:8085",
+		"localhost:8085/":    "http://localhost:8085",
+	} {
+		if got := emulatorBaseURL(in); got != want {
+			t.Errorf("emulatorBaseURL(%q) = %q, se esperaba %q", in, got, want)
+		}
+	}
+}
+
+func TestNewPubSubQueueUsesGoogleWithoutEmulator(t *testing.T) {
+	q, err := NewPubSubQueue(PubSubConfig{ProjectID: "p", TopicID: "t"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if q.publishURL != "https://pubsub.googleapis.com/v1/projects/p/topics/t:publish" || q.tokens == nil || q.timeout != 5*time.Second {
+		t.Errorf("configuración inesperada: %s, token %v, timeout %s", q.publishURL, q.tokens != nil, q.timeout)
+	}
+	if err := q.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPubSubQueueRejectsResponseWithoutIDs(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer srv.Close()
+	if err := newTestQueue(t, srv.URL).EnqueueMediaJob(&domain.MediaJob{ID: "j", JobType: domain.JobScanAntivirus}); err == nil {
+		t.Fatal("una respuesta sin messageIds debía ser error")
+	}
+}
+
+type failingToken struct{}
+
+func (failingToken) Token(context.Context) (string, error) { return "", errors.New("sin metadatos") }
+
+func TestPubSubQueueRetriesWhenTokenFails(t *testing.T) {
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&calls, 1)
+	}))
+	defer srv.Close()
+	q := newTestQueue(t, srv.URL)
+	q.tokens = failingToken{}
+	if err := q.EnqueueMediaJob(&domain.MediaJob{ID: "j", JobType: domain.JobScanAntivirus}); err == nil {
+		t.Fatal("sin token debía fallar")
+	}
+	if calls != 0 {
+		t.Errorf("sin token no se debía llamar a Pub/Sub; hubo %d llamadas", calls)
+	}
+}
+
+func TestMetadataTokenSourceErrors(t *testing.T) {
+	cases := map[string]http.HandlerFunc{
+		"500":       func(w http.ResponseWriter, r *http.Request) { http.Error(w, "x", http.StatusInternalServerError) },
+		"json roto": func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte(`{`)) },
+		"sin token": func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte(`{"expires_in":10}`)) },
+	}
+	for name, h := range cases {
+		srv := httptest.NewServer(h)
+		m := newMetadataTokenSource(srv.Client())
+		m.url = srv.URL
+		if _, err := m.Token(context.Background()); err == nil {
+			t.Errorf("%s: se esperaba error", name)
+		}
+		srv.Close()
+	}
+	m := newMetadataTokenSource(nil)
+	m.url = "http://127.0.0.1:1/token"
+	if _, err := m.Token(context.Background()); err == nil {
+		t.Error("sin servidor de metadatos se esperaba error")
+	}
+}

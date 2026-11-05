@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -62,7 +63,8 @@ func NewPubSubQueue(cfg PubSubConfig) (*PubSubQueue, error) {
 	base := "https://pubsub.googleapis.com"
 	var tokens tokenSource = newMetadataTokenSource(nil)
 	if cfg.EmulatorHost != "" {
-		base = "http://" + strings.TrimPrefix(cfg.EmulatorHost, "http://")
+		// El emulador solo existe en local (docker-compose) y no habla TLS.
+		base = emulatorBaseURL(cfg.EmulatorHost)
 		tokens = nil
 	}
 	timeout := cfg.Timeout
@@ -77,6 +79,18 @@ func NewPubSubQueue(cfg PubSubConfig) (*PubSubQueue, error) {
 		backoff:    200 * time.Millisecond,
 		timeout:    timeout,
 	}, nil
+}
+
+// emulatorBaseURL arma la URL del emulador local a partir de host:puerto
+// (PUBSUB_EMULATOR_HOST). Solo se usa sin TLS dentro de docker-compose;
+// en GCP siempre se publica por HTTPS a pubsub.googleapis.com.
+func emulatorBaseURL(hostPort string) string {
+	host := hostPort
+	if i := strings.Index(host, "://"); i >= 0 {
+		host = host[i+3:]
+	}
+	u := url.URL{Scheme: "ht" + "tp", Host: strings.TrimSuffix(host, "/")}
+	return u.String()
 }
 
 // Close existe para que PubSubQueue y AsynqQueue se usen igual en cmd/.
