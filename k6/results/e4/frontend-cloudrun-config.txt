@@ -1,0 +1,28 @@
+metadata:
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+    run.googleapis.com/maxScale: '3'
+    run.googleapis.com/operation-id: b6327c5a-e8b8-47a0-99a3-eefe001528e1
+    run.googleapis.com/urls: '["https://mooc-frontend-828976161294.us-central1.run.app","https://mooc-frontend-yufxihdm4q-uc.a.run.app"]'
+    serving.knative.dev/creator: camilafajardo32@gmail.com
+    serving.knative.dev/lastModifier: camilafajardo32@gmail.com
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: '3'
+        autoscaling.knative.dev/minScale: '0'
+        run.googleapis.com/cpu-throttling: 'true'
+        run.googleapis.com/sessionAffinity: 'false'
+    spec:
+      containerConcurrency: 80
+      containers:
+      - resources:
+          limits:
+            cpu: '1'
+            memory: 512Mi
+      serviceAccountName: sa-frontend@proyectodesarrollo-513918.iam.gserviceaccount.com
+      timeoutSeconds: 60
+status:
+  url: https://mooc-frontend-yufxihdm4q-uc.a.run.app
