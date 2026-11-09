@@ -148,3 +148,31 @@ Cuando el worker esté desplegado se completarán:
 - prueba de reentrega sin efectos duplicados;
 - prueba de reemplazo de una instancia durante un trabajo;
 - verificación de que una llamada no autenticada al worker responde `403`.
+
+## Prueba fuerte de escalamiento del backend
+
+Se ejecutó una prueba de carga controlada contra `mooc-backend`, incrementando la tasa desde 20 hasta 120 iteraciones por segundo e incluyendo operaciones de catálogo y autenticación.
+
+### Resultados
+
+- Solicitudes HTTP: 31.923
+- Checks exitosos: 100 %
+- Errores HTTP: 0 %
+- Latencia promedio: 1,65 s
+- p95: 4,31 s
+- p99: 5,46 s
+- Latencia máxima: 8,45 s
+- VUs máximos utilizados por k6: 400
+- Iteraciones descartadas: 1.077
+
+Durante la prueba, Cloud Run escaló hasta **3 instancias activas**, alcanzando el máximo configurado para el servicio sin superarlo. Al finalizar la carga, las instancias dejaron de estar activas y quedaron en estado `idle`.
+
+La prueba demuestra que el límite `maxScale = 3` se respeta bajo carga y que el backend puede escalar horizontalmente sin producir errores HTTP durante el escenario probado.
+
+### Evidencias
+
+- `k6/results/e4/backend-scaling-20261109.log`
+- `k6/results/e4/backend-scaling-20261109.json`
+- `k6/results/e4/backend-cloudrun-config.txt`
+- `k6/results/e4/backend-iam.txt`
+- `docs/entrega4/evidencias/backend-instance-count-20261109.png`
