@@ -30,8 +30,8 @@ variable "servicios_habilitados" {
     worker      = bool
   })
   default = {
-    migraciones = false
-    backend     = false
+    migraciones = true
+    backend     = true
     frontend    = false
     worker      = false
   }
