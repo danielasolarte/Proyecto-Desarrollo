@@ -176,3 +176,29 @@ La prueba demuestra que el límite `maxScale = 3` se respeta bajo carga y que el
 - `k6/results/e4/backend-cloudrun-config.txt`
 - `k6/results/e4/backend-iam.txt`
 - `docs/entrega4/evidencias/backend-instance-count-20261109.png`
+
+## Prueba de escalamiento del frontend
+
+Se ejecutó una prueba de carga controlada contra `mooc-frontend` con una tasa creciente de solicitudes sobre la SPA.
+
+### Resultados
+
+- Solicitudes HTTP: 92.999
+- Checks exitosos: 100 %
+- Errores HTTP: 0 %
+- Latencia promedio: 46,19 ms
+- p90: 51,88 ms
+- p95: 56,99 ms
+- Latencia máxima: 1,09 s
+- VUs máximos utilizados: 33
+
+Durante la prueba, Cloud Run escaló de 1 a **2 instancias activas**. El servicio mantuvo el 100 % de respuestas exitosas y no superó el límite configurado de 3 instancias.
+
+Al finalizar la carga, las instancias activas descendieron a 0 y quedaron instancias en estado `idle`.
+
+### Evidencias
+
+- `k6/results/e4/frontend-scaling-20261109.log`
+- `k6/results/e4/frontend-cloudrun-config.txt`
+- `k6/results/e4/frontend-iam.txt`
+- `docs/entrega4/evidencias/frontend-instance-count-20261109.png`
