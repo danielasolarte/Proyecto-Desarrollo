@@ -38,7 +38,13 @@ variable "servicios_habilitados" {
 }
 
 variable "equipo" {
-  description = "Correos del grupo (y del equipo docente si se quiere) que pueden ver el proyecto y publicar imágenes. No modifican infraestructura: eso lo hace Terraform."
+  description = "Correos del grupo: pueden ver el proyecto, los registros y las métricas, publicar imágenes y encender o apagar Cloud SQL. No crean ni borran infraestructura: eso lo hace Terraform."
+  type        = list(string)
+  default     = []
+}
+
+variable "docentes" {
+  description = "Correos del equipo docente: solo lectura del proyecto, los registros y las métricas."
   type        = list(string)
   default     = []
 }

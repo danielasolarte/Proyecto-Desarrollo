@@ -99,7 +99,8 @@ Invocar un servicio y leer sus datos son permisos distintos, y van en cuentas di
 - **sa-migraciones**: escribir registros y métricas; leer `mooc-database-url`.
 - **sa-medios**: leer y escribir objetos del bucket de medios. Es la dueña de la llave HMAC con la que backend y worker firman URL y usan el bucket.
 - **Agente de Pub/Sub** (cuenta administrada por Google): firmar el token OIDC en nombre de `sa-pubsub-push`, publicar en el tópico de fallidos y confirmar en la suscripción del worker.
-- **Grupo** (variable `equipo`): ver el proyecto, los registros y las métricas, y publicar imágenes. No modifica infraestructura.
+- **Grupo** (variable `equipo`): ver el proyecto, los registros y las métricas, publicar imágenes y encender o apagar Cloud SQL (`roles/cloudsql.editor`, que no permite borrar la instancia ni cambiar usuarios, claves o permisos). No crea ni borra infraestructura: eso lo hace Terraform.
+- **Equipo docente** (variable `docentes`): solo lectura del proyecto, los registros y las métricas.
 
 ## Secretos
 

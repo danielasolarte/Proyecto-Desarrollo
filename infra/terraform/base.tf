@@ -102,6 +102,13 @@ resource "google_sql_database_instance" "postgres" {
     }
   }
 
+  # Encender y apagar la instancia (--activation-policy) se hace con gcloud
+  # para ahorrar créditos; Terraform no lo vigila, así que no aparece como
+  # cambio pendiente ni la enciende en el siguiente apply.
+  lifecycle {
+    ignore_changes = [settings[0].activation_policy]
+  }
+
   depends_on = [google_service_networking_connection.servicios_privados]
 }
 
@@ -170,14 +177,31 @@ resource "google_artifact_registry_repository" "imagenes" {
 # ---------- acceso del grupo ----------
 
 locals {
+  # Grupo: ver, publicar imágenes y encender o apagar Cloud SQL
+  # (roles/cloudsql.editor no permite borrar la instancia, ni cambiar
+  # usuarios, claves o permisos).
   roles_equipo = {
-    for par in setproduct(var.equipo, ["roles/viewer", "roles/artifactregistry.writer", "roles/logging.viewer", "roles/monitoring.viewer"]) :
+    for par in setproduct(var.equipo, ["roles/viewer", "roles/artifactregistry.writer", "roles/logging.viewer", "roles/monitoring.viewer", "roles/cloudsql.editor"]) :
+    "${par[0]}|${par[1]}" => { correo = par[0], rol = par[1] }
+  }
+
+  # Equipo docente: solo lectura (proyecto, registros y métricas).
+  roles_docentes = {
+    for par in setproduct(var.docentes, ["roles/viewer", "roles/logging.viewer", "roles/monitoring.viewer"]) :
     "${par[0]}|${par[1]}" => { correo = par[0], rol = par[1] }
   }
 }
 
 resource "google_project_iam_member" "equipo" {
   for_each = local.roles_equipo
+
+  project = var.project_id
+  role    = each.value.rol
+  member  = "user:${each.value.correo}"
+}
+
+resource "google_project_iam_member" "docentes" {
+  for_each = local.roles_docentes
 
   project = var.project_id
   role    = each.value.rol

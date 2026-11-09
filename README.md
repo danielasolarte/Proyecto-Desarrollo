@@ -21,13 +21,13 @@ Toda la infraestructura se crea con Terraform (`infra/terraform/`) en el proyect
 ### Aplicación desplegada
 
 - Frontend: _(pendiente: `terraform output url_frontend`)_
-- Backend: _(pendiente: `terraform output url_backend`)_; también responde detrás del frontend en `/api/v1`.
+- Backend: https://mooc-backend-yufxihdm4q-uc.a.run.app (también responderá detrás del frontend en `/api/v1`).
 - Tag evaluado: `entrega-4`.
 - Video de sustentación: _(pendiente)_
 
 El frontend (nginx) sirve la SPA y reenvía `/api/*` al backend, así que la sesión por cookies y el CSRF funcionan sin CORS. El bucket sí tiene CORS para el origen del frontend, porque el navegador sube y descarga los archivos directo con URL firmadas.
 
-Cloud Run escala a cero cuando no hay tráfico, así que la primera solicitud puede tardar unos segundos. Las credenciales de las cuentas de prueba y el acceso al proyecto se entregan al equipo docente por el medio privado del curso; no están en el repositorio.
+Cloud Run escala a cero cuando no hay tráfico, así que la primera solicitud puede tardar unos segundos. Cloud SQL se apaga cuando nadie está trabajando, para ahorrar créditos; si el backend responde `Service Unavailable`, la base está apagada (ver "Encender y apagar Cloud SQL" abajo). Las credenciales de las cuentas de prueba y el acceso al proyecto se entregan al equipo docente por el medio privado del curso; no están en el repositorio.
 
 ### Documentación
 
@@ -54,6 +54,18 @@ Los pasos completos están en la [guía](docs/entrega4/despliegue.md). En resume
 La primera vez el orden importa: primero el job de migraciones y `migrar.ps1`, después el backend, para que arranque con las tablas creadas y cree la cuenta de administrador (ver la guía).
 
 Cada imagen se etiqueta con el commit y Cloud Run la despliega por digest, así que lo que corre es exactamente lo que se probó. Al final, `tf.ps1 plan` debe decir `No changes`.
+
+#### Encender y apagar Cloud SQL
+
+Cualquiera del grupo puede hacerlo (rol Editor de Cloud SQL). Encender tarda unos 5 minutos; después `/health/ready` del backend responde `ready`.
+
+```powershell
+gcloud sql instances patch mooc-e4-postgres --activation-policy=ALWAYS --project=proyectodesarrollo-513918   # encender
+gcloud sql instances patch mooc-e4-postgres --activation-policy=NEVER --project=proyectodesarrollo-513918    # apagar
+gcloud sql instances describe mooc-e4-postgres --project=proyectodesarrollo-513918 --format="value(state,settings.activationPolicy)"
+```
+
+Terraform no vigila si la base está encendida o apagada, así que esto no aparece como cambio pendiente en `tf.ps1 plan`.
 
 ### Calidad y pruebas
 

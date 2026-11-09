@@ -2,8 +2,14 @@
 # secretos. El proyecto NO va aquí: lo pasa deploy/gcp/e4/tf.ps1 desde
 # deploy/gcp/e4/proyecto.ps1.
 
-# Correos del grupo: pueden ver el proyecto, los registros y publicar imágenes.
+# Correos del grupo: pueden ver el proyecto, los registros y las métricas,
+# publicar imágenes y encender o apagar Cloud SQL.
 equipo = [
   "correo1@example.com",
   "correo2@example.com",
+]
+
+# Correos del equipo docente: solo lectura.
+docentes = [
+  "docente@example.com",
 ]
