@@ -2,3 +2,5 @@ Video[[:space:]]y[[:space:]]doc/proyecto1[[:space:]]entrega[[:space:]]1[[:space:
 
 *.sh text eol=lf
 deploy/gcp/e3/maquina/* text eol=lf
+deploy/nginx/* text eol=lf
+deploy/Dockerfile.* text eol=lf

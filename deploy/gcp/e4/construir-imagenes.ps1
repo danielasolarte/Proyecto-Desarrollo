@@ -43,7 +43,8 @@ foreach ($s in $Servicios) {
     }
     $ref = "$REGISTRO/$P/$REPO_AR/$($img.nombre):$tag"
     Titulo "$s -> $ref"
-    docker build --platform linux/amd64 --progress=plain -f $img.dockerfile -t $ref . 2>&1 | Select-Object -Last 8 | ForEach-Object { "$_" }
+    # El frontend publica el commit en /version.json.
+    docker build --platform linux/amd64 --progress=plain --build-arg "APP_COMMIT=$tag" -f $img.dockerfile -t $ref . 2>&1 | Select-Object -Last 8 | ForEach-Object { "$_" }
     if ($LASTEXITCODE -ne 0) { Falla "Fallo docker build de $s (revisa que Docker Desktop este corriendo)."; CerrarRegistro; return }
     docker push $ref 2>&1 | Select-Object -Last 2 | ForEach-Object { "$_" }
     if ($LASTEXITCODE -ne 0) { Falla "Fallo docker push de $s. Corre una vez: gcloud auth configure-docker $REGISTRO"; CerrarRegistro; return }

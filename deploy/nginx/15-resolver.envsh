@@ -1,0 +1,7 @@
+#!/bin/sh
+# El entrypoint de nginx carga (source) los *.envsh antes de sustituir las
+# variables en las plantillas. nginx necesita un resolver DNS para resolver
+# BACKEND_URL en cada solicitud (las IP de Cloud Run cambian); se toma el
+# del contenedor: 169.254.169.254 en Cloud Run, 127.0.0.11 en docker compose.
+NGINX_RESOLVER="$(awk '/^nameserver/ { print $2; exit }' /etc/resolv.conf)"
+export NGINX_RESOLVER="${NGINX_RESOLVER:-8.8.8.8}"
