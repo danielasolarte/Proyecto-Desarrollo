@@ -1,3 +1,5 @@
+# Imagen del servicio de Cloud Run mooc-worker (Entrega 4).
+#
 # ---------- build ----------
 FROM golang:1.26-bookworm AS builder
 WORKDIR /src
@@ -7,16 +9,16 @@ RUN go mod download
 
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/worker ./cmd/worker
-# El exportador de la cola viaja en la misma imagen (misma version que los
-# workers). Corre una sola copia en la VM de servicios con
-# --entrypoint /app/cola-exportador, nunca dentro de los workers.
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/cola-exportador ./cmd/cola-exportador
+
+# ---------- firmas de ClamAV ----------
+# La imagen oficial (etiqueta sin _base) trae la base de firmas del día en
+# que se publicó. Se copian a la imagen del worker para no depender de la
+# red al arrancar ni del límite de descargas de freshclam en cada instancia.
+FROM clamav/clamav:stable AS firmas
 
 # ---------- runtime ----------
-# A diferencia de la API, el worker no puede ser "distroless": necesita
-# ffmpeg (transcodificación HLS), libreoffice (conversión de
-# presentaciones) y clamdscan (cliente que habla con el contenedor
-# clamav por red, ver sección 5.1 puntos 5 y 6).
+# No puede ser distroless: necesita ffmpeg (HLS), libreoffice (PDF) y
+# clamd + clamdscan (antivirus), todo en el mismo contenedor.
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -27,19 +29,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# clamdscan lee este archivo para saber a qué clamd conectarse. Se apunta
-# al servicio "clamav" del docker-compose por TCP en vez de arrancar un
-# clamd local (que no necesitamos: el escaneo real ya corre en su propio
-# contenedor).
-RUN mkdir -p /etc/clamav && \
-    { \
-        echo "TCPSocket 3310"; \
-        echo "TCPAddr clamav"; \
-    } > /etc/clamav/clamd.conf
+COPY --from=firmas /var/lib/clamav/ /var/lib/clamav/
+# Intenta actualizar las firmas al construir. Si freshclam falla (por
+# ejemplo, por el límite de descargas), se quedan las de la imagen oficial.
+RUN chown -R clamav:clamav /var/lib/clamav \
+    && (freshclam --stdout --foreground || echo "freshclam falló: se usan las firmas de clamav/clamav:stable") \
+    && ls -l /var/lib/clamav/ \
+    && ls /var/lib/clamav/main.c[lv]d /var/lib/clamav/daily.c[lv]d >/dev/null
 
 WORKDIR /app
 COPY --from=builder /out/worker /app/worker
-COPY --from=builder /out/cola-exportador /app/cola-exportador
+COPY deploy/worker-entrypoint.sh /app/worker-entrypoint.sh
+RUN chmod +x /app/worker-entrypoint.sh && mkdir -p /tmp/media
 
-RUN mkdir -p /tmp/media
-ENTRYPOINT ["/app/worker"]
+# Cloud Run define PORT=8080. Los temporales van en /tmp (en Cloud Run es
+# memoria y se borra con la instancia) y cada trabajo borra los suyos.
+ENV WORKER_WORKDIR=/tmp/media
+EXPOSE 8080
+ENTRYPOINT ["/app/worker-entrypoint.sh"]

@@ -136,6 +136,7 @@ var (
 	ErrChecksumMismatch   = errors.New("el checksum declarado no coincide con el archivo recibido")
 	ErrMimeNotAllowed     = errors.New("el tipo MIME real no esta permitido para este recurso")
 	ErrJobAlreadyTerminal = errors.New("el job ya se encuentra en un estado terminal")
+	ErrJobLocked          = errors.New("el job lo está procesando otra entrega")
 	ErrValidation         = errors.New("error de validacion")
 )
 
@@ -157,6 +158,18 @@ type MediaRepository interface {
 	FindJobByIdempotencyKey(key string) (*MediaJob, error)
 	UpdateJob(j *MediaJob) error
 	ListDeadLetterJobs() ([]MediaJob, error)
+
+	// ClaimJob toma el job para procesarlo en una sola operación atómica:
+	// lo pasa a processing, suma un intento y fija locked_at. Solo lo toma
+	// si está pending/failed, o processing con un bloqueo más viejo que
+	// lockTTL (la instancia que lo tenía murió). Si no, devuelve el job
+	// actual con ErrJobAlreadyTerminal o ErrJobLocked; ErrNotFound si no
+	// existe. Así dos entregas simultáneas del mismo mensaje nunca
+	// procesan el mismo job a la vez.
+	ClaimJob(id string, lockTTL time.Duration) (*MediaJob, error)
+	// TouchJobLock renueva locked_at mientras el job sigue en proceso
+	// (latido), para que el bloqueo solo caduque si la instancia muere.
+	TouchJobLock(id string) error
 }
 
 // ---------- almacenamiento de objetos (implementado en internal/media/platform) ----------

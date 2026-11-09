@@ -1,10 +1,10 @@
-// Package worker contiene los "processors" que asynq invoca cuando toma un
-// media_job de la cola. Cada processor: descarga el original desde
-// MinIO/S3, corre la herramienta correspondiente (ClamAV, FFmpeg,
-// LibreOffice), sube el resultado, y actualiza tanto media_assets (este
-// módulo) como resources.processing_status (módulo de cursos, vía
-// coursesRepo). No conoce nada de HTTP ni de asynq directamente: el
-// archivo cmd/worker/main.go es quien conecta esto con la cola real.
+// Package worker contiene el procesamiento de los media_job. Cada
+// processor descarga el original desde Cloud Storage, corre la herramienta
+// correspondiente (ClamAV, FFmpeg, LibreOffice), sube el resultado y
+// actualiza media_assets (este módulo) y resources.processing_status
+// (módulo de cursos, vía coursesRepo). push.go recibe los mensajes de
+// Pub/Sub (Entrega 4) y decide qué responder; processor.go no sabe nada de
+// HTTP ni de Pub/Sub.
 package worker
 
 import (
@@ -57,19 +57,25 @@ func NewProcessor(mediaRepo mediadomain.MediaRepository, coursesRepo coursesdoma
 	return &Processor{mediaRepo: mediaRepo, coursesRepo: coursesRepo, storage: storage, queue: queue, workDir: workDir}
 }
 
-// HandleJob es el punto de entrada que cmd/worker/main.go conecta al
-// handler de asynq para cada tipo de tarea. Encapsula el ciclo de vida
-// completo: marcar processing, ejecutar, marcar done/failed, y si se
-// agotaron los reintentos, reflejar el fallo en resources.processing_status
-// y encadenar el TODO de alerta (sección 6: "emite una alerta").
-func (p *Processor) HandleJob(job *mediadomain.MediaJob) error {
-	if err := mediausecase.MarkJobProcessing(p.mediaRepo, job); err != nil {
-		return err
-	}
+// ErrDeadLettered indica que el job falló y ya no le quedan intentos: quedó
+// en dead_letter en Postgres y el recurso en failed. Quien llama no debe
+// pedir otro reintento (en push: responder 2xx).
+var ErrDeadLettered = errors.New("job en dead_letter: se agotaron los intentos")
 
+// HandleJob procesa un job que ya fue tomado con MediaRepository.ClaimJob
+// (status processing, intento sumado, locked_at fijado). Ejecuta el paso,
+// guarda el resultado y cierra el job como done. Si falla, lo deja pending
+// para otro intento o, si se agotaron, en dead_letter y devuelve un error
+// que envuelve ErrDeadLettered.
+func (p *Processor) HandleJob(job *mediadomain.MediaJob) error {
 	asset, err := p.mediaRepo.FindAssetByID(job.MediaAssetID)
 	if err != nil {
-		_ = mediausecase.MarkJobFailed(p.mediaRepo, job, err)
+		if markErr := mediausecase.MarkJobFailed(p.mediaRepo, job, err); markErr != nil {
+			return markErr
+		}
+		if job.Status == mediadomain.JobDeadLetter {
+			return fmt.Errorf("%w: %w", ErrDeadLettered, err)
+		}
 		return err
 	}
 
@@ -91,10 +97,9 @@ func (p *Processor) HandleJob(job *mediadomain.MediaJob) error {
 		}
 		if job.Status == mediadomain.JobDeadLetter {
 			_ = p.setResourceProcessingStatus(asset.ResourceID, coursesdomain.ProcessingFailed, nil)
-			// TODO: aquí es donde se dispara la alerta de la sección 6
-			// ("tras tres reintentos fallidos... emite una alerta"), por
-			// ejemplo publicando en el mismo canal que usa observabilidad
-			// (OpenTelemetry / logs estructurados que ya use el equipo).
+			// La alerta de la sección 6 es el registro con severidad
+			// ERROR que deja push.go con estado_final=dead_letter.
+			return fmt.Errorf("%w: %w", ErrDeadLettered, procErr)
 		}
 		return procErr
 	}
@@ -171,8 +176,9 @@ func (p *Processor) scanAntivirus(job *mediadomain.MediaJob, asset *mediadomain.
 		return err
 	}
 
-	// clamdscan habla con el daemon clamav ya levantado en docker-compose
-	// (ver modulo-cursos-catalogo.md: "docker compose up -d ... clamav").
+	// clamdscan habla con clamd por TCP según /etc/clamav/clamd.conf: en
+	// Cloud Run, el clamd del mismo contenedor (deploy/worker-entrypoint.sh);
+	// en docker-compose, el servicio clamav.
 	cmd := exec.Command("clamdscan", "--stream", "--no-summary", localPath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

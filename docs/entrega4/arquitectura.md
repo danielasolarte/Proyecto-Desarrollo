@@ -23,7 +23,7 @@ flowchart LR
     nav -- URL firmadas --> gcs
     be -- publica job_id --> ps
     ps -- "push con token OIDC" --> wk
-    ps -. "5 entregas fallidas" .-> dlq
+    ps -. "10 entregas fallidas" .-> dlq
     wk -- publica trabajo encadenado --> ps
     be -- VPC --> sql
     wk -- VPC --> sql
@@ -38,7 +38,7 @@ flowchart LR
 2. Al confirmar la carga, el backend crea el `media_job` en Postgres, publica `{"job_id": "..."}` en `mooc-media-jobs` y responde sin esperar el procesamiento.
 3. Pub/Sub entrega el mensaje al worker por push (`POST /pubsub/push`) con un token OIDC de `sa-pubsub-push`.
 4. El worker relee el job en Postgres, lo procesa, guarda el resultado y responde 204. Si hace falta otro paso (escaneo → HLS o PDF), publica el siguiente trabajo.
-5. Si un mensaje no se confirma, Pub/Sub lo reintenta con espera creciente (10 s a 600 s). Tras 5 entregas pasa a `mooc-media-jobs-dlq`.
+5. Si un mensaje no se confirma, Pub/Sub lo reintenta con espera creciente (10 s a 600 s). Tras 10 entregas pasa a `mooc-media-jobs-dlq` (ver el comentario en `infra/terraform/pubsub.tf`); los errores que se repiten los corta antes el worker, que marca el job `dead_letter` a los 3 intentos.
 
 Contrato del mensaje y reglas de respuesta: [`contrato-mensaje.md`](contrato-mensaje.md).
 
