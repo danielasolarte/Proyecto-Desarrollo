@@ -16,3 +16,13 @@ coverage.out
 .DS_Store
 Video y doc/
 Claude outputs/
+
+# Terraform (E4): el estado vive en GCS; aquí nunca van estado, planes ni tfvars
+infra/terraform/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+infra/terraform/terraform.tfvars
+infra/terraform/*.auto.tfvars
+crash.log

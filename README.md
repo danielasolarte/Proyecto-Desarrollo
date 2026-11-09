@@ -1,101 +1,77 @@
 # Plataforma MOOC
 
 Plataforma web de cursos masivos abiertos en línea: backend en Go (monolito
-modular con API REST bajo `/api/v1` y workers asíncronos con asynq) y frontend
-en React. PostgreSQL es la fuente transaccional, Redis guarda sesiones y la cola
-de trabajos, y los archivos multimedia van a un almacenamiento de objetos
-(MinIO en local, Cloud Storage en la nube).
+modular con API REST bajo `/api/v1` y workers asíncronos) y frontend en React.
+PostgreSQL es la fuente transaccional (también de las sesiones), Pub/Sub lleva
+la cola de trabajos multimedia y los archivos van a un almacenamiento de
+objetos (MinIO en local, Cloud Storage en la nube).
 
 Este README está organizado por entrega, con la más reciente arriba:
 
-- [Entrega 3: aplicación elástica IaaS](#entrega-3-aplicación-elástica-iaas-gcp--estado-actual) (estado actual).
+- [Entrega 4: Cloud Run, Pub/Sub y Terraform](#entrega-4-cloud-run-pubsub-y-terraform--estado-actual) (estado actual).
 - [Estructura del repositorio](#estructura-del-repositorio) y [desarrollo local](#desarrollo-local).
-- [Entregas anteriores](#entregas-anteriores): Entrega 2 (despliegue básico en GCP) y Entrega 1 (backend).
+- [Entregas anteriores](#entregas-anteriores): Entrega 3 (aplicación elástica IaaS), Entrega 2 (despliegue básico en GCP) y Entrega 1 (backend).
 
-## Entrega 3: Aplicación elástica IaaS (GCP) — estado actual
+## Entrega 4: Cloud Run, Pub/Sub y Terraform — estado actual
 
-Plataforma MOOC sobre Google Cloud con escalamiento automático en dos capas:
-un grupo de instancias administradas para la API (`mooc-api-mig`, 1 a 3 VMs por
-CPU) y otro para los workers (`mooc-worker-mig`, 1 a 3 VMs por la demanda de la
-cola), detrás de un balanceador HTTPS externo. La cola Redis y ClamAV viven en
-una VM fija (`mooc-servicios`), fuera de los grupos. PostgreSQL en Cloud SQL y
-archivos en Cloud Storage, ambos compartidos por todas las instancias.
+La plataforma corre en tres servicios de Cloud Run: frontend, backend y workers, cada uno con máximo 3 instancias. El backend publica cada trabajo multimedia en Pub/Sub y responde sin esperar; una suscripción push autenticada entrega el mensaje al worker, que es privado y solo acepta llamadas de la identidad de la suscripción. PostgreSQL en Cloud SQL (solo IP privada) y archivos en Cloud Storage. Ya no hay VM ni Redis: las sesiones viven en Postgres y la cola es Pub/Sub.
+
+Toda la infraestructura se crea con Terraform (`infra/terraform/`) en el proyecto de GCP de Camila. Nada se crea a mano en la consola.
 
 ### Aplicación desplegada
 
-- Frontend: https://136.68.98.101.sslip.io
-- API (mismo dominio, detrás del balanceador): https://136.68.98.101.sslip.io/api/v1
-- Versión publicada del frontend: https://136.68.98.101.sslip.io/version.json
-- Tag evaluado: `entrega-3` (commit final de la entrega).
-- Video de sustentación: https://canva.link/npbpdsuxienq5w2
+- Frontend: _(pendiente: `terraform output url_frontend`)_
+- Backend: https://mooc-backend-yufxihdm4q-uc.a.run.app (también responderá detrás del frontend en `/api/v1`).
+- Tag evaluado: `entrega-4`.
+- Video de sustentación: _(pendiente)_
 
-Frontend y API comparten dominio, así que la sesión por cookies y el CSRF
-funcionan sin CORS. El bucket de medios sí tiene CORS para ese origen, porque el
-navegador sube los archivos directo al almacenamiento con URLs prefirmadas.
+El frontend (nginx) sirve la SPA y reenvía `/api/*` al backend, así que la sesión por cookies y el CSRF funcionan sin CORS. El bucket sí tiene CORS para el origen del frontend, porque el navegador sube y descarga los archivos directo con URL firmadas.
 
-Los recursos se apagan cuando no se usan, para controlar costos. Si el
-dominio no responde, el entorno está apagado: ver "Encender y apagar" abajo.
-Las credenciales de las cuentas de prueba se entregan al equipo docente por el
-medio privado del curso; no están en el repositorio.
+Cloud Run escala a cero cuando no hay tráfico, así que la primera solicitud puede tardar unos segundos. Cloud SQL se apaga cuando nadie está trabajando, para ahorrar créditos; si el backend responde `Service Unavailable`, la base está apagada (ver "Encender y apagar Cloud SQL" abajo). Las credenciales de las cuentas de prueba y el acceso al proyecto se entregan al equipo docente por el medio privado del curso; no están en el repositorio.
 
 ### Documentación
 
-- Arquitectura (componentes, despliegue, escalamiento, operación, costos y limitaciones): [`docs/entrega3/arquitectura.md`](docs/entrega3/arquitectura.md).
-- Cola compartida, workers elásticos y retiro seguro: [`docs/entrega3/arquitectura-workers.md`](docs/entrega3/arquitectura-workers.md).
-- Verificación funcional del frontend (matriz de recorridos y rutas): [`docs/entrega3/matriz-verificacion-frontend.md`](docs/entrega3/matriz-verificacion-frontend.md).
-- Informe de capacidad (escenarios 1, 2, 3A y 3B, gráficas y limitaciones): [`capacity-planning/pruebas_de_carga_entrega3.md`](capacity-planning/pruebas_de_carga_entrega3.md).
-- Integridad entre réplicas: [`capacity-planning/integridad-replicas-e3.md`](capacity-planning/integridad-replicas-e3.md).
-- Pool de conexiones a Cloud SQL: [`capacity-planning/cloud-sql-pool-e3.md`](capacity-planning/cloud-sql-pool-e3.md).
-- Deuda técnica y calidad del código (SonarQube): [`docs/entrega3/deuda-tecnica.md`](docs/entrega3/deuda-tecnica.md).
-- Frontend (arranque local, cuentas de prueba y contrato con la API): [`frontend/README.md`](frontend/README.md).
+- Arquitectura (diagrama, configuración de cada servicio, cuentas de servicio y permisos, secretos): [`docs/entrega4/arquitectura.md`](docs/entrega4/arquitectura.md).
+- Contrato del mensaje de Pub/Sub y reglas de respuesta del worker: [`docs/entrega4/contrato-mensaje.md`](docs/entrega4/contrato-mensaje.md).
+- Guía de despliegue reproducible, desde un proyecto vacío: [`docs/entrega4/despliegue.md`](docs/entrega4/despliegue.md).
+- Comandos para obtener las evidencias (registros de una tarea, instancias, mensajes pendientes, acceso): [`docs/entrega4/evidencias.md`](docs/entrega4/evidencias.md).
+- Verificación del escalamiento: _(pendiente: `docs/entrega4/escalamiento.md`)_.
+
+### Despliegue
+
+Los pasos completos están en la [guía](docs/entrega4/despliegue.md). En resumen, con el ID del proyecto en `deploy/gcp/e4/proyecto.ps1`:
+
+```powershell
+.\deploy\gcp\e4\00-bucket-estado.ps1                 # una vez: bucket del estado de Terraform
+.\deploy\gcp\e4\tf.ps1 init
+.\deploy\gcp\e4\tf.ps1 plan ; .\deploy\gcp\e4\tf.ps1 apply   # base: red, Cloud SQL, bucket, Pub/Sub, identidades
+.\deploy\gcp\e4\01-secretos.ps1                      # valores de los secretos, sin mostrarlos
+.\deploy\gcp\e4\construir-imagenes.ps1 -Servicios backend,migraciones,worker,frontend
+.\deploy\gcp\e4\tf.ps1 plan -Tag <commit> ; .\deploy\gcp\e4\tf.ps1 apply   # servicios habilitados en variables.tf
+.\deploy\gcp\e4\migrar.ps1
+```
+
+La primera vez el orden importa: primero el job de migraciones y `migrar.ps1`, después el backend, para que arranque con las tablas creadas y cree la cuenta de administrador (ver la guía).
+
+Cada imagen se etiqueta con el commit y Cloud Run la despliega por digest, así que lo que corre es exactamente lo que se probó. Al final, `tf.ps1 plan` debe decir `No changes`.
+
+#### Encender y apagar Cloud SQL
+
+Cualquiera del grupo puede hacerlo (rol Editor de Cloud SQL). Encender tarda unos 5 minutos; después `/health/ready` del backend responde `ready`.
+
+```powershell
+gcloud sql instances patch mooc-e4-postgres --activation-policy=ALWAYS --project=proyectodesarrollo-513918   # encender
+gcloud sql instances patch mooc-e4-postgres --activation-policy=NEVER --project=proyectodesarrollo-513918    # apagar
+gcloud sql instances describe mooc-e4-postgres --project=proyectodesarrollo-513918 --format="value(state,settings.activationPolicy)"
+```
+
+Terraform no vigila si la base está encendida o apagada, así que esto no aparece como cambio pendiente en `tf.ps1 plan`.
 
 ### Calidad y pruebas
 
-- CI en GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): pruebas y build de Go, análisis de SonarQube Cloud, validación de los compose, guardia de secretos, y pruebas (Vitest) y build del frontend.
-- SonarQube Cloud: [resumen del proyecto](https://sonarcloud.io/summary/overall?id=danielasolarte_Proyecto-Desarrollo&branch=main). Configuración en [`sonar-project.properties`](sonar-project.properties); el token vive solo en el secreto `SONAR_TOKEN` del repositorio.
-- Pruebas de carga: scripts de k6 en [`k6/`](k6/README.md) y resultados crudos en `k6/results/` y `capacity-planning/results/`.
-
-### Despliegue y operación
-
-Todos los scripts están en [`deploy/gcp/e3/`](deploy/gcp/e3/README.md), con el
-orden completo para reconstruir el entorno:
-
-- `01-secretos-identidades.ps1`: cuentas de servicio por rol y secretos en Secret Manager.
-- `02-imagen-maquina.ps1`: contenedor versionado por commit e imagen de máquina por rol.
-- `03-grupo-api.ps1`: plantilla, health checks, grupo de la API y autoscaling.
-- `04-vm-servicios.ps1`: VM fija con Redis, ClamAV y el exportador de métricas de la cola.
-- `05-migraciones.ps1`: migraciones controladas, una sola vez, desde la VM de servicios.
-- `06-cors-bucket.ps1`: CORS del bucket de medios para el dominio del frontend.
-- `07-grupo-workers.ps1`: plantilla, grupo y autoscaling de los workers.
-- `08-balanceador.ps1`: balanceador HTTPS, publicación del frontend y pruebas de reparto.
-- `09-cuenta-admin.ps1`: listar cuentas admin y asignar una clave nueva desde Cloud SQL.
-- `09-admin-prueba.ps1`: promover cuentas de prueba a administrador para las pruebas de carga.
-- `10-escenario3a.ps1`: línea de tiempo y CPU del grupo de la API para el Escenario 3A.
-
-#### Encender y apagar
-
-Encender, en este orden (Cloud SQL tarda de 3 a 5 minutos):
-
-```powershell
-gcloud sql instances patch mooc-postgres --activation-policy=ALWAYS
-.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Encender
-.\deploy\gcp\e3\03-grupo-api.ps1 -Fase Encender
-.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Encender
-.\deploy\gcp\e3\03-grupo-api.ps1 -Fase Probar
-.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Probar
-```
-
-Apagar, en orden inverso:
-
-```powershell
-.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Apagar
-.\deploy\gcp\e3\03-grupo-api.ps1 -Fase Apagar
-.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Apagar
-gcloud sql instances patch mooc-postgres --activation-policy=NEVER
-```
-
-No se apaga `mooc-servicios` ni Cloud SQL con los grupos encendidos: sin ellos
-los workers no arrancan y la API no puede iniciar sesión.
+- CI en GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): pruebas y build de Go, análisis de SonarQube Cloud, guardia de secretos, y pruebas y build del frontend.
+- SonarQube Cloud: [resumen del proyecto](https://sonarcloud.io/summary/overall?id=danielasolarte_Proyecto-Desarrollo&branch=main).
+- En local, `docker compose up` levanta el emulador de Pub/Sub con el mismo topic y la misma suscripción que crea Terraform.
 
 ## Estructura del repositorio
 
@@ -590,6 +566,93 @@ Incluye endpoints de:
 La especificacion usa OpenAPI 3.1 y define los esquemas de request/response, parametros de ruta, autenticacion, respuestas de error y endpoints publicos y protegidos de la plataforma.
 
 ## Entregas anteriores
+
+### Entrega 3: Aplicación elástica IaaS (GCP)
+
+> El proyecto de GCP de la E2 y la E3 quedó suspendido por falta de facturación (se agotó el crédito educativo), así que las URL de esta sección ya no responden. El tag `entrega-3` y los scripts de `deploy/gcp/e3/` siguen documentando esa versión.
+
+Plataforma MOOC sobre Google Cloud con escalamiento automático en dos capas:
+un grupo de instancias administradas para la API (`mooc-api-mig`, 1 a 3 VMs por
+CPU) y otro para los workers (`mooc-worker-mig`, 1 a 3 VMs por la demanda de la
+cola), detrás de un balanceador HTTPS externo. La cola Redis y ClamAV viven en
+una VM fija (`mooc-servicios`), fuera de los grupos. PostgreSQL en Cloud SQL y
+archivos en Cloud Storage, ambos compartidos por todas las instancias.
+
+#### Aplicación desplegada
+
+- Frontend: https://136.68.98.101.sslip.io
+- API (mismo dominio, detrás del balanceador): https://136.68.98.101.sslip.io/api/v1
+- Versión publicada del frontend: https://136.68.98.101.sslip.io/version.json
+- Tag evaluado: `entrega-3` (commit final de la entrega).
+- Video de sustentación: https://canva.link/npbpdsuxienq5w2
+
+Frontend y API comparten dominio, así que la sesión por cookies y el CSRF
+funcionan sin CORS. El bucket de medios sí tiene CORS para ese origen, porque el
+navegador sube los archivos directo al almacenamiento con URLs prefirmadas.
+
+Los recursos se apagan cuando no se usan, para controlar costos. Si el
+dominio no responde, el entorno está apagado: ver "Encender y apagar" abajo.
+Las credenciales de las cuentas de prueba se entregan al equipo docente por el
+medio privado del curso; no están en el repositorio.
+
+#### Documentación
+
+- Arquitectura (componentes, despliegue, escalamiento, operación, costos y limitaciones): [`docs/entrega3/arquitectura.md`](docs/entrega3/arquitectura.md).
+- Cola compartida, workers elásticos y retiro seguro: [`docs/entrega3/arquitectura-workers.md`](docs/entrega3/arquitectura-workers.md).
+- Verificación funcional del frontend (matriz de recorridos y rutas): [`docs/entrega3/matriz-verificacion-frontend.md`](docs/entrega3/matriz-verificacion-frontend.md).
+- Informe de capacidad (escenarios 1, 2, 3A y 3B, gráficas y limitaciones): [`capacity-planning/pruebas_de_carga_entrega3.md`](capacity-planning/pruebas_de_carga_entrega3.md).
+- Integridad entre réplicas: [`capacity-planning/integridad-replicas-e3.md`](capacity-planning/integridad-replicas-e3.md).
+- Pool de conexiones a Cloud SQL: [`capacity-planning/cloud-sql-pool-e3.md`](capacity-planning/cloud-sql-pool-e3.md).
+- Deuda técnica y calidad del código (SonarQube): [`docs/entrega3/deuda-tecnica.md`](docs/entrega3/deuda-tecnica.md).
+- Frontend (arranque local, cuentas de prueba y contrato con la API): [`frontend/README.md`](frontend/README.md).
+
+#### Calidad y pruebas
+
+- CI en GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): pruebas y build de Go, análisis de SonarQube Cloud, validación de los compose, guardia de secretos, y pruebas (Vitest) y build del frontend.
+- SonarQube Cloud: [resumen del proyecto](https://sonarcloud.io/summary/overall?id=danielasolarte_Proyecto-Desarrollo&branch=main). Configuración en [`sonar-project.properties`](sonar-project.properties); el token vive solo en el secreto `SONAR_TOKEN` del repositorio.
+- Pruebas de carga: scripts de k6 en [`k6/`](k6/README.md) y resultados crudos en `k6/results/` y `capacity-planning/results/`.
+
+#### Despliegue y operación
+
+Todos los scripts están en [`deploy/gcp/e3/`](deploy/gcp/e3/README.md), con el
+orden completo para reconstruir el entorno:
+
+- `01-secretos-identidades.ps1`: cuentas de servicio por rol y secretos en Secret Manager.
+- `02-imagen-maquina.ps1`: contenedor versionado por commit e imagen de máquina por rol.
+- `03-grupo-api.ps1`: plantilla, health checks, grupo de la API y autoscaling.
+- `04-vm-servicios.ps1`: VM fija con Redis, ClamAV y el exportador de métricas de la cola.
+- `05-migraciones.ps1`: migraciones controladas, una sola vez, desde la VM de servicios.
+- `06-cors-bucket.ps1`: CORS del bucket de medios para el dominio del frontend.
+- `07-grupo-workers.ps1`: plantilla, grupo y autoscaling de los workers.
+- `08-balanceador.ps1`: balanceador HTTPS, publicación del frontend y pruebas de reparto.
+- `09-cuenta-admin.ps1`: listar cuentas admin y asignar una clave nueva desde Cloud SQL.
+- `09-admin-prueba.ps1`: promover cuentas de prueba a administrador para las pruebas de carga.
+- `10-escenario3a.ps1`: línea de tiempo y CPU del grupo de la API para el Escenario 3A.
+
+##### Encender y apagar
+
+Encender, en este orden (Cloud SQL tarda de 3 a 5 minutos):
+
+```powershell
+gcloud sql instances patch mooc-postgres --activation-policy=ALWAYS
+.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Encender
+.\deploy\gcp\e3\03-grupo-api.ps1 -Fase Encender
+.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Encender
+.\deploy\gcp\e3\03-grupo-api.ps1 -Fase Probar
+.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Probar
+```
+
+Apagar, en orden inverso:
+
+```powershell
+.\deploy\gcp\e3\07-grupo-workers.ps1 -Fase Apagar
+.\deploy\gcp\e3\03-grupo-api.ps1 -Fase Apagar
+.\deploy\gcp\e3\04-vm-servicios.ps1 -Fase Apagar
+gcloud sql instances patch mooc-postgres --activation-policy=NEVER
+```
+
+No se apaga `mooc-servicios` ni Cloud SQL con los grupos encendidos: sin ellos
+los workers no arrancan y la API no puede iniciar sesión.
 
 ### Entrega 2: Despliegue básico en la nube (GCP)
 

@@ -11,13 +11,23 @@ const defaultMaxAttempts = 3 // "tras tres reintentos fallidos... DLQ" (sección
 
 // EnqueueJob crea un media_job si no existe ya uno con la misma clave de
 // idempotencia (así "una entrega duplicada no genera salidas repetidas",
-// sección 6), y luego lo publica en la cola real (Redis/asynq) para que un
-// worker lo recoja. Si el job ya existía, NO se vuelve a publicar en la
-// cola — evita el caso de doble entrega HTTP encolando el mismo trabajo
-// dos veces en Redis.
+// sección 6), y luego lo publica en la cola (Pub/Sub desde la E4) para que
+// un worker lo recoja.
+//
+// Si el job ya existía y sigue pending (nadie lo ha tomado), se vuelve a
+// publicar: así un job cuyo publicado falló la primera vez no queda
+// huérfano cuando el cliente repite la operación. Un mensaje duplicado es
+// inofensivo porque el worker relee el estado en Postgres y no repite un
+// trabajo en curso ni uno terminado. Si ya está en proceso o terminado, no
+// se publica de nuevo.
 func EnqueueJob(repo domain.MediaRepository, queue domain.JobQueue, mediaAssetID string, jobType domain.JobType, idempotencyKey string) (*domain.MediaJob, error) {
 	existing, err := repo.FindJobByIdempotencyKey(idempotencyKey)
 	if err == nil {
+		if existing.Status == domain.JobPending {
+			if err := queue.EnqueueMediaJob(existing); err != nil {
+				return nil, err
+			}
+		}
 		return existing, nil
 	}
 	if !errors.Is(err, domain.ErrNotFound) {
