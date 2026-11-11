@@ -20,8 +20,8 @@ Toda la infraestructura se crea con Terraform (`infra/terraform/`) en el proyect
 
 ### Aplicación desplegada
 
-- Frontend: _(pendiente: `terraform output url_frontend`)_
-- Backend: https://mooc-backend-yufxihdm4q-uc.a.run.app (también responderá detrás del frontend en `/api/v1`).
+- Frontend: https://mooc-frontend-yufxihdm4q-uc.a.run.app
+- Backend: https://mooc-backend-yufxihdm4q-uc.a.run.app (también responde detrás del frontend en `/api/v1`).
 - Tag evaluado: `entrega-4`.
 - Video de sustentación: _(pendiente)_
 
@@ -35,7 +35,7 @@ Cloud Run escala a cero cuando no hay tráfico, así que la primera solicitud pu
 - Contrato del mensaje de Pub/Sub y reglas de respuesta del worker: [`docs/entrega4/contrato-mensaje.md`](docs/entrega4/contrato-mensaje.md).
 - Guía de despliegue reproducible, desde un proyecto vacío: [`docs/entrega4/despliegue.md`](docs/entrega4/despliegue.md).
 - Comandos para obtener las evidencias (registros de una tarea, instancias, mensajes pendientes, acceso): [`docs/entrega4/evidencias.md`](docs/entrega4/evidencias.md).
-- Verificación del escalamiento: _(pendiente: `docs/entrega4/escalamiento.md`)_.
+- Verificación del escalamiento: `docs/entrega4/escalamiento.md`. La ráfaga de cargas para el worker se corre con `k6/run-rafaga-worker-e4.ps1` (ver la guía, paso 8).
 
 ### Despliegue
 

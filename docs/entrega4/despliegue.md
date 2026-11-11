@@ -81,7 +81,26 @@ Con esa cuenta se crean los profesores y estudiantes de prueba desde la aplicaci
 
 ## 6. Frontend y worker
 
-Igual que el paso 5, con `-Servicios frontend` o `-Servicios worker` y su valor en `servicios_habilitados`. Si la etiqueta de un servicio es distinta, `tf.ps1 plan` admite la etiqueta común con `-Tag` y en `variables.tf` se puede fijar `image_tag_por_servicio`.
+Lo más simple es construir todas las imágenes con el mismo commit, así una sola etiqueta sirve para todo:
+
+```powershell
+git checkout main
+git pull
+.\deploy\gcp\e4\construir-imagenes.ps1 -Servicios backend,migraciones,frontend,worker
+```
+
+En `variables.tf`, `frontend = true` y `worker = true`, y luego:
+
+```powershell
+.\deploy\gcp\e4\tf.ps1 plan -Tag <etiqueta que imprimió el script>
+.\deploy\gcp\e4\tf.ps1 apply
+```
+
+Con el worker se crea también la suscripción push `mooc-media-jobs-worker` (OIDC con `sa-pubsub-push`) y el permiso para que solo esa cuenta invoque el worker. El worker tarda entre 20 y 40 s en arrancar porque `clamd` carga las firmas antes de abrir el puerto.
+
+Si algún servicio necesita una etiqueta distinta, en `variables.tf` se fija `image_tag_por_servicio` (por ejemplo `{ worker = "a1b2c3d" }`).
+
+Comprobación rápida del worker: sube un PDF o un video desde el frontend como profesor y sigue su `job_id` en Cloud Logging (`docs/entrega4/evidencias.md`, sección 2). Una llamada sin identidad al worker debe responder 403 (sección 5).
 
 ## 7. Verificar
 
@@ -93,8 +112,19 @@ curl.exe -s "$b/health/ready"
 
 Al final, `.\deploy\gcp\e4\tf.ps1 plan` debe decir `No changes`: lo desplegado es igual a lo del repositorio.
 
+## 8. Prueba de escalamiento del worker
+
+`k6/run-rafaga-worker-e4.ps1` sube una ráfaga de archivos con una cuenta de profesor y mide cuánto tarda cada uno en quedar listo. Con Cloud SQL encendida y Docker Desktop abierto:
+
+```powershell
+$env:TEACHER_PASSWORD = "<clave del profesor de prueba>"
+.\k6\run-rafaga-worker-e4.ps1 -Tipo presentacion -Rafaga 1    # capacidad de un worker (c)
+.\k6\run-rafaga-worker-e4.ps1 -Tipo presentacion -Rafaga 9    # ráfaga: la cola crece y se vacía
+.\k6\run-rafaga-worker-e4.ps1 -Tipo video -Rafaga 6
+```
+
+Los resultados quedan en `k6/results/e4/`. Mientras corre, se capturan las gráficas de la sección 4 de `docs/entrega4/evidencias.md`.
+
 ## Pendiente
 
-- Mateo: worker y verificación de la suscripción push.
-- Samara: frontend (el CORS del bucket ya toma la URL del frontend desde Terraform).
-- Camila: ejecutar esta guía y corregir lo que falte.
+- Camila: ejecutar esta guía de punta a punta y corregir lo que falte.
