@@ -78,8 +78,7 @@ Terraform no vigila si la base está encendida o apagada, así que esto no apare
 ```text
 cmd/
   api/                  servidor HTTP
-  worker/               worker asynq (multimedia)
-  cola-exportador/      publica la demanda de la cola en Cloud Monitoring (E3)
+  worker/               worker de multimedia: recibe push de Pub/Sub (E4)
 internal/
   admin/ auth/ badges/ catalog/ courses/ media/ progress/ quizzes/
   platform/             utilidades compartidas

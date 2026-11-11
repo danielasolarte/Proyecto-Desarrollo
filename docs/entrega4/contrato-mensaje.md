@@ -46,14 +46,24 @@ El backend publica en el topic `mooc-media-jobs` y Pub/Sub entrega cada mensaje 
 | Error con intentos disponibles | 500 | Reintenta con espera creciente |
 | Error y se agotaron los intentos del job | Marcar `dead_letter` y 204 | Se confirma; no se escala un error repetible |
 
-La suscripción además manda al tópico `mooc-media-jobs-dlq` cualquier mensaje entregado 5 veces sin confirmarse.
+La suscripción además manda al tópico `mooc-media-jobs-dlq` cualquier mensaje entregado 10 veces sin confirmarse.
+
+### Bloqueo y reemplazo de instancias
+
+El worker toma el job con un `UPDATE` condicional en Postgres (`ClaimJob`): pasa a `processing`, suma un intento y fija `locked_at`, solo si estaba `pending`/`failed` o si su bloqueo venció. De dos entregas simultáneas del mismo mensaje, solo una lo procesa; la otra recibe 429.
+
+Mientras procesa, el worker renueva `locked_at` cada 20 s. Si la instancia muere, el bloqueo vence a los 60 s (`WORKER_LOCK_TTL_SECONDS`) y la siguiente entrega de Pub/Sub retoma el job en otra instancia. Rehacer un paso no duplica efectos: los derivados se escriben en las mismas rutas del bucket y el trabajo encadenado usa la misma clave de idempotencia.
 
 ## Registros
 
 Cada paso registra el mismo `job_id`, así una consulta en Cloud Logging sigue la tarea de punta a punta:
 
 - backend: `pubsub: publicado job_id=… job_type=… message_id=…`
-- worker: `job_id`, `message_id`, `deliveryAttempt` y estado final.
+- worker: una línea JSON por evento con `job_id`, `message_id`, `delivery_attempt`, `intento` y `estado_final` (`done`, `reintento`, `dead_letter`, `ya_terminado`, `ocupado`, `descartado`). Consulta en Cloud Logging:
+
+  ```
+  resource.type="cloud_run_revision" jsonPayload.job_id="<job_id>"
+  ```
 
 ## Idempotencia
 

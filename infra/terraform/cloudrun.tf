@@ -249,12 +249,12 @@ resource "google_cloud_run_v2_service" "worker" {
 
       dynamic "env" {
         for_each = merge(local.entorno_almacenamiento, local.entorno_pubsub, {
-          WORKER_WORKDIR     = "/tmp/media"
-          WORKER_CONCURRENCY = "1"
-          CLAMAV_HOST        = "127.0.0.1"
-          CLAMAV_PORT        = "3310"
-          DB_MAX_CONNS       = "3"
-          DB_MIN_CONNS       = "0"
+          WORKER_WORKDIR          = "/tmp/media"
+          WORKER_LOCK_TTL_SECONDS = "60"
+          CLAMAV_HOST             = "127.0.0.1"
+          CLAMAV_PORT             = "3310"
+          DB_MAX_CONNS            = "3"
+          DB_MIN_CONNS            = "0"
         })
         content {
           name  = env.key

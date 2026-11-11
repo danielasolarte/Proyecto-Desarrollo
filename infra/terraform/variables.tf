@@ -33,7 +33,7 @@ variable "servicios_habilitados" {
     migraciones = true
     backend     = true
     frontend    = true
-    worker      = false
+    worker      = true
   }
 }
 

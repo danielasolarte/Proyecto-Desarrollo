@@ -77,7 +77,7 @@ Debe verse:
 - `oidcToken.serviceAccountEmail` igual a `sa-pubsub-push@...` (push autenticado).
 - `ackDeadlineSeconds: 600`.
 - Reintentos de 10 s a 600 s.
-- Tópico de fallidos `mooc-media-jobs-dlq` con 5 entregas como máximo.
+- Tópico de fallidos `mooc-media-jobs-dlq` con 10 entregas como máximo.
 
 Captura: `03-suscripcion.png`.
 

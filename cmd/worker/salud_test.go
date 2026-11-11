@@ -1,52 +1,45 @@
 package main
 
 import (
-	"errors"
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
-	"time"
 )
 
-func TestSaludEstados(t *testing.T) {
-	reloj := time.Date(2026, 10, 15, 12, 0, 0, 0, time.UTC)
-	s := nuevaSalud(15 * time.Second)
-	s.ahora = func() time.Time { return reloj }
-
-	pasos := []struct {
-		nombre string
-		accion func()
-		estado string
-		codigo int
-	}{
-		{"antes de arrancar", func() {}, "iniciando", http.StatusServiceUnavailable},
-		{"arrancado sin chequeo", s.marcarIniciado, "iniciando", http.StatusServiceUnavailable},
-		{"redis responde", func() { s.registrarChequeo(nil) }, "ok", http.StatusOK},
-		{"redis falla", func() { s.registrarChequeo(errors.New("dial tcp: timeout")) }, "redis_no_disponible", http.StatusServiceUnavailable},
-		{"redis vuelve", func() { s.registrarChequeo(nil) }, "ok", http.StatusOK},
-		{"chequeo viejo", func() { reloj = reloj.Add(46 * time.Second) }, "sin_chequeo_reciente", http.StatusServiceUnavailable},
-		{"chequeo nuevo", func() { s.registrarChequeo(nil) }, "ok", http.StatusOK},
-		{"apagando", s.marcarApagando, "apagando", http.StatusServiceUnavailable},
+func TestSaludOkYApagando(t *testing.T) {
+	s := &salud{}
+	rec := httptest.NewRecorder()
+	s.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("código %d, se esperaba 200", rec.Code)
 	}
 
-	for _, p := range pasos {
-		p.accion()
-		rec := httptest.NewRecorder()
-		s.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
-		if rec.Code != p.codigo || !strings.Contains(rec.Body.String(), `"status":"`+p.estado+`"`) {
-			t.Fatalf("%s: esperaba %d %q, obtuve %d %s", p.nombre, p.codigo, p.estado, rec.Code, rec.Body.String())
-		}
+	s.marcarApagando()
+	rec = httptest.NewRecorder()
+	s.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("código %d, se esperaba 503", rec.Code)
 	}
 }
 
-func TestSaludNoExponeElError(t *testing.T) {
-	s := nuevaSalud(time.Second)
-	s.marcarIniciado()
-	s.registrarChequeo(errors.New("dial tcp 10.20.0.7:6379: connection refused"))
-	rec := httptest.NewRecorder()
-	s.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
-	if strings.Contains(rec.Body.String(), "10.20.0.7") {
-		t.Fatalf("la respuesta expone detalles internos: %s", rec.Body.String())
+func TestRegistroFormatoCloudLogging(t *testing.T) {
+	var buf bytes.Buffer
+	nuevoRegistro(&buf).Warn("job falló", "job_id", "abc")
+	var linea map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &linea); err != nil {
+		t.Fatal(err)
+	}
+	if linea["severity"] != "WARNING" || linea["message"] != "job falló" || linea["job_id"] != "abc" {
+		t.Fatalf("línea %v", linea)
+	}
+}
+
+func TestIntEnv(t *testing.T) {
+	t.Setenv("X_NUM", "7")
+	t.Setenv("X_MAL", "siete")
+	if intEnv("X_NUM", 1) != 7 || intEnv("X_MAL", 1) != 1 || intEnv("X_NO_EXISTE", 3) != 3 {
+		t.Fatal("intEnv no respeta el valor o el respaldo")
 	}
 }

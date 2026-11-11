@@ -1,15 +1,19 @@
-// cmd/worker es el proceso separado que corre los trabajos asíncronos del
-// módulo de multimedia (ver diagrama de arquitectura, sección 4 del
-// enunciado: "Workers en Go" aparte de la API). Escucha la cola de Redis
-// y consume tareas; el único HTTP que expone es GET /health (ver salud.go)
-// para la autorreparación del grupo de workers.
+// cmd/worker es el servicio de Cloud Run mooc-worker (Entrega 4): procesa
+// los trabajos multimedia (antivirus, HLS, PDF) que Pub/Sub le entrega por
+// push en POST /pubsub/push. Es privado: solo la cuenta de la suscripción
+// tiene run.invoker, así que Cloud Run rechaza con 403 cualquier llamada
+// sin esa identidad antes de que llegue a este código.
+//
+// No guarda nada que deba sobrevivir a la instancia: originales y
+// derivados van a Cloud Storage y el estado a Postgres. Los archivos
+// temporales viven en WORKER_WORKDIR (/tmp) y se borran al terminar cada
+// trabajo.
 package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,60 +21,50 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	coursespostgres "github.com/equipo-mooc/plataforma-mooc/internal/courses/postgres"
-	mediadomain "github.com/equipo-mooc/plataforma-mooc/internal/media/domain"
 	mediaplatform "github.com/equipo-mooc/plataforma-mooc/internal/media/platform"
 	mediapostgres "github.com/equipo-mooc/plataforma-mooc/internal/media/postgres"
 	mediaworker "github.com/equipo-mooc/plataforma-mooc/internal/media/worker"
 )
 
-// mustEnv aborta el arranque si falta una variable requerida, en vez de
-// arrancar "a medias" y fallar de forma confusa más tarde en el primer job.
-func mustEnv(key string) string {
-	v := os.Getenv(key)
-	if v == "" {
-		log.Fatalf("falta variable de entorno requerida: %s", key)
+func main() {
+	logger := nuevoRegistro(os.Stdout)
+	slog.SetDefault(logger)
+	if err := run(logger); err != nil {
+		logger.Error("el worker se detuvo con error", "error", err.Error())
+		os.Exit(1)
 	}
-	return v
 }
 
-func main() {
+func run(logger *slog.Logger) error {
 	ctx := context.Background()
 
 	// ---------- conexiones ----------
 
 	dbConfig, err := pgxpool.ParseConfig(mustEnv("DATABASE_URL"))
 	if err != nil {
-		log.Fatalf("configuración inválida de postgres: %v", err)
+		return errors.New("DATABASE_URL inválida")
 	}
-
-	dbConfig.MaxConns = int32(intEnv("DB_MAX_CONNS", 5))
+	dbConfig.MaxConns = int32(intEnv("DB_MAX_CONNS", 3))
 	dbConfig.MinConns = int32(intEnv("DB_MIN_CONNS", 0))
-
 	dbPool, err := pgxpool.NewWithConfig(ctx, dbConfig)
 	if err != nil {
-		log.Fatalf("conectando a postgres: %v", err)
+		return err
 	}
 	defer dbPool.Close()
-
 	if err := dbPool.Ping(ctx); err != nil {
-		log.Fatalf("no se pudo conectar a postgres: %v", err)
+		return err
 	}
 
 	mediaRepo := mediapostgres.NewMediaRepository(dbPool)
-	// NewCourseRepository ya existe en internal/courses/postgres — se
-	// reusa tal cual, el worker necesita leer/escribir resources.
 	coursesRepo := coursespostgres.NewCourseRepository(dbPool)
 
 	useSSL, _ := strconv.ParseBool(os.Getenv("S3_USE_SSL"))
 	storage, err := mediaplatform.NewS3Storage(mediaplatform.S3Config{
 		Endpoint: mustEnv("S3_ENDPOINT"),
-		// S3_ACCESS_KEY/S3_SECRET_KEY son las llaves HMAC de la cuenta de
-		// servicio de GCS (ver comentario en NewS3Storage); solo existen en
-		// el .env real de la VM, nunca en *.env.example ni en el repo.
+		// Llaves HMAC de sa-medios, desde Secret Manager.
 		AccessKey: os.Getenv("S3_ACCESS_KEY"),
 		SecretKey: os.Getenv("S3_SECRET_KEY"),
 		Bucket:    mustEnv("S3_BUCKET"),
@@ -78,127 +72,96 @@ func main() {
 		Region:    os.Getenv("S3_REGION"),
 	})
 	if err != nil {
-		log.Fatalf("conectando a minio/s3: %v", err)
+		return err
 	}
 
-	redisAddr := mustEnv("REDIS_ADDR")
-	queue := mediaplatform.NewAsynqQueue(redisAddr)
-	defer queue.Close()
+	// El worker también publica: al terminar el escaneo encadena el
+	// siguiente trabajo (HLS o PDF) en el mismo topic.
+	queue, err := mediaplatform.NewPubSubQueue(mediaplatform.PubSubConfig{
+		ProjectID:    os.Getenv("PUBSUB_PROJECT"),
+		TopicID:      os.Getenv("PUBSUB_TOPIC"),
+		EmulatorHost: os.Getenv("PUBSUB_EMULATOR_HOST"),
+		Timeout:      time.Duration(intEnv("PUBSUB_PUBLISH_TIMEOUT_MS", 5000)) * time.Millisecond,
+	})
+	if err != nil {
+		return err
+	}
 
 	workDir := os.Getenv("WORKER_WORKDIR")
 	if workDir == "" {
 		workDir = "/tmp/media"
 	}
 	if err := os.MkdirAll(workDir, 0o755); err != nil {
-		log.Fatalf("creando directorio de trabajo %s: %v", workDir, err)
+		return err
 	}
 
 	processor := mediaworker.NewProcessor(mediaRepo, coursesRepo, storage, queue, workDir)
 
-	// ---------- servidor de asynq ----------
-
-	concurrency := 5 // valor por defecto: el mismo que había antes
-	if v := os.Getenv("WORKER_CONCURRENCY"); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil || n < 1 {
-			log.Fatalf("WORKER_CONCURRENCY inválida %q: debe ser un entero >= 1", v)
-		}
-		concurrency = n
-	}
-	log.Printf("worker de multimedia con concurrencia %d", concurrency)
-
-	// Al retirar una VM, el grupo detiene mooc.service y Docker manda
-	// SIGTERM. asynq deja de tomar trabajos, espera a los activos hasta
-	// ShutdownTimeout y devuelve a la cola los que no alcanzaron a
-	// terminar (otro worker los retoma; el estado en Postgres evita
-	// duplicados). El timeout debe ser mayor que la duración de un
-	// trabajo y menor que el mooc-detener-s de la plantilla.
-	shutdownTimeout := time.Duration(intEnv("WORKER_SHUTDOWN_TIMEOUT_SECONDS", 300)) * time.Second
-	const intervaloSalud = 15 * time.Second
-	estadoSalud := nuevaSalud(intervaloSalud)
-
-	srv := asynq.NewServer(
-		asynq.RedisClientOpt{Addr: redisAddr},
-		asynq.Config{
-			// Cuántos jobs procesa este worker EN PARALELO. El escalamiento
-			// horizontal lo hace el grupo de workers (más VM); esto es
-			// concurrencia DENTRO de una sola instancia.
-			Concurrency: concurrency,
-			Queues: map[string]int{
-				"media": 1,
-			},
-			ShutdownTimeout:     shutdownTimeout,
-			HealthCheckFunc:     estadoSalud.registrarChequeo,
-			HealthCheckInterval: intervaloSalud,
-		},
-	)
-
-	mux := asynq.NewServeMux()
-	for _, jobType := range []mediadomain.JobType{
-		mediadomain.JobScanAntivirus,
-		mediadomain.JobTranscodeHLS,
-		mediadomain.JobConvertPresentationToPDF,
-	} {
-		mux.HandleFunc(string(jobType), taskHandler(mediaRepo, processor))
+	// Un job en processing cuyo bloqueo no se renueva en LockTTL se da
+	// por abandonado (la instancia murió) y la siguiente entrega lo
+	// retoma. El latido lo renueva cada LockTTL/3.
+	lockTTL := time.Duration(intEnv("WORKER_LOCK_TTL_SECONDS", 60)) * time.Second
+	push := &mediaworker.PushHandler{
+		Repo:      mediaRepo,
+		Runner:    processor,
+		Logger:    logger,
+		LockTTL:   lockTTL,
+		Heartbeat: lockTTL / 3,
 	}
 
-	saludAddr := os.Getenv("WORKER_HEALTH_ADDR")
-	if saludAddr == "" {
-		saludAddr = ":8081"
-	}
+	// ---------- servidor HTTP ----------
+
+	estado := &salud{}
 	rutas := http.NewServeMux()
-	rutas.Handle("GET /health", estadoSalud)
-	httpSrv := &http.Server{Addr: saludAddr, Handler: rutas, ReadHeaderTimeout: 5 * time.Second}
-	go func() {
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("servidor de salud en %s: %v", saludAddr, err)
-		}
-	}()
+	rutas.Handle("POST /pubsub/push", push)
+	rutas.Handle("GET /health", estado)
 
-	if err := srv.Start(mux); err != nil {
-		log.Fatalf("el worker no pudo arrancar: %v", err)
+	port := os.Getenv("PORT") // Cloud Run lo define (8080)
+	if port == "" {
+		port = "8081" // docker-compose: la suscripción del emulador apunta aquí
 	}
-	estadoSalud.marcarIniciado()
-	log.Printf("worker de multimedia escuchando en la cola 'media' (salud en %s, apagado ordenado hasta %s)", saludAddr, shutdownTimeout)
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           rutas,
+		ReadHeaderTimeout: 10 * time.Second,
+		// Sin WriteTimeout: un trabajo puede tardar hasta el tiempo
+		// máximo de solicitud de Cloud Run (600 s).
+	}
+
+	errSrv := make(chan error, 1)
+	go func() { errSrv <- srv.ListenAndServe() }()
+	logger.Info("worker escuchando", "puerto", port, "bloqueo_ttl_s", lockTTL.Seconds(),
+		"revision", os.Getenv("K_REVISION"))
 
 	senal := make(chan os.Signal, 1)
 	signal.Notify(senal, syscall.SIGTERM, os.Interrupt)
-	s := <-senal
-	log.Printf("señal %v: no se toman trabajos nuevos; se espera hasta %s a los activos", s, shutdownTimeout)
-	estadoSalud.marcarApagando()
-	srv.Shutdown()
-	_ = httpSrv.Close()
-	log.Println("worker detenido")
+	select {
+	case err := <-errSrv:
+		return err
+	case s := <-senal:
+		// Cloud Run da 10 s tras SIGTERM. Si un trabajo no alcanza a
+		// terminar, su bloqueo deja de renovarse y otra instancia lo
+		// retoma cuando Pub/Sub lo reentregue.
+		logger.Warn("señal de apagado, se esperan los trabajos en curso", "senal", s.String())
+		estado.marcarApagando()
+		shutdownCtx, cancel := context.WithTimeout(ctx, 9*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			logger.Warn("apagado sin esperar a todos los trabajos", "error", err.Error())
+		}
+		return nil
+	}
 }
 
-// taskHandler adapta la firma que pide asynq (func(ctx, *asynq.Task) error)
-// a processor.HandleJob(*domain.MediaJob). El payload que viaja por Redis
-// solo trae el ID; el job completo se relee de Postgres, que es la fuente
-// de verdad (así si el job cambió de estado entre que se encoló y se
-// procesó, el worker ve el estado real, no uno desactualizado).
-func taskHandler(repo mediadomain.MediaRepository, processor *mediaworker.Processor) asynq.HandlerFunc {
-	return func(ctx context.Context, t *asynq.Task) error {
-		var payload struct {
-			JobID string `json:"job_id"`
-		}
-		if err := json.Unmarshal(t.Payload(), &payload); err != nil {
-			return err
-		}
-
-		job, err := repo.FindJobByID(payload.JobID)
-		if err != nil {
-			return err
-		}
-
-		// Si un procesamiento anterior ya lo cerró (done/dead_letter),
-		// no hay nada que hacer: evita reprocesar por una entrega
-		// duplicada de Redis (sección 6, "tolerancia a fallos").
-		if job.Status == mediadomain.JobDone || job.Status == mediadomain.JobDeadLetter {
-			return nil
-		}
-
-		return processor.HandleJob(job)
+// mustEnv aborta el arranque si falta una variable requerida, en vez de
+// arrancar a medias y fallar de forma confusa en el primer trabajo.
+func mustEnv(key string) string {
+	v := os.Getenv(key)
+	if v == "" {
+		slog.Error("falta variable de entorno requerida", "variable", key)
+		os.Exit(1)
 	}
+	return v
 }
 
 func intEnv(key string, fallback int) int {
@@ -206,11 +169,9 @@ func intEnv(key string, fallback int) int {
 	if value == "" {
 		return fallback
 	}
-
 	parsed, err := strconv.Atoi(value)
 	if err != nil {
 		return fallback
 	}
-
 	return parsed
 }

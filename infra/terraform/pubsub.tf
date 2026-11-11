@@ -18,7 +18,7 @@ resource "google_pubsub_topic" "trabajos" {
   depends_on = [google_project_service.apis]
 }
 
-# Tópico de fallidos: un mensaje que se entregó 5 veces sin confirmarse pasa
+# Tópico de fallidos: un mensaje que se entregó 10 veces sin confirmarse pasa
 # aquí, para no escalar un error repetible (clase 11). El worker además marca
 # el job como dead_letter en Postgres al agotar sus intentos.
 resource "google_pubsub_topic" "fallidos" {
@@ -70,9 +70,15 @@ resource "google_pubsub_subscription" "worker" {
     maximum_backoff = "600s"
   }
 
+  # 10 y no 5: Pub/Sub cuenta como entrega cada 429 que devuelve el worker
+  # mientras otra instancia tiene el job (bloqueo de 60 s). Si una instancia
+  # muere a mitad de un trabajo, las entregas siguientes reciben 429 hasta
+  # que el bloqueo vence; con 5 el mensaje podía llegar al tópico de
+  # fallidos antes de que otra instancia lo retomara. Los errores reales ya
+  # los corta el worker a los 3 intentos (max_attempts del job en Postgres).
   dead_letter_policy {
     dead_letter_topic     = google_pubsub_topic.fallidos.id
-    max_delivery_attempts = 5
+    max_delivery_attempts = 10
   }
 
   expiration_policy {

@@ -292,6 +292,40 @@ func (r *MediaRepository) FindJobByID(id string) (*domain.MediaJob, error) {
 	return j, nil
 }
 
+// ClaimJob ver domain.MediaRepository. El UPDATE condicional es atómico en
+// Postgres: de dos entregas simultáneas, solo una recibe la fila.
+func (r *MediaRepository) ClaimJob(id string, lockTTL time.Duration) (*domain.MediaJob, error) {
+	j, err := scanJobRow(r.db.QueryRow(context.Background(), `
+		UPDATE media_jobs SET
+			status = 'processing', attempts = attempts + 1, locked_at = now(), updated_at = now()
+		WHERE id = $1 AND (
+			status IN ('pending', 'failed')
+			OR (status = 'processing' AND (locked_at IS NULL OR locked_at < now() - make_interval(secs => $2)))
+		)
+		RETURNING `+selectJobColumns, id, lockTTL.Seconds()))
+	if err == nil {
+		return j, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	current, err := r.FindJobByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if current.Status == domain.JobDone || current.Status == domain.JobDeadLetter {
+		return current, domain.ErrJobAlreadyTerminal
+	}
+	return current, domain.ErrJobLocked
+}
+
+// TouchJobLock ver domain.MediaRepository.
+func (r *MediaRepository) TouchJobLock(id string) error {
+	_, err := r.db.Exec(context.Background(),
+		`UPDATE media_jobs SET locked_at = now() WHERE id = $1 AND status = 'processing'`, id)
+	return err
+}
+
 // FindJobByIdempotencyKey es la pieza clave de la tolerancia a fallos
 // (sección 6): antes de encolar, se busca si ya existe un job con la
 // misma clave para no producir una salida duplicada.
