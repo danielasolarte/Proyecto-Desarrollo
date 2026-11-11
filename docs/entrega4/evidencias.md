@@ -200,6 +200,41 @@ Publica el mismo mensaje dos veces, como si Pub/Sub lo reentregara:
 
 Debe verse en los registros del worker que el job ya estaba terminado y que respondió 204 sin procesar (sección 2 con el mismo `$job`). Repite el conteo de derivados: el número no cambia. Captura: `08-reentrega.png`.
 
+### Reemplazo de instancia
+
+Rúbrica: el worker tolera que una instancia muera a mitad de un trabajo. Cómo funciona: [contrato-mensaje.md](contrato-mensaje.md), "Bloqueo y reemplazo de instancias".
+
+Cloud Run no permite matar una instancia a mano, así que la prueba deja el job exactamente como lo dejaría una instancia que murió: en `processing`, con un bloqueo que nadie renueva. Usa el trabajo HLS de la sección 2 (el encadenado), que ya terminó: `$job = "<job_id del HLS>"`.
+
+1. En la consola, **SQL** → `mooc-e4-postgres` → **Cloud SQL Studio**. Base `mooc`, usuario `mooc`. La clave va dentro de la URL del secreto `mooc-database-url` (`gcloud secrets versions access latest --secret=mooc-database-url --project=$P`). No la pegues en capturas ni en el chat.
+2. Simula la instancia muerta:
+
+   ```sql
+   UPDATE media_jobs SET status = 'processing', locked_at = now() WHERE id = '<job_id>';
+   SELECT id, status, attempts, locked_at FROM media_jobs WHERE id = '<job_id>';
+   ```
+
+   Captura el `SELECT`: `08-reemplazo-antes.png`.
+3. Enseguida, publica el mensaje como haría Pub/Sub al reintentar:
+
+   ```powershell
+   gcloud pubsub topics publish mooc-media-jobs --project=$P --message="{`"job_id`":`"$job`"}" --attribute="job_type=transcode_hls,contract_version=1"
+   ```
+
+4. Espera unos 2 minutos y mira la secuencia en el worker:
+
+   ```powershell
+   gcloud logging read "resource.type=`"cloud_run_revision`" AND resource.labels.service_name=`"mooc-worker`" AND jsonPayload.job_id=`"$job`"" --project=$P --freshness=1h --order=asc --format="table(timestamp,jsonPayload.message,jsonPayload.estado_final,jsonPayload.delivery_attempt,jsonPayload.intento)"
+   ```
+
+   Debe verse:
+   - Mientras el bloqueo tiene menos de 60 s, una o varias entregas con `estado_final=ocupado`: el worker respondió 429 y no tocó el job.
+   - Cuando el bloqueo vence, una entrega con `job tomado, procesando` y `intento` uno más que antes.
+   - Después, `job terminado y guardado` con `estado_final=done`.
+
+   Captura: `08-reemplazo-registros.png`.
+5. Repite el `SELECT`: `status = done` y `attempts` subió en 1. Repite el conteo de derivados de arriba: el número no cambia, porque el HLS se reescribe en las mismas rutas. Captura: `08-reemplazo-despues.png`.
+
 ## 9. Despliegue reproducible y reversión
 
 Lo desplegado es igual a lo del repositorio:
