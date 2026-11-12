@@ -1,0 +1,94 @@
+[0m[1mgoogle_project_service.apis["logging.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/logging.googleapis.com][0m
+[0m[1mgoogle_project_service.apis["secretmanager.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/secretmanager.googleapis.com][0m
+[0m[1mgoogle_project_service.apis["iam.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/iam.googleapis.com][0m
+[0m[1mgoogle_project_service.apis["artifactregistry.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/artifactregistry.googleapis.com][0m
+[0m[1mgoogle_project_service.apis["storage.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/storage.googleapis.com][0m
+[0m[1mgoogle_project_service.apis["monitoring.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/monitoring.googleapis.com][0m
+[0m[1mgoogle_project_service.apis["compute.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/compute.googleapis.com][0m
+[0m[1mgoogle_project_service.apis["servicenetworking.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/servicenetworking.googleapis.com][0m
+[0m[1mdata.google_project.actual: Reading...[0m[0m
+[0m[1mgoogle_project_service.apis["pubsub.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/pubsub.googleapis.com][0m
+[0m[1mdata.google_project.actual: Read complete after 1s [id=projects/proyectodesarrollo-513918][0m
+[0m[1mgoogle_project_service.apis["sqladmin.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/sqladmin.googleapis.com][0m
+[0m[1mgoogle_project_service.apis["run.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/run.googleapis.com][0m
+[0m[1mgoogle_project_iam_member.equipo["martinezjsamara@gmail.com|roles/logging.viewer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/logging.viewer/user:martinezjsamara@gmail.com][0m
+[0m[1mgoogle_project_service.apis["iamcredentials.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/iamcredentials.googleapis.com][0m
+[0m[1mgoogle_project_service.apis["cloudresourcemanager.googleapis.com"]: Refreshing state... [id=proyectodesarrollo-513918/cloudresourcemanager.googleapis.com][0m
+[0m[1mgoogle_project_iam_member.equipo["am.juradoc@gmail.com|roles/logging.viewer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/logging.viewer/user:am.juradoc@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["am.juradoc@gmail.com|roles/monitoring.viewer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/monitoring.viewer/user:am.juradoc@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["danisolarte0307@gmail.com|roles/cloudsql.editor"]: Refreshing state... [id=proyectodesarrollo-513918/roles/cloudsql.editor/user:danisolarte0307@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["martinezjsamara@gmail.com|roles/cloudsql.editor"]: Refreshing state... [id=proyectodesarrollo-513918/roles/cloudsql.editor/user:martinezjsamara@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["martinezjsamara@gmail.com|roles/monitoring.viewer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/monitoring.viewer/user:martinezjsamara@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["danisolarte0307@gmail.com|roles/viewer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/viewer/user:danisolarte0307@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["martinezjsamara@gmail.com|roles/viewer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/viewer/user:martinezjsamara@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["martinezjsamara@gmail.com|roles/artifactregistry.writer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/artifactregistry.writer/user:martinezjsamara@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["danisolarte0307@gmail.com|roles/artifactregistry.writer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/artifactregistry.writer/user:danisolarte0307@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["danisolarte0307@gmail.com|roles/logging.viewer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/logging.viewer/user:danisolarte0307@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["am.juradoc@gmail.com|roles/cloudsql.editor"]: Refreshing state... [id=proyectodesarrollo-513918/roles/cloudsql.editor/user:am.juradoc@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["am.juradoc@gmail.com|roles/artifactregistry.writer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/artifactregistry.writer/user:am.juradoc@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["danisolarte0307@gmail.com|roles/monitoring.viewer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/monitoring.viewer/user:danisolarte0307@gmail.com][0m
+[0m[1mgoogle_project_iam_member.equipo["am.juradoc@gmail.com|roles/viewer"]: Refreshing state... [id=proyectodesarrollo-513918/roles/viewer/user:am.juradoc@gmail.com][0m
+[0m[1mgoogle_service_account.sa["worker"]: Refreshing state... [id=projects/proyectodesarrollo-513918/serviceAccounts/sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_compute_network.vpc: Refreshing state... [id=projects/proyectodesarrollo-513918/global/networks/mooc-e4-vpc][0m
+[0m[1mgoogle_pubsub_topic.trabajos: Refreshing state... [id=projects/proyectodesarrollo-513918/topics/mooc-media-jobs][0m
+[0m[1mgoogle_pubsub_topic.fallidos: Refreshing state... [id=projects/proyectodesarrollo-513918/topics/mooc-media-jobs-dlq][0m
+[0m[1mgoogle_service_account.sa["medios"]: Refreshing state... [id=projects/proyectodesarrollo-513918/serviceAccounts/sa-medios@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_service_account.sa["frontend"]: Refreshing state... [id=projects/proyectodesarrollo-513918/serviceAccounts/sa-frontend@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_artifact_registry_repository.imagenes: Refreshing state... [id=projects/proyectodesarrollo-513918/locations/us-central1/repositories/mooc-e4][0m
+[0m[1mgoogle_service_account.sa["migraciones"]: Refreshing state... [id=projects/proyectodesarrollo-513918/serviceAccounts/sa-migraciones@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_service_account.sa["pubsub-push"]: Refreshing state... [id=projects/proyectodesarrollo-513918/serviceAccounts/sa-pubsub-push@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_service_account.sa["backend"]: Refreshing state... [id=projects/proyectodesarrollo-513918/serviceAccounts/sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_secret_manager_secret.app["S3_SECRET_KEY"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-s3-secret-key][0m
+[0m[1mgoogle_secret_manager_secret.app["BOOTSTRAP_ADMIN_PASSWORD"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-admin-password][0m
+[0m[1mgoogle_secret_manager_secret.app["DATABASE_URL"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-database-url][0m
+[0m[1mgoogle_secret_manager_secret.app["S3_ACCESS_KEY"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-s3-access-key][0m
+[0m[1mgoogle_pubsub_subscription.fallidos_revision: Refreshing state... [id=projects/proyectodesarrollo-513918/subscriptions/mooc-media-jobs-dlq-revision][0m
+[0m[1mgoogle_pubsub_topic_iam_member.agente_publica_fallidos: Refreshing state... [id=projects/proyectodesarrollo-513918/topics/mooc-media-jobs-dlq/roles/pubsub.publisher/serviceAccount:service-828976161294@gcp-sa-pubsub.iam.gserviceaccount.com][0m
+[0m[1mgoogle_service_account_iam_member.agente_firma_push: Refreshing state... [id=projects/proyectodesarrollo-513918/serviceAccounts/sa-pubsub-push@proyectodesarrollo-513918.iam.gserviceaccount.com/roles/iam.serviceAccountTokenCreator/serviceAccount:service-828976161294@gcp-sa-pubsub.iam.gserviceaccount.com][0m
+[0m[1mgoogle_project_iam_member.observabilidad["worker|roles/monitoring.metricWriter"]: Refreshing state... [id=proyectodesarrollo-513918/roles/monitoring.metricWriter/serviceAccount:sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_project_iam_member.observabilidad["frontend|roles/monitoring.metricWriter"]: Refreshing state... [id=proyectodesarrollo-513918/roles/monitoring.metricWriter/serviceAccount:sa-frontend@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_project_iam_member.observabilidad["backend|roles/logging.logWriter"]: Refreshing state... [id=proyectodesarrollo-513918/roles/logging.logWriter/serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_project_iam_member.observabilidad["backend|roles/monitoring.metricWriter"]: Refreshing state... [id=proyectodesarrollo-513918/roles/monitoring.metricWriter/serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_project_iam_member.observabilidad["frontend|roles/logging.logWriter"]: Refreshing state... [id=proyectodesarrollo-513918/roles/logging.logWriter/serviceAccount:sa-frontend@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_project_iam_member.observabilidad["worker|roles/logging.logWriter"]: Refreshing state... [id=proyectodesarrollo-513918/roles/logging.logWriter/serviceAccount:sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_project_iam_member.observabilidad["migraciones|roles/logging.logWriter"]: Refreshing state... [id=proyectodesarrollo-513918/roles/logging.logWriter/serviceAccount:sa-migraciones@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_project_iam_member.observabilidad["migraciones|roles/monitoring.metricWriter"]: Refreshing state... [id=proyectodesarrollo-513918/roles/monitoring.metricWriter/serviceAccount:sa-migraciones@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_pubsub_topic_iam_member.publica_trabajos["worker"]: Refreshing state... [id=projects/proyectodesarrollo-513918/topics/mooc-media-jobs/roles/pubsub.publisher/serviceAccount:sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_pubsub_topic_iam_member.publica_trabajos["backend"]: Refreshing state... [id=projects/proyectodesarrollo-513918/topics/mooc-media-jobs/roles/pubsub.publisher/serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_secret_manager_secret_iam_member.lectura["S3_ACCESS_KEY|worker"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-s3-access-key/roles/secretmanager.secretAccessor/serviceAccount:sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_secret_manager_secret_iam_member.lectura["S3_SECRET_KEY|backend"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-s3-secret-key/roles/secretmanager.secretAccessor/serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_secret_manager_secret_iam_member.lectura["S3_SECRET_KEY|worker"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-s3-secret-key/roles/secretmanager.secretAccessor/serviceAccount:sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_secret_manager_secret_iam_member.lectura["BOOTSTRAP_ADMIN_PASSWORD|backend"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-admin-password/roles/secretmanager.secretAccessor/serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_secret_manager_secret_iam_member.lectura["DATABASE_URL|backend"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-database-url/roles/secretmanager.secretAccessor/serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_secret_manager_secret_iam_member.lectura["DATABASE_URL|migraciones"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-database-url/roles/secretmanager.secretAccessor/serviceAccount:sa-migraciones@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_secret_manager_secret_iam_member.lectura["DATABASE_URL|worker"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-database-url/roles/secretmanager.secretAccessor/serviceAccount:sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_secret_manager_secret_iam_member.lectura["S3_ACCESS_KEY|backend"]: Refreshing state... [id=projects/proyectodesarrollo-513918/secrets/mooc-s3-access-key/roles/secretmanager.secretAccessor/serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_compute_global_address.servicios_privados: Refreshing state... [id=projects/proyectodesarrollo-513918/global/addresses/mooc-e4-servicios-privados][0m
+[0m[1mgoogle_compute_subnetwork.subred: Refreshing state... [id=projects/proyectodesarrollo-513918/regions/us-central1/subnetworks/mooc-e4-subnet][0m
+[0m[1mdata.google_artifact_registry_docker_image.servicio["backend"]: Reading...[0m[0m
+[0m[1mdata.google_artifact_registry_docker_image.servicio["frontend"]: Reading...[0m[0m
+[0m[1mdata.google_artifact_registry_docker_image.servicio["migraciones"]: Reading...[0m[0m
+[0m[1mdata.google_artifact_registry_docker_image.servicio["worker"]: Reading...[0m[0m
+[0m[1mgoogle_service_networking_connection.servicios_privados: Refreshing state... [id=projects%2Fproyectodesarrollo-513918%2Fglobal%2Fnetworks%2Fmooc-e4-vpc:servicenetworking.googleapis.com][0m
+[0m[1mdata.google_artifact_registry_docker_image.servicio["frontend"]: Read complete after 1s [id=https://artifactregistry.googleapis.com/v1/projects/proyectodesarrollo-513918/locations/us-central1/repositories/mooc-e4/dockerImages/mooc-e4-frontend:255f3ec][0m
+[0m[1mdata.google_artifact_registry_docker_image.servicio["migraciones"]: Read complete after 1s [id=https://artifactregistry.googleapis.com/v1/projects/proyectodesarrollo-513918/locations/us-central1/repositories/mooc-e4/dockerImages/mooc-e4-migraciones:255f3ec][0m
+[0m[1mdata.google_artifact_registry_docker_image.servicio["backend"]: Read complete after 1s [id=https://artifactregistry.googleapis.com/v1/projects/proyectodesarrollo-513918/locations/us-central1/repositories/mooc-e4/dockerImages/mooc-e4-backend:255f3ec][0m
+[0m[1mdata.google_artifact_registry_docker_image.servicio["worker"]: Read complete after 1s [id=https://artifactregistry.googleapis.com/v1/projects/proyectodesarrollo-513918/locations/us-central1/repositories/mooc-e4/dockerImages/mooc-e4-worker:255f3ec][0m
+[0m[1mgoogle_cloud_run_v2_job.migraciones[0]: Refreshing state... [id=projects/proyectodesarrollo-513918/locations/us-central1/jobs/mooc-migraciones][0m
+[0m[1mgoogle_cloud_run_v2_service.worker[0]: Refreshing state... [id=projects/proyectodesarrollo-513918/locations/us-central1/services/mooc-worker][0m
+[0m[1mgoogle_cloud_run_v2_service.backend[0]: Refreshing state... [id=projects/proyectodesarrollo-513918/locations/us-central1/services/mooc-backend][0m
+[0m[1mgoogle_sql_database_instance.postgres: Refreshing state... [id=mooc-e4-postgres][0m
+[0m[1mgoogle_sql_database.mooc: Refreshing state... [id=projects/proyectodesarrollo-513918/instances/mooc-e4-postgres/databases/mooc][0m
+[0m[1mgoogle_cloud_run_v2_service_iam_member.push_invoca_worker[0]: Refreshing state... [id=projects/proyectodesarrollo-513918/locations/us-central1/services/mooc-worker/roles/run.invoker/serviceAccount:sa-pubsub-push@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+[0m[1mgoogle_cloud_run_v2_service_iam_member.publico_backend[0]: Refreshing state... [id=projects/proyectodesarrollo-513918/locations/us-central1/services/mooc-backend/roles/run.invoker/allUsers][0m
+[0m[1mgoogle_cloud_run_v2_service.frontend[0]: Refreshing state... [id=projects/proyectodesarrollo-513918/locations/us-central1/services/mooc-frontend][0m
+[0m[1mgoogle_cloud_run_v2_service_iam_member.publico_frontend[0]: Refreshing state... [id=projects/proyectodesarrollo-513918/locations/us-central1/services/mooc-frontend/roles/run.invoker/allUsers][0m
+[0m[1mgoogle_storage_bucket.medios: Refreshing state... [id=mooc-e4-medios-proyectodesarrollo-513918][0m
+[0m[1mgoogle_pubsub_subscription.worker[0]: Refreshing state... [id=projects/proyectodesarrollo-513918/subscriptions/mooc-media-jobs-worker][0m
+[0m[1mgoogle_pubsub_subscription_iam_member.agente_confirma_worker[0]: Refreshing state... [id=projects/proyectodesarrollo-513918/subscriptions/mooc-media-jobs-worker/roles/pubsub.subscriber/serviceAccount:service-828976161294@gcp-sa-pubsub.iam.gserviceaccount.com][0m
+[0m[1mgoogle_storage_bucket_iam_member.medios_objetos: Refreshing state... [id=b/mooc-e4-medios-proyectodesarrollo-513918/roles/storage.objectAdmin/serviceAccount:sa-medios@proyectodesarrollo-513918.iam.gserviceaccount.com][0m
+
+[0m[1m[32mNo changes.[0m[1m Your infrastructure matches the configuration.[0m
+
+[0mTerraform has compared your real infrastructure against your configuration
+and found no differences, so no changes are needed.
