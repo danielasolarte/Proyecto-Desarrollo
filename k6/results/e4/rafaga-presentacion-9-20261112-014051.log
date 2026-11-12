@@ -1,0 +1,79 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: rafaga-worker-e4.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 9 max VUs, 20m30s max duration (incl. graceful stop):
+              * rafaga: 1 iterations for each of 9 VUs (maxDuration: 20m0s, gracefulStop: 30s)
+
+time="2026-11-12T01:40:52Z" level=info msg="inicio_rafaga=2026-11-12T01:40:52.408Z tipo=presentacion rafaga=9 archivo=./fixtures/presentacion_prueba.pptx bytes=32254" source=console
+time="2026-11-12T01:40:52Z" level=warning msg="Request Failed" error="Post \"https://mooc-backend-yufxihdm4q-uc.a.run.app/api/v1/units/8672f92e-cadf-4b2a-843a-244c8da288e4/resources\": dial tcp 34.143.77.2:443: connect: connection refused"
+
+running (00m01.0s), 8/9 VUs, 1 complete and 0 interrupted iterations
+rafaga   [  11% ] 9 VUs  00m00.7s/20m0s  1/9 iters, 1 per VU
+
+running (00m02.0s), 8/9 VUs, 1 complete and 0 interrupted iterations
+rafaga   [  11% ] 9 VUs  00m01.7s/20m0s  1/9 iters, 1 per VU
+
+running (00m03.0s), 8/9 VUs, 1 complete and 0 interrupted iterations
+rafaga   [  11% ] 9 VUs  00m02.7s/20m0s  1/9 iters, 1 per VU
+
+running (00m04.0s), 8/9 VUs, 1 complete and 0 interrupted iterations
+rafaga   [  11% ] 9 VUs  00m03.7s/20m0s  1/9 iters, 1 per VU
+
+running (00m05.0s), 8/9 VUs, 1 complete and 0 interrupted iterations
+rafaga   [  11% ] 9 VUs  00m04.7s/20m0s  1/9 iters, 1 per VU
+
+running (00m06.0s), 8/9 VUs, 1 complete and 0 interrupted iterations
+rafaga   [  11% ] 9 VUs  00m05.7s/20m0s  1/9 iters, 1 per VU
+time="2026-11-12T01:40:58Z" level=info msg="listo carga=7 resource_id=969e619d-9942-485e-8769-99a845df2dc5 time_to_ready_ms=5048" source=console
+time="2026-11-12T01:40:58Z" level=info msg="listo carga=2 resource_id=63042384-0e6b-4acb-a10f-b1305c4e0b13 time_to_ready_ms=5048" source=console
+time="2026-11-12T01:40:58Z" level=info msg="listo carga=9 resource_id=6bd0168b-4fc8-4550-978d-c4af828daff3 time_to_ready_ms=5052" source=console
+time="2026-11-12T01:40:58Z" level=info msg="listo carga=1 resource_id=5330950d-9b86-475b-87b9-ffc5c6a2c4f7 time_to_ready_ms=5051" source=console
+time="2026-11-12T01:40:58Z" level=info msg="listo carga=3 resource_id=3b6d9e7a-2bab-44fd-b887-0d4e7dff63a8 time_to_ready_ms=5051" source=console
+time="2026-11-12T01:40:58Z" level=info msg="listo carga=4 resource_id=83a16003-60f1-4e2c-80af-cf3746029e82 time_to_ready_ms=5050" source=console
+time="2026-11-12T01:40:58Z" level=info msg="listo carga=8 resource_id=b5292122-c9a3-49d6-ac6e-32202f0b3979 time_to_ready_ms=5052" source=console
+time="2026-11-12T01:40:58Z" level=info msg="listo carga=6 resource_id=f388fa32-48b9-4249-949a-b2cd40724529 time_to_ready_ms=5056" source=console
+time="2026-11-12T01:40:58Z" level=info msg="fin_rafaga=2026-11-12T01:40:58.636Z" source=console
+
+     ✗ recurso 201
+      ↳  88% — ✓ 8 / ✗ 1
+     ✓ initiate 201
+     ✓ url de la parte 200
+     ✓ PUT a storage 2xx
+     ✓ complete 200
+
+     checks.........................: 97.56% 40 out of 41
+     data_received..................: 125 kB 19 kB/s
+     data_sent......................: 282 kB 43 kB/s
+     http_req_blocked...............: avg=29.14ms  min=0s      med=770ns    p(90)=16.88ms  p(95)=305.77ms max=312.96ms
+     http_req_connecting............: avg=23.19ms  min=0s      med=0s       p(90)=1.23ms   p(95)=302.19ms max=307.3ms 
+     http_req_duration..............: avg=125.12ms min=0s      med=54.57ms  p(90)=265.36ms p(95)=293.88ms max=385.67ms
+       { expected_response:true }...: avg=127.53ms min=43.84ms med=54.58ms  p(90)=267.86ms p(95)=293.95ms max=385.67ms
+     http_req_failed................: 1.88%  1 out of 53
+     http_req_receiving.............: avg=152.22µs min=0s      med=141.76µs p(90)=218.54µs p(95)=239.8µs  max=327.27µs
+     http_req_sending...............: avg=174.69µs min=0s      med=123.56µs p(90)=349.6µs  p(95)=371.1µs  max=545.25µs
+     http_req_tls_handshaking.......: avg=5.67ms   min=0s      med=0s       p(90)=7.06ms   p(95)=9.68ms   max=210.95ms
+     http_req_waiting...............: avg=124.79ms min=0s      med=54.25ms  p(90)=264.81ms p(95)=293.37ms max=385.36ms
+     http_reqs......................: 53     8.117607/s
+     iteration_duration.............: avg=5.32s    min=1.71ms  med=5.97s    p(90)=6.14s    p(95)=6.18s    max=6.22s   
+     iterations.....................: 9      1.378462/s
+   ✓ ready_timeouts.................: 0      0/s
+     time_to_ready_ms...............: avg=5.05s    min=5.04s   med=5.05s    p(90)=5.05s    p(95)=5.05s    max=5.05s   
+     upload_confirm_ms..............: avg=244ms    min=194ms   med=227.5ms  p(90)=287.29ms p(95)=336.64ms max=386ms   
+   ✗ upload_failures................: 11.11% 1 out of 9
+   ✓ upload_request_ms..............: avg=202.62ms min=143ms   med=174.5ms  p(90)=267.8ms  p(95)=276.89ms max=286ms   
+     upload_transfer_ms.............: avg=255.5ms  min=149ms   med=283ms    p(90)=316.89ms p(95)=321.45ms max=326ms   
+     vus............................: 8      min=8        max=8
+     vus_max........................: 9      min=9        max=9
+
+
+running (00m06.5s), 0/9 VUs, 9 complete and 0 interrupted iterations
+rafaga ✓ [ 100% ] 9 VUs  00m06.2s/20m0s  9/9 iters, 1 per VU
+time="2026-11-12T01:40:58Z" level=error msg="thresholds on metrics 'upload_failures' have been crossed"
