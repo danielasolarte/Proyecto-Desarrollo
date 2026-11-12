@@ -19,6 +19,7 @@ Servicio: `mooc-backend`
 - Timeout: 60 s
 - Acceso: público
 - Base de datos: Cloud SQL PostgreSQL mediante VPC privada
+- Máximo de conexiones a PostgreSQL por instancia: `DB_MAX_CONNS=5`
 
 ## Objetivos medibles
 
@@ -28,8 +29,6 @@ Los objetivos iniciales definidos para la E4 son:
 - PDF procesado: 95 % listo en máximo 2 minutos desde que el original queda almacenado.
 - Video corto de hasta 1 minuto: 95 % con HLS listo en máximo 5 minutos.
 - Una ráfaga de trabajos debe ser absorbida sin superar 3 workers y sin dejar mensajes en el tópico de fallidos.
-
-Los objetivos asociados al procesamiento multimedia serán medidos cuando el servicio `mooc-worker` esté desplegado.
 
 ## Baseline del backend
 
@@ -120,9 +119,9 @@ La incorporación de operaciones de autenticación elevó el p95 desde aproximad
 | Baseline 2 | 1 → 5 req/s | Catálogo | 1110 | 0 % | 49.75 ms |
 | Catálogo + login | 1 → 5 req/s | Catálogo + autenticación | 1111 | 0 % | 131.44 ms |
 
-Estos resultados constituyen la línea base del servicio backend antes de las pruebas de escalamiento multimedia.
+Estos resultados constituyen la línea base del servicio backend antes de las pruebas de escalamiento.
 
-## Evidencias
+## Evidencias del baseline
 
 Los resultados crudos de k6 se almacenan en:
 
@@ -133,21 +132,6 @@ Archivos disponibles:
 - `backend-catalog-1to5-20261109-161136.log`
 - `backend-login-20261109-162109.log`
 - `backend-login-20261109-162109.json`
-
-## Pruebas pendientes
-
-Cuando el worker esté desplegado se completarán:
-
-- medición del tiempo p95 de creación de solicitudes de carga;
-- capacidad `c` de un worker para PDF;
-- capacidad `c` de un worker para video;
-- crecimiento de la cola cuando la entrada sea mayor que la capacidad;
-- vaciado de la cola con máximo 3 workers;
-- métricas de instancias de Cloud Run;
-- cantidad y edad de mensajes pendientes en Pub/Sub;
-- prueba de reentrega sin efectos duplicados;
-- prueba de reemplazo de una instancia durante un trabajo;
-- verificación de que una llamada no autenticada al worker responde `403`.
 
 ## Prueba fuerte de escalamiento del backend
 
@@ -168,6 +152,8 @@ Se ejecutó una prueba de carga controlada contra `mooc-backend`, incrementando 
 Durante la prueba, Cloud Run escaló hasta **3 instancias activas**, alcanzando el máximo configurado para el servicio sin superarlo. Al finalizar la carga, las instancias dejaron de estar activas y quedaron en estado `idle`.
 
 La prueba demuestra que el límite `maxScale = 3` se respeta bajo carga y que el backend puede escalar horizontalmente sin producir errores HTTP durante el escenario probado.
+
+Sin embargo, la prueba de mayor carga también evidencia que el backend alcanzó su límite de capacidad con la configuración actual. El p95 aumentó hasta 4,31 s y k6 descartó 1.077 iteraciones, lo que indica que la tasa de llegada superó la capacidad que podían sostener las 3 instancias disponibles. Una causa probable es la combinación de hasta 40 solicitudes concurrentes por instancia con un pool de solo 5 conexiones a PostgreSQL por instancia (`DB_MAX_CONNS=5`), lo que puede generar espera por una conexión cuando aumenta la concurrencia. Además, las operaciones de autenticación utilizan bcrypt para verificar contraseñas, una tarea intensiva en CPU, mientras cada instancia dispone de 1 vCPU. Por lo tanto, bajo esta carga, tanto la contención del pool de conexiones como el costo computacional del login pueden contribuir al aumento de latencia. Un eventual aumento de capacidad debería evaluarse junto con el tamaño del pool de conexiones y los recursos de CPU, y no únicamente incrementando el número de instancias.
 
 ### Evidencias
 
