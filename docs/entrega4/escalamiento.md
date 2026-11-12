@@ -134,3 +134,13 @@ Este comportamiento se observó experimentalmente: durante la prueba la cola alc
 aproximadamente 5 mensajes pendientes, el worker escaló hasta 3 instancias y,
 posteriormente, los mensajes pendientes y la edad del mensaje más antiguo volvieron
 a cero.
+
+### Verificación de la DLQ
+
+Después de las pruebas de presentación y video se consultó la suscripción
+`mooc-media-jobs-dlq-revision`.
+
+La consulta devolvió `Listed 0 items`, por lo que no quedaron trabajos en la cola
+de mensajes fallidos. Esto confirma que, pese a los reintentos transitorios
+observados durante la ráfaga, todos los trabajos pendientes fueron finalmente
+procesados y la cola se drenó por completo.
