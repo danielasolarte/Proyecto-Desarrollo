@@ -144,3 +144,7 @@ La consulta devolvió `Listed 0 items`, por lo que no quedaron trabajos en la co
 de mensajes fallidos. Esto confirma que, pese a los reintentos transitorios
 observados durante la ráfaga, todos los trabajos pendientes fueron finalmente
 procesados y la cola se drenó por completo.
+
+### Limite de escalamiento backend
+
+El backend se limita a un máximo de 3 instancias de Cloud Run, con una concurrencia máxima de 40 solicitudes por instancia. Esta decisión también controla el consumo de conexiones hacia Cloud SQL: cada instancia del backend utiliza un pool de hasta 5 conexiones (`DB_MAX_CONNS=5`), por lo que, incluso con las 3 instancias activas, el backend utilizaría como máximo 15 conexiones simultáneas. De esta forma se mantiene margen para el worker, las migraciones y otras operaciones sobre la base de datos, evitando que el escalamiento horizontal del backend agote las conexiones disponibles.

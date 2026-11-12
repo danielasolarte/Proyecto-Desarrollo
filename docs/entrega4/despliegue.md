@@ -1,6 +1,6 @@
-# Guía de despliegue de la Entrega 4 (borrador)
+# Guía de despliegue de la Entrega 4
 
-> Borrador de Daniela. Camila la ejecuta en su proyecto y la corrige con lo que encuentre; cada responsable agrega los pasos de su servicio.
+Esta guía recoge el procedimiento validado durante el despliegue de la Entrega 4 en GCP y las correcciones identificadas durante su ejecución.
 
 La E4 corre en el proyecto de Camila. El proyecto de la E2/E3 quedó sin facturación porque se agotó el crédito educativo, así que **toda** la infraestructura se crea desde cero con Terraform (`infra/terraform/`): red, Cloud SQL, bucket de medios, Artifact Registry, Pub/Sub, cuentas de servicio y los tres servicios de Cloud Run. Nada se crea a mano en la consola.
 
@@ -110,7 +110,7 @@ $b = terraform -chdir=infra/terraform output -raw url_backend
 curl.exe -s "$b/health/ready"
 ```
 
-Al final, `.\deploy\gcp\e4\tf.ps1 plan` debe decir `No changes`: lo desplegado es igual a lo del repositorio.
+Al final, `.\deploy\gcp\e4\tf.ps1 plan -Tag <etiqueta desplegada>` debe decir `No changes`: lo desplegado es igual a lo del repositorio.
 
 ## 8. Prueba de escalamiento del worker
 
@@ -125,6 +125,75 @@ $env:TEACHER_PASSWORD = "<clave del profesor de prueba>"
 
 Los resultados quedan en `k6/results/e4/`. Mientras corre, se capturan las gráficas de la sección 4 de `docs/entrega4/evidencias.md`.
 
-## Pendiente
+## 9. Despliegue reproducible y reversión
 
-- Camila: ejecutar esta guía de punta a punta y corregir lo que falte.
+### Verificación de infraestructura
+
+Para comprobar que la infraestructura desplegada coincide con la definición de
+Terraform se debe utilizar el mismo tag con el que fueron construidas las imágenes
+actualmente desplegadas.
+
+En la validación final de la E4 se utilizó el tag:
+
+```text
+255f3ec
+```
+
+
+La verificación se ejecutó con:
+.\deploy\gcp\e4\tf.ps1 plan -Tag 255f3ec
+
+El resultado esperado es:
+No changes. Your infrastructure matches the configuration.
+
+Esto confirma que la infraestructura desplegada no presenta diferencias respecto a
+la configuración versionada en Terraform.
+
+### Reversión de una revisión de Cloud Run
+Primero se consultan las revisiones disponibles:
+gcloud run revisions list `
+  --service=mooc-backend `
+  --region=$R `
+  --project=$P `
+  --format="table(metadata.name,status.conditions[0].status,metadata.creationTimestamp)"
+
+Antes de modificar el tráfico se verifica la revisión actual:
+gcloud run services describe mooc-backend `
+  --project=$P `
+  --region=$R `
+  --format="yaml(status.traffic)"
+
+Durante la prueba realizada, el estado inicial fue:
+100% -> mooc-backend-00003-wmm
+
+Se realizó temporalmente la reversión a la revisión anterior:
+gcloud run services update-traffic mooc-backend `
+  --project=$P `
+  --region=$R `
+  --to-revisions=mooc-backend-00002-84s=100
+
+Se comprobó la disponibilidad del servicio:
+Invoke-WebRequest "https://mooc-backend-yufxihdm4q-uc.a.run.app/health"
+
+El endpoint respondió 200 OK.
+
+Finalmente se restauró la revisión actual:
+gcloud run services update-traffic mooc-backend `
+  --project=$P `
+  --region=$R `
+  --to-revisions=mooc-backend-00003-wmm=100
+
+Después de la restauración se verificó nuevamente:
+gcloud run services describe mooc-backend `
+  --project=$P `
+  --region=$R `
+  --format="yaml(status.traffic)"
+
+Invoke-WebRequest "https://mooc-backend-yufxihdm4q-uc.a.run.app/health"
+
+El resultado final fue:
+100% -> mooc-backend-00003-wmm
+GET /health -> 200 OK
+
+La prueba demuestra que una revisión anterior puede recibir nuevamente el tráfico y
+que es posible restaurar la versión actual sin indisponibilidad observable.
