@@ -1,0 +1,6 @@
+bindings:
+- members:
+  - serviceAccount:sa-pubsub-push@proyectodesarrollo-513918.iam.gserviceaccount.com
+  role: roles/run.invoker
+etag: BwZgCB0pChs=
+version: 1

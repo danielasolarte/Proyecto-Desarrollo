@@ -1,0 +1,118 @@
+[
+  {
+    "insertId": "6af4f61800022c94daea4d26",
+    "jsonPayload": {
+      "delivery_attempt": 1,
+      "intento": 1,
+      "job_id": "fae52783-c920-4f8c-98de-be4532226693",
+      "job_type": "transcode_hls",
+      "max_intentos": 3,
+      "message": "job tomado, procesando",
+      "message_id": "23366849582155984"
+    },
+    "labels": {
+      "instanceId": "00e8a408bd449154e4668fac17566dafe6cfa6105f0e8b213624b4e3b8e58295f81ba805214335db7dfddf0d1d6baf84f2cb0d7e50d0ef4d2e8d623f6669d27d47d0955e3622db4b89f47bbe9bc5d2af63e2879a951ef081d374e56b"
+    },
+    "logName": "projects/proyectodesarrollo-513918/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-11-11T23:11:20.331403605Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mooc-worker",
+        "location": "us-central1",
+        "project_id": "proyectodesarrollo-513918",
+        "revision_name": "mooc-worker-00001-9lv",
+        "service_name": "mooc-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-11-11T23:11:20.143801703Z"
+  },
+  {
+    "insertId": "6af4f65f000b0935c8ef177d",
+    "jsonPayload": {
+      "delivery_attempt": 1,
+      "duracion_ms": 71582,
+      "estado_final": "done",
+      "intento": 1,
+      "job_id": "fae52783-c920-4f8c-98de-be4532226693",
+      "job_type": "transcode_hls",
+      "max_intentos": 3,
+      "message": "job terminado y guardado",
+      "message_id": "23366849582155984"
+    },
+    "labels": {
+      "instanceId": "00e8a408bd449154e4668fac17566dafe6cfa6105f0e8b213624b4e3b8e58295f81ba805214335db7dfddf0d1d6baf84f2cb0d7e50d0ef4d2e8d623f6669d27d47d0955e3622db4b89f47bbe9bc5d2af63e2879a951ef081d374e56b"
+    },
+    "logName": "projects/proyectodesarrollo-513918/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-11-11T23:12:31.729016701Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mooc-worker",
+        "location": "us-central1",
+        "project_id": "proyectodesarrollo-513918",
+        "revision_name": "mooc-worker-00001-9lv",
+        "service_name": "mooc-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-11-11T23:12:31.723548713Z"
+  },
+  {
+    "insertId": "6af4fb5f0007b3650351eed7",
+    "jsonPayload": {
+      "delivery_attempt": 1,
+      "estado_final": "ya_terminado",
+      "job_id": "fae52783-c920-4f8c-98de-be4532226693",
+      "message": "reentrega de un job ya terminado, no se procesa",
+      "message_id": "23355870496211589",
+      "status": "done"
+    },
+    "labels": {
+      "instanceId": "00e8a408bd61b7097e9d10287066e6601e1311050a87b4e591c71d37863c5c38d101e74343fa46b1a859330c65e6a1a78000a6c44421fec5a17cfc83957f722b773e02271be17533ecf96d9fba73b735306afb00e936a1ba7c9d46"
+    },
+    "logName": "projects/proyectodesarrollo-513918/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-11-11T23:33:51.758510159Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mooc-worker",
+        "location": "us-central1",
+        "project_id": "proyectodesarrollo-513918",
+        "revision_name": "mooc-worker-00001-9lv",
+        "service_name": "mooc-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-11-11T23:33:51.505382193Z"
+  },
+  {
+    "insertId": "6af4fb5f00099fdcf1f2b3f9",
+    "jsonPayload": {
+      "delivery_attempt": 1,
+      "estado_final": "ya_terminado",
+      "job_id": "fae52783-c920-4f8c-98de-be4532226693",
+      "message": "reentrega de un job ya terminado, no se procesa",
+      "message_id": "22585660455873356",
+      "status": "done"
+    },
+    "labels": {
+      "instanceId": "00e8a408bd94464270da5a0174df6f89a68ab37ad6875dbc492cb18f146ea73fdcb320325980c2dce5391dcda6e6a048096dfbd6ffd5a36c647242b349fce0aecd520fe82ed70890a892b06f907de95479742b90e7be3838b7cb11b1"
+    },
+    "logName": "projects/proyectodesarrollo-513918/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-11-11T23:33:51.920978842Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mooc-worker",
+        "location": "us-central1",
+        "project_id": "proyectodesarrollo-513918",
+        "revision_name": "mooc-worker-00001-9lv",
+        "service_name": "mooc-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-11-11T23:33:51.631868521Z"
+  }
+]
