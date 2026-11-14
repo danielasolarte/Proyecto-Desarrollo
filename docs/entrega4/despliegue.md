@@ -129,71 +129,69 @@ Los resultados quedan en `k6/results/e4/`. Mientras corre, se capturan las gráf
 
 ### Verificación de infraestructura
 
-Para comprobar que la infraestructura desplegada coincide con la definición de
-Terraform se debe utilizar el mismo tag con el que fueron construidas las imágenes
-actualmente desplegadas.
+Para comprobar que la infraestructura desplegada coincide con la definición de Terraform se usa la misma etiqueta con la que se construyeron las imágenes desplegadas. En la validación final de la E4 fue `255f3ec`:
 
-En la validación final de la E4 se utilizó el tag:
-
-```text
-255f3ec
+```powershell
+.\deploy\gcp\e4\tf.ps1 plan -Tag 255f3ec
 ```
 
-
-La verificación se ejecutó con:
-.\deploy\gcp\e4\tf.ps1 plan -Tag 255f3ec
-
 El resultado esperado es:
-No changes. Your infrastructure matches the configuration.
 
-Esto confirma que la infraestructura desplegada no presenta diferencias respecto a
-la configuración versionada en Terraform.
+```text
+No changes. Your infrastructure matches the configuration.
+```
+
+Eso confirma que la infraestructura desplegada no tiene diferencias con la configuración versionada en Terraform.
 
 ### Reversión de una revisión de Cloud Run
-Primero se consultan las revisiones disponibles:
+
+Primero se consultan las revisiones disponibles y la que recibe el tráfico:
+
+```powershell
 gcloud run revisions list `
   --service=mooc-backend `
   --region=$R `
   --project=$P `
   --format="table(metadata.name,status.conditions[0].status,metadata.creationTimestamp)"
 
-Antes de modificar el tráfico se verifica la revisión actual:
 gcloud run services describe mooc-backend `
   --project=$P `
   --region=$R `
   --format="yaml(status.traffic)"
+```
 
-Durante la prueba realizada, el estado inicial fue:
-100% -> mooc-backend-00003-wmm
+En la prueba, el estado inicial era `100% -> mooc-backend-00003-wmm`. Se llevó el tráfico a la revisión anterior y se comprobó que el servicio respondía:
 
-Se realizó temporalmente la reversión a la revisión anterior:
+```powershell
 gcloud run services update-traffic mooc-backend `
   --project=$P `
   --region=$R `
   --to-revisions=mooc-backend-00002-84s=100
 
-Se comprobó la disponibilidad del servicio:
 Invoke-WebRequest "https://mooc-backend-yufxihdm4q-uc.a.run.app/health"
+```
 
-El endpoint respondió 200 OK.
+El endpoint respondió `200 OK`. Después se restauró la revisión actual y se verificó de nuevo:
 
-Finalmente se restauró la revisión actual:
+```powershell
 gcloud run services update-traffic mooc-backend `
   --project=$P `
   --region=$R `
   --to-revisions=mooc-backend-00003-wmm=100
 
-Después de la restauración se verificó nuevamente:
 gcloud run services describe mooc-backend `
   --project=$P `
   --region=$R `
   --format="yaml(status.traffic)"
 
 Invoke-WebRequest "https://mooc-backend-yufxihdm4q-uc.a.run.app/health"
+```
 
-El resultado final fue:
+Resultado final:
+
+```text
 100% -> mooc-backend-00003-wmm
 GET /health -> 200 OK
+```
 
-La prueba demuestra que una revisión anterior puede recibir nuevamente el tráfico y
-que es posible restaurar la versión actual sin indisponibilidad observable.
+Una revisión anterior puede volver a recibir el tráfico y la actual se restaura sin indisponibilidad observable. Evidencia: `k6/results/e4/backend-rollback-20261112.txt`.

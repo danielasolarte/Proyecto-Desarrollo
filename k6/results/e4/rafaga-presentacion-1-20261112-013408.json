@@ -159,10 +159,6 @@
             "avg": 1.4247459
         }
     },
-    "setup_data": {
-        "token": "pgJZ_4Of7jDylJAYtpaAYt4hQf56Ps-pU5891s8X63E",
-        "unidadId": "e6074277-3c00-4a58-ad4c-624cf3bf7d2e"
-    },
     "root_group": {
         "checks": {
             "recurso 201": {
