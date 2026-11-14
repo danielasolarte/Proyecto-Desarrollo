@@ -1,0 +1,27 @@
+%% Entrega 4: componentes y flujo (fuente del diagrama de docs/entrega4/arquitectura.md).
+%% Renderizar: mmdc -i componentes.mmd -o componentes.png
+flowchart LR
+    nav[Navegador]
+    subgraph run[Cloud Run, us-central1]
+        fe["mooc-frontend<br/>nginx: SPA y /api"]
+        be["mooc-backend<br/>API Go"]
+        wk["mooc-worker<br/>privado: solo IAM"]
+    end
+    ps[("Pub/Sub<br/>mooc-media-jobs")]
+    dlq[("mooc-media-jobs-dlq")]
+    sql[("Cloud SQL<br/>Postgres 16, IP privada")]
+    gcs[("Cloud Storage<br/>bucket de medios")]
+    sm[["Secret Manager"]]
+
+    nav -- HTTPS --> fe
+    fe -- "/api/*" --> be
+    nav -- URL firmadas --> gcs
+    be -- publica job_id --> ps
+    ps -- "push con token OIDC" --> wk
+    ps -. "10 entregas fallidas" .-> dlq
+    wk -- publica trabajo encadenado --> ps
+    be -- VPC --> sql
+    wk -- VPC --> sql
+    wk -- originales, HLS y PDF --> gcs
+    be -.-> sm
+    wk -.-> sm
