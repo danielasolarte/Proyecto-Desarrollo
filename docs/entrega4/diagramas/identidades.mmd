@@ -1,0 +1,50 @@
+%% Entrega 4: cuentas de servicio y permisos (infra/terraform/identidades.tf,
+%% secretos.tf, pubsub.tf y cloudrun.tf). Cada flecha es un permiso sobre un
+%% recurso concreto, no sobre todo el proyecto.
+%% Renderizar: mmdc -i identidades.mmd -o identidades.png
+flowchart LR
+    pub(("allUsers<br/>(Internet)"))
+    agente(["Agente de servicio<br/>de Pub/Sub"])
+
+    subgraph cuentas[Cuentas de servicio]
+        safe["sa-frontend"]
+        sabe["sa-backend"]
+        sawk["sa-worker"]
+        sapush["sa-pubsub-push"]
+        samig["sa-migraciones"]
+        samed["sa-medios<br/>(llave HMAC)"]
+    end
+
+    subgraph recursos[Recursos]
+        fe["Cloud Run<br/>mooc-frontend"]
+        be["Cloud Run<br/>mooc-backend"]
+        wk["Cloud Run<br/>mooc-worker"]
+        topic[("Tópico<br/>mooc-media-jobs")]
+        dlq[("Tópico<br/>mooc-media-jobs-dlq")]
+        sub[("Suscripción push<br/>mooc-media-jobs-worker")]
+        sdb[["Secreto<br/>mooc-database-url"]]
+        ss3[["Secretos<br/>mooc-s3-access-key<br/>mooc-s3-secret-key"]]
+        sadm[["Secreto<br/>mooc-admin-password"]]
+        gcs[("Bucket de medios")]
+    end
+
+    pub -- run.invoker --> fe
+    pub -- run.invoker --> be
+    sapush -- "run.invoker<br/>(único)" --> wk
+    agente -- "serviceAccountTokenCreator<br/>(firma el token OIDC)" --> sapush
+    agente -- pubsub.publisher --> dlq
+    agente -- pubsub.subscriber --> sub
+
+    sabe -- pubsub.publisher --> topic
+    sawk -- "pubsub.publisher<br/>(trabajos encadenados)" --> topic
+
+    sabe -- secretAccessor --> sdb
+    sawk -- secretAccessor --> sdb
+    samig -- secretAccessor --> sdb
+    sabe -- secretAccessor --> ss3
+    sawk -- secretAccessor --> ss3
+    sabe -- secretAccessor --> sadm
+
+    samed -- storage.objectAdmin --> gcs
+
+    safe -. "logWriter y metricWriter<br/>(igual backend, worker, migraciones)" .-> obs[("Logging y Monitoring")]
