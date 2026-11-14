@@ -125,3 +125,42 @@ jobs:
           ! git grep -n -I -E "(BEGIN PRIVATE KEY|AIza[0-9A-Za-z_-]{20,})" -- . \
             ":(exclude).github/workflows/ci.yml" \
             ":(exclude)go.sum" ":(exclude)*.example" ":(exclude)docs/**" ":(exclude)k6/results/**"
+
+      # Terraform: el estado y las variables reales nunca se versionan, y en
+      # los .tf no puede haber valores de secretos (solo los contenedores; los
+      # valores se cargan con gcloud, ver infra/terraform/secretos.tf).
+      - name: Secret guard (Terraform)
+        run: |
+          if git ls-files | grep -E '(\.tfstate(\.backup)?$|(^|/)terraform\.tfvars$|\.auto\.tfvars$|(^|/)\.terraform/)'; then
+            echo "Hay estado o variables de Terraform versionados"; exit 1
+          fi
+          if git grep -n -I -i -E '(password|secret_data|private_key|client_secret|api_key|token)[[:space:]]*=[[:space:]]*"[^"$]{6,}"' -- '*.tf'; then
+            echo "Hay un valor que parece secreto en un archivo .tf"; exit 1
+          fi
+
+  terraform:
+    name: terraform-ci
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Formato canonico: si falla, correr "terraform fmt -recursive" en
+      # infra/terraform y subir el cambio.
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff
+
+      # Sin backend: valida la sintaxis y las referencias sin tocar el estado
+      # remoto ni necesitar credenciales de GCP.
+      - name: terraform init
+        run: terraform init -backend=false -input=false
+
+      - name: terraform validate
+        run: terraform validate -no-color
