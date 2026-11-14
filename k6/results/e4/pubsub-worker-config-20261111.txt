@@ -1,0 +1,14 @@
+ackDeadlineSeconds: 600
+deadLetterPolicy:
+  deadLetterTopic: projects/proyectodesarrollo-513918/topics/mooc-media-jobs-dlq
+  maxDeliveryAttempts: 10
+name: projects/proyectodesarrollo-513918/subscriptions/mooc-media-jobs-worker
+pushConfig:
+  oidcToken:
+    audience: https://mooc-worker-yufxihdm4q-uc.a.run.app
+    serviceAccountEmail: sa-pubsub-push@proyectodesarrollo-513918.iam.gserviceaccount.com
+  pushEndpoint: https://mooc-worker-yufxihdm4q-uc.a.run.app/pubsub/push
+retryPolicy:
+  maximumBackoff: 600s
+  minimumBackoff: 10s
+topic: projects/proyectodesarrollo-513918/topics/mooc-media-jobs

@@ -1,0 +1,5 @@
+ackDeadlineSeconds: 60
+messageRetentionDuration: 604800s
+name: projects/proyectodesarrollo-513918/subscriptions/mooc-media-jobs-dlq-revision
+state: ACTIVE
+topic: projects/proyectodesarrollo-513918/topics/mooc-media-jobs-dlq

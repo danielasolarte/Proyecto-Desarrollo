@@ -181,8 +181,12 @@ export default function (data) {
   const limite = t3 + READY_TIMEOUT_MS;
   while (Date.now() < limite) {
     sleep(POLL_MS / 1000);
-    const m = http.get(`${BASE_URL}/resources/${resourceId}/media`, { ...t, tags: { fase: 'espera', tipo: TIPO } });
-    if (m.status === 200 && tipo.listo(body(m))) {
+    const m = http.get(`${BASE_URL}/resources/${resourceId}/playback`, {
+      ...t,
+      tags: { fase: 'espera', tipo: TIPO },
+    });
+
+    if (m.status === 200) {
       const ms = Date.now() - t3;
       timeToReadyMs.add(ms);
       console.log(`listo carga=${n} resource_id=${resourceId} time_to_ready_ms=${ms}`);

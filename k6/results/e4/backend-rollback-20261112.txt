@@ -1,0 +1,15 @@
+Prueba de reversión Cloud Run - Backend
+Fecha: 2026-11-12
+
+Estado inicial:
+100% -> mooc-backend-00003-wmm
+
+Rollback:
+100% -> mooc-backend-00002-84s
+
+Verificación durante rollback:
+GET /health -> 200 OK
+{"status":"ok"}
+
+Restauración:
+100% -> mooc-backend-00003-wmm

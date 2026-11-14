@@ -1,0 +1,21 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+HTTP/2 403 
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+date: Wed, 11 Nov 2026 23:05:56 GMT
+content-type: text/html; charset=UTF-8
+server: Google Frontend
+content-length: 306
+
+
+<html><head>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<title>403 Forbidden</title>
+</head>
+<body text=#000000 bgcolor=#ffffff>
+<h1>Error: Forbidden</h1>
+<h2>Your client does not have permission to get URL <code>/pubsub/push</code> from this server.</h2>
+<h2></h2>
+</body></html>
+100   308  100   306  100     2   1116      7 --:--:-- --:--:-- --:--:--  1128
