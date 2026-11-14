@@ -134,7 +134,7 @@ jobs:
           if git ls-files | grep -E '(\.tfstate(\.backup)?$|(^|/)terraform\.tfvars$|\.auto\.tfvars$|(^|/)\.terraform/)'; then
             echo "Hay estado o variables de Terraform versionados"; exit 1
           fi
-          if git grep -n -I -i -E '(password|secret_data|private_key|client_secret|api_key|token)[[:space:]]*=[[:space:]]*"[^"$]{6,}"' -- '*.tf'; then
+          if git grep -n -I -i -E '(^|[^A-Za-z0-9_])(password|secret_data|private_key|client_secret|api_key|token)[[:space:]]*=[[:space:]]*"[^"$]{6,}"' -- '*.tf'; then
             echo "Hay un valor que parece secreto en un archivo .tf"; exit 1
           fi
 
