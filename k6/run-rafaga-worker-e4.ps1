@@ -69,6 +69,14 @@ docker run --rm `
     $K6Image run --summary-export "/project/$prefix.json" rafaga-worker-e4.js 2>&1 |
     Tee-Object -FilePath "$prefix.log"
 
+# k6 copia en el resumen lo que devuelve setup(), incluido el token de sesion
+# del profesor. Se quita antes de que el archivo pueda llegar al repositorio.
+if (Test-Path "$prefix.json") {
+    $resumen = Get-Content "$prefix.json" -Raw | ConvertFrom-Json
+    $resumen.PSObject.Properties.Remove("setup_data")
+    $resumen | ConvertTo-Json -Depth 32 | Set-Content "$prefix.json" -Encoding utf8
+}
+
 Write-Host ""
 Write-Host "Fin (UTC): $((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))"
 Write-Host "Resultados: $prefix.log y $prefix.json" -ForegroundColor Green
