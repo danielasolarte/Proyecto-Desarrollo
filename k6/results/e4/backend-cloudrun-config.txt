@@ -1,0 +1,31 @@
+metadata:
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+    run.googleapis.com/maxScale: '3'
+    run.googleapis.com/operation-id: 1f0f4a3a-5e16-4cde-a267-49e85b6ffdfc
+    run.googleapis.com/urls: '["https://mooc-backend-828976161294.us-central1.run.app","https://mooc-backend-yufxihdm4q-uc.a.run.app"]'
+    serving.knative.dev/creator: camilafajardo32@gmail.com
+    serving.knative.dev/lastModifier: camilafajardo32@gmail.com
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: '3'
+        autoscaling.knative.dev/minScale: '0'
+        run.googleapis.com/cpu-throttling: 'true'
+        run.googleapis.com/network-interfaces: '[{"network":"projects/proyectodesarrollo-513918/global/networks/mooc-e4-vpc","subnetwork":"projects/proyectodesarrollo-513918/regions/us-central1/subnetworks/mooc-e4-subnet"}]'
+        run.googleapis.com/sessionAffinity: 'false'
+        run.googleapis.com/startup-cpu-boost: 'true'
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      containerConcurrency: 40
+      containers:
+      - resources:
+          limits:
+            cpu: '1'
+            memory: 1Gi
+      serviceAccountName: sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com
+      timeoutSeconds: 60
+status:
+  url: https://mooc-backend-yufxihdm4q-uc.a.run.app
