@@ -1,0 +1,25 @@
+== Roles de proyecto de las cuentas sa-
+MEMBERS                                                                          ROLE
+serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com      roles/logging.logWriter
+serviceAccount:sa-frontend@proyectodesarrollo-513918.iam.gserviceaccount.com     roles/logging.logWriter
+serviceAccount:sa-migraciones@proyectodesarrollo-513918.iam.gserviceaccount.com  roles/logging.logWriter
+serviceAccount:sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com       roles/logging.logWriter
+serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com      roles/monitoring.metricWriter
+serviceAccount:sa-frontend@proyectodesarrollo-513918.iam.gserviceaccount.com     roles/monitoring.metricWriter
+serviceAccount:sa-migraciones@proyectodesarrollo-513918.iam.gserviceaccount.com  roles/monitoring.metricWriter
+serviceAccount:sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com       roles/monitoring.metricWriter
+== Secreto mooc-database-url
+ROLE                                    MEMBERS
+['roles/secretmanager.secretAccessor']  [['serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com', 'serviceAccount:sa-migraciones@proyectodesarrollo-513918.iam.gserviceaccount.com', 'serviceAccount:sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com']]
+== Secreto mooc-s3-access-key
+ROLE                                    MEMBERS
+['roles/secretmanager.secretAccessor']  [['serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com', 'serviceAccount:sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com']]
+== Secreto mooc-s3-secret-key
+ROLE                                    MEMBERS
+['roles/secretmanager.secretAccessor']  [['serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com', 'serviceAccount:sa-worker@proyectodesarrollo-513918.iam.gserviceaccount.com']]
+== Secreto mooc-admin-password
+ROLE                                    MEMBERS
+['roles/secretmanager.secretAccessor']  [['serviceAccount:sa-backend@proyectodesarrollo-513918.iam.gserviceaccount.com']]
+== Tópico mooc-media-jobs
+No se incluye: leer la política del tópico requiere pubsub.topics.getIamPolicy, que el grupo no tiene
+(solo lectura). Según infra/terraform/pubsub.tf, publican en el tópico sa-backend y sa-worker.

@@ -8,11 +8,11 @@ objetos (MinIO en local, Cloud Storage en la nube).
 
 Este README está organizado por entrega, con la más reciente arriba:
 
-- [Entrega 4: Cloud Run, Pub/Sub y Terraform](#entrega-4-cloud-run-pubsub-y-terraform--estado-actual) (estado actual).
+- [Entrega 4: Cloud Run, Pub/Sub y Terraform](#entrega-4-cloud-run-pubsub-y-terraform).
 - [Estructura del repositorio](#estructura-del-repositorio) y [desarrollo local](#desarrollo-local).
 - [Entregas anteriores](#entregas-anteriores): Entrega 3 (aplicación elástica IaaS), Entrega 2 (despliegue básico en GCP) y Entrega 1 (backend).
 
-## Entrega 4: Cloud Run, Pub/Sub y Terraform — estado actual
+## Entrega 4: Cloud Run, Pub/Sub y Terraform
 
 La plataforma corre en tres servicios de Cloud Run: frontend, backend y workers, cada uno con máximo 3 instancias. El backend publica cada trabajo multimedia en Pub/Sub y responde sin esperar; una suscripción push autenticada entrega el mensaje al worker, que es privado y solo acepta llamadas de la identidad de la suscripción. PostgreSQL en Cloud SQL (solo IP privada) y archivos en Cloud Storage. Ya no hay VM ni Redis: las sesiones viven en Postgres y la cola es Pub/Sub.
 
@@ -31,11 +31,12 @@ Cloud Run escala a cero cuando no hay tráfico, así que la primera solicitud pu
 
 ### Documentación
 
-- Arquitectura (diagrama, configuración de cada servicio, cuentas de servicio y permisos, secretos): [`docs/entrega4/arquitectura.md`](docs/entrega4/arquitectura.md).
+- Informe de arquitectura (cambios frente a la E3, componentes, despliegue, Pub/Sub, escalamiento, seguridad, limitaciones y alternativas): [`docs/entrega4/informe-arquitectura.md`](docs/entrega4/informe-arquitectura.md).
+- Diagrama y ficha de cada servicio (región, instancias, CPU, memoria, concurrencia, tiempo máximo, cuentas de servicio y secretos): [`docs/entrega4/arquitectura.md`](docs/entrega4/arquitectura.md).
 - Contrato del mensaje de Pub/Sub y reglas de respuesta del worker: [`docs/entrega4/contrato-mensaje.md`](docs/entrega4/contrato-mensaje.md).
 - Guía de despliegue reproducible, desde un proyecto vacío: [`docs/entrega4/despliegue.md`](docs/entrega4/despliegue.md).
-- Comandos para obtener las evidencias (registros de una tarea, instancias, mensajes pendientes, acceso): [`docs/entrega4/evidencias.md`](docs/entrega4/evidencias.md).
-- Verificación del escalamiento: `docs/entrega4/escalamiento.md`. La ráfaga de cargas para el worker se corre con `k6/run-rafaga-worker-e4.ps1` (ver la guía, paso 8).
+- Evidencias por criterio de la rúbrica, con el resultado, el archivo y los comandos para repetir cada una: [`docs/entrega4/evidencias.md`](docs/entrega4/evidencias.md).
+- Verificación del escalamiento de backend, frontend y worker, con métricas: [`docs/entrega4/escalamiento.md`](docs/entrega4/escalamiento.md). La ráfaga de cargas para el worker se corre con `k6/run-rafaga-worker-e4.ps1` (ver la guía, paso 8).
 
 ### Despliegue
 

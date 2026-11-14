@@ -1,0 +1,19 @@
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: '3'
+        autoscaling.knative.dev/minScale: '0'
+        run.googleapis.com/cpu-throttling: 'true'
+        run.googleapis.com/network-interfaces: '[{"network":"projects/proyectodesarrollo-513918/global/networks/mooc-e4-vpc","subnetwork":"projects/proyectodesarrollo-513918/regions/us-central1/subnetworks/mooc-e4-subnet"}]'
+        run.googleapis.com/sessionAffinity: 'false'
+        run.googleapis.com/startup-cpu-boost: 'true'
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      containerConcurrency: 1
+      containers:
+      - resources:
+          limits:
+            cpu: '2'
+            memory: 4Gi
+      timeoutSeconds: 600

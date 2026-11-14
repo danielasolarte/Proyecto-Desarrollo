@@ -1,8 +1,28 @@
 # Evidencias de la Entrega 4
 
-Comandos y consultas para obtener cada evidencia que pide la rúbrica. Están pensados para copiar y pegar en PowerShell desde la raíz del repositorio, con `gcloud` autenticado en el proyecto de la E4. Cada sección dice qué captura guardar y dónde se usa.
+Este documento reúne la evidencia de cada criterio de la rúbrica: qué se verificó, qué resultado dio y dónde está el archivo. Debajo de cada resultado quedan los comandos para repetir la verificación, pensados para PowerShell desde la raíz del repositorio con `gcloud` autenticado en el proyecto de la E4.
 
-Las capturas van en `docs/entrega4/evidencias/` con el nombre que indica cada sección.
+Las capturas están en `docs/entrega4/evidencias/` y las salidas de comandos y de k6, en `k6/results/e4/`.
+
+## Resumen
+
+| Sección | Qué se verifica | Estado |
+|---|---|---|
+| 1 | Servicios desplegados, máximo 3 instancias y configuración | Listo |
+| 2 | Una tarea de punta a punta en los registros | Listo |
+| 3 | Suscripción push autenticada y tópico de fallidos | Listo |
+| 4 | Métricas de instancias y mensajes pendientes | Listo; el tiempo de procesamiento del worker se mide de nuevo |
+| 5 | El worker solo acepta a Pub/Sub | Listo |
+| 6 | Cuentas de servicio y permisos mínimos | Listo |
+| 7 | Ningún secreto en el repositorio ni en el estado | Repositorio listo; falta el estado de Terraform |
+| 8 | Reentrega sin efectos duplicados | Reentrega lista; falta el reemplazo de instancia |
+| 9 | Despliegue reproducible y reversión | Listo |
+
+URL desplegadas:
+
+- Frontend: https://mooc-frontend-yufxihdm4q-uc.a.run.app
+- Backend: https://mooc-backend-yufxihdm4q-uc.a.run.app
+- Worker (privado, responde 403 sin identidad): https://mooc-worker-yufxihdm4q-uc.a.run.app
 
 ## 0. Preparar la terminal
 
@@ -17,6 +37,16 @@ $bucket = terraform -chdir=infra/terraform output -raw bucket_medios
 ```
 
 ## 1. Servicios desplegados y su configuración
+
+**Resultado.** Los tres servicios corren en `us-central1` con `minScale: '0'` y `maxScale: '3'`. Backend: concurrencia 40, timeout de 60 s, 1 vCPU y 1 GiB. Frontend: concurrencia 80, 60 s, 1 vCPU y 512 MiB. Worker: concurrencia 1, 600 s, 2 vCPU y 4 GiB, con salida a la VPC solo para rangos privados. La configuración completa de los tres está en [`arquitectura.md`](arquitectura.md).
+
+**Evidencia**
+
+- `k6/results/e4/backend-cloudrun-config.txt`
+- `k6/results/e4/frontend-cloudrun-config.txt`
+- `k6/results/e4/worker-cloudrun-config.txt`
+
+**Cómo repetirlo**
 
 Rúbrica: despliegue e integración; documentar región, instancias, CPU, memoria, concurrencia y timeout.
 
@@ -37,6 +67,16 @@ Qué debe verse en cada servicio:
 Capturas: `01-servicios.png` (la lista) y `01-<servicio>.png` (cada descripción). En la consola, lo mismo está en **Cloud Run** → el servicio → pestaña **Revisiones**.
 
 ## 2. Una tarea de punta a punta en los registros
+
+**Resultado.** El 11 de noviembre se siguió el trabajo `29cd1378-e4f0-4ca0-af3e-443903943861`: a las 23:11:18 el backend lo publicó (`message_id` 20354242745055623), Pub/Sub lo entregó al worker en el primer intento (`delivery_attempt` 1) y a las 23:11:19 el worker lo terminó y guardó (`estado_final` done). La aplicación muestra el recurso procesado.
+
+**Evidencia**
+
+- `k6/results/e4/worker-punta-a-punta-20261111.txt`
+- `docs/entrega4/evidencias/02-tarea-29cd1378-e4f0-4ca0-af3e-443903943861.png`
+- `docs/entrega4/evidencias/02-tarea-app.png`
+
+**Cómo repetirlo**
 
 Rúbrica: Pub/Sub y workers; registros que siguen una tarea.
 
@@ -67,6 +107,15 @@ Captura: `02-tarea-<job_id>.png`. Después, el estado visible en la aplicación 
 
 ## 3. Suscripción push y tópico de fallidos
 
+**Resultado.** La suscripción `mooc-media-jobs-worker` envía a `https://mooc-worker-yufxihdm4q-uc.a.run.app/pubsub/push` con token OIDC de `sa-pubsub-push`, plazo de confirmación de 600 s, reintentos de 10 s a 600 s y tópico de fallidos `mooc-media-jobs-dlq` tras 10 entregas. La suscripción de revisión `mooc-media-jobs-dlq-revision` guarda los fallidos 7 días.
+
+**Evidencia**
+
+- `k6/results/e4/pubsub-worker-config-20261111.txt`
+- `k6/results/e4/pubsub-dlq-config-20261111.txt`
+
+**Cómo repetirlo**
+
 ```powershell
 gcloud pubsub subscriptions describe mooc-media-jobs-worker --project=$P --format="yaml(pushConfig,ackDeadlineSeconds,retryPolicy,deadLetterPolicy)"
 ```
@@ -82,6 +131,19 @@ Debe verse:
 Captura: `03-suscripcion.png`.
 
 ## 4. Métricas: instancias y mensajes pendientes
+
+**Resultado.** El backend llegó a 3 instancias y el frontend a 2 bajo carga, sin errores. En la ráfaga de cargas, el worker llegó a 3 instancias, la suscripción acumuló unos 5 mensajes pendientes, el más antiguo esperó unos 20 s y luego la cola volvió a 0, sin mensajes en el tópico de fallidos. El detalle está en [`escalamiento.md`](escalamiento.md). El tiempo hasta que cada recurso queda listo se está midiendo de nuevo.
+
+**Evidencia**
+
+- `docs/entrega4/evidencias/backend-instance-count-20261109.png`
+- `docs/entrega4/evidencias/frontend-instance-count-20261109.png`
+- `docs/entrega4/evidencias/04-instancias.png`
+- `docs/entrega4/evidencias/04-pendientes.png`
+- `docs/entrega4/evidencias/04-edad.png`
+- `docs/entrega4/evidencias/04-respuestas.png`
+
+**Cómo repetirlo**
 
 Rúbrica: escalamiento. En **Monitoring** → **Explorador de métricas**, cambia el editor a **PromQL** y pega cada consulta. Rango: el de la prueba de carga.
 
@@ -119,6 +181,16 @@ Capturas: `04-instancias.png`, `04-pendientes.png`, `04-edad.png`, `04-respuesta
 
 ## 5. Acceso: el worker solo acepta a Pub/Sub
 
+**Resultado.** Una llamada sin identidad a `/pubsub/push` recibe `403 Forbidden`. En el worker, el único con `roles/run.invoker` es `sa-pubsub-push`; frontend y backend tienen `allUsers`.
+
+**Evidencia**
+
+- `k6/results/e4/worker-403-20261111.txt`
+- `k6/results/e4/worker-iam-policy-20261111.txt`
+- `k6/results/e4/frontend-iam.txt` y `k6/results/e4/backend-iam.txt`
+
+**Cómo repetirlo**
+
 Rúbrica: configuración y acceso.
 
 Sin identidad, el worker responde 403:
@@ -147,6 +219,14 @@ Capturas: `05-403.png` y `05-invocadores.png`.
 
 ## 6. Cuentas de servicio y permisos mínimos
 
+**Resultado.** Coincide con [`arquitectura.md`](arquitectura.md). A nivel de proyecto, `sa-frontend`, `sa-backend`, `sa-worker` y `sa-migraciones` solo tienen `roles/logging.logWriter` y `roles/monitoring.metricWriter`. Los secretos se dan uno por uno con `roles/secretmanager.secretAccessor`: `mooc-database-url` a backend, worker y migraciones; las dos partes de la llave del bucket a backend y worker; `mooc-admin-password` solo al backend. La política del tópico no se pudo leer con permisos de solo lectura; según `infra/terraform/pubsub.tf`, publican `sa-backend` y `sa-worker`.
+
+**Evidencia**
+
+- `k6/results/e4/permisos-20261114.txt`
+
+**Cómo repetirlo**
+
 Roles de proyecto de cada cuenta:
 
 ```powershell
@@ -173,6 +253,15 @@ Debe coincidir con la lista de [`arquitectura.md`](arquitectura.md). Captura: `0
 
 ## 7. Ningún secreto en el repositorio ni en el estado
 
+**Resultado.** La búsqueda en el repositorio no encontró secretos reales: las coincidencias son la base local de desarrollo (`mooc:mooc` en localhost), plantillas con `CAMBIAR_CLAVE`, variables de entorno y la propia búsqueda de la integración continua; el archivo de evidencia explica cada una. Falta revisar el estado de Terraform, que requiere permiso de lectura sobre su bucket. Los resúmenes de k6 ya no guardan tokens de sesión: `k6/run-rafaga-worker-e4.ps1` quita `setup_data` al terminar, y los tokens de las entregas anteriores en `k6/results/` se reemplazaron por `<redactado>`.
+
+**Evidencia**
+
+- `k6/results/e4/sin-secretos-repo-20261114.txt`
+- Pendiente: la revisión del estado de Terraform
+
+**Cómo repetirlo**
+
 ```powershell
 git grep -n -I -E "postgres://[^:]+:[^@]+@|BEGIN (RSA )?PRIVATE KEY|GOOG[0-9A-Z]{20,}" -- . ":!*.md"
 terraform -chdir=infra/terraform state pull | Select-String -Pattern "postgres://|PRIVATE KEY|secret_data"
@@ -181,6 +270,15 @@ terraform -chdir=infra/terraform state pull | Select-String -Pattern "postgres:/
 Los dos deben salir vacíos. El primero busca cadenas de conexión con clave, llaves privadas e identificadores de llaves HMAC; el segundo revisa que el estado de Terraform no tenga valores de secretos. Captura: `07-sin-secretos.png`.
 
 ## 8. Reentrega sin efectos duplicados
+
+**Resultado.** El 11 de noviembre se publicó dos veces el mensaje de un trabajo HLS ya terminado. Las dos entregas quedaron registradas como `reentrega de un job ya terminado, no se procesa` (`estado_final` ya_terminado): el worker respondió 204 sin repetir la conversión. La prueba de reemplazo de instancia está pendiente.
+
+**Evidencia**
+
+- `k6/results/e4/worker-idempotencia-hls-20261111.txt`
+- Pendiente: `08-reemplazo-antes.png`, `08-reemplazo-registros.png` y `08-reemplazo-despues.png`
+
+**Cómo repetirlo**
 
 Rúbrica: el worker tolera reentregas. Usa un `job_id` de una tarea que ya terminó (sección 2) y su tipo.
 
@@ -236,6 +334,15 @@ Cloud Run no permite matar una instancia a mano, así que la prueba deja el job 
 5. Repite el `SELECT`: `status = done` y `attempts` subió en 1. Repite el conteo de derivados de arriba: el número no cambia, porque el HLS se reescribe en las mismas rutas. Captura: `08-reemplazo-despues.png`.
 
 ## 9. Despliegue reproducible y reversión
+
+**Resultado.** Con la etiqueta desplegada (`255f3ec`), `tf.ps1 plan -Tag 255f3ec` respondió `No changes. Your infrastructure matches the configuration.` En la reversión, el tráfico del backend pasó de `mooc-backend-00003-wmm` a `mooc-backend-00002-84s`, `GET /health` respondió 200 y se restauró la revisión actual.
+
+**Evidencia**
+
+- `k6/results/e4/terraform-plan-sin-cambios-20261112.txt`
+- `k6/results/e4/backend-rollback-20261112.txt`
+
+**Cómo repetirlo**
 
 Lo desplegado es igual a lo del repositorio:
 
