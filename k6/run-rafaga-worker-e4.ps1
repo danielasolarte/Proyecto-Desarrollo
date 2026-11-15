@@ -71,6 +71,11 @@ docker run --rm `
 
 # k6 copia en el resumen lo que devuelve setup(), incluido el token de sesion
 # del profesor. Se quita antes de que el archivo pueda llegar al repositorio.
+# En Cloud Shell, Docker crea el summary como root. Devuelve la propiedad
+# al usuario antes de redactar setup_data.
+if ($IsLinux -and (Test-Path "$prefix.json")) {
+    sudo chown "$($env:USER):$($env:USER)" "$prefix.json"
+}
 if (Test-Path "$prefix.json") {
     $resumen = Get-Content "$prefix.json" -Raw | ConvertFrom-Json
     $resumen.PSObject.Properties.Remove("setup_data")
