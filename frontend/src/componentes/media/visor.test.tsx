@@ -3,7 +3,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { derivadoListo, VisorRecurso } from './VisorRecurso'
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+const hlsMock = vi.hoisted(() => {
+  const instancia = { on: vi.fn(), loadSource: vi.fn(), attachMedia: vi.fn(), destroy: vi.fn() }
+  const Hls = Object.assign(vi.fn(() => instancia), { isSupported: vi.fn(() => true), Events: { ERROR: 'hlsError' } })
+  return { Hls, instancia }
+})
+vi.mock('hls.js', () => ({ default: hlsMock.Hls }))
+
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.clearAllMocks(); hlsMock.Hls.isSupported.mockReturnValue(true) })
 
 const json = (datos: unknown, status = 200) => new Response(JSON.stringify(datos), { status })
 
@@ -79,5 +86,30 @@ describe('VisorRecurso', () => {
     fallar = false
     fireEvent.click(screen.getByText('Intentar de nuevo'))
     expect((await screen.findByText(/Descargar el archivo/)).getAttribute('href')).toBe(URL_FIRMADA)
+  })
+
+  it('usa hls.js aunque el navegador diga que reproduce HLS nativo (Chrome reciente)', async () => {
+    api({
+      '/api/v1/resources/r1/media': () => json({ id: 'a1', resource_id: 'r1', kind: 'video', hls_manifest_key: 'h' }),
+      '/api/v1/resources/r1/playback': () => json({ url: URL_FIRMADA }),
+    })
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('maybe')
+    render(<VisorRecurso recurso={{ id: 'r1', title: 'Clase 1', type: 'video' }} />)
+    await vi.waitFor(() => expect(hlsMock.instancia.loadSource).toHaveBeenCalledWith(URL_FIRMADA))
+    const video = document.querySelector('video')!
+    expect(hlsMock.instancia.attachMedia).toHaveBeenCalledWith(video)
+    expect(video.getAttribute('src')).toBeNull()
+  })
+
+  it('reproduce de forma nativa cuando hls.js no es compatible (Safari en iPhone)', async () => {
+    api({
+      '/api/v1/resources/r1/media': () => json({ id: 'a1', resource_id: 'r1', kind: 'video', hls_manifest_key: 'h' }),
+      '/api/v1/resources/r1/playback': () => json({ url: URL_FIRMADA }),
+    })
+    hlsMock.Hls.isSupported.mockReturnValue(false)
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('maybe')
+    render(<VisorRecurso recurso={{ id: 'r1', title: 'Clase 1', type: 'video' }} />)
+    await vi.waitFor(() => expect(document.querySelector('video')?.getAttribute('src')).toBe(URL_FIRMADA))
+    expect(hlsMock.instancia.loadSource).not.toHaveBeenCalled()
   })
 })
