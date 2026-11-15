@@ -1,0 +1,84 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: rafaga-worker-e4.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 20m30s max duration (incl. graceful stop):
+              * rafaga: 1 iterations for each of 1 VUs (maxDuration: 20m0s, gracefulStop: 30s)
+
+time="2026-11-15T19:49:22Z" level=info msg="inicio_rafaga=2026-11-15T19:49:22.818Z tipo=presentacion rafaga=1 archivo=./fixtures/presentacion_prueba.pptx bytes=32254" source=console
+
+running (00m01.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m00.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m02.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m01.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m03.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m02.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m04.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m03.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m05.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m04.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m06.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m05.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m07.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m06.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m08.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m07.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m09.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m08.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m10.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m09.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m11.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m10.4s/20m0s  0/1 iters, 1 per VU
+time="2026-11-15T19:49:34Z" level=info msg="listo carga=1 resource_id=7a8702c7-b979-4473-aafa-74ee02e5487e time_to_ready_ms=10105" source=console
+time="2026-11-15T19:49:34Z" level=info msg="fin_rafaga=2026-11-15T19:49:34.044Z" source=console
+
+     ✓ recurso 201
+     ✓ initiate 201
+     ✓ url de la parte 200
+     ✓ PUT a storage 2xx
+     ✓ complete 200
+
+     checks.........................: 100.00% 5 out of 5
+     data_received..................: 25 kB   2.1 kB/s
+     data_sent......................: 37 kB   3.1 kB/s
+     http_req_blocked...............: avg=3.47ms   min=699ns    med=904ns    p(90)=14.68ms  p(95)=15.51ms  max=16.35ms 
+     http_req_connecting............: avg=307.71µs min=0s       med=0s       p(90)=1.11ms   p(95)=1.21ms   max=1.3ms   
+     http_req_duration..............: avg=163.42ms min=51.38ms  med=127.04ms p(90)=305.82ms p(95)=336.38ms max=366.94ms
+       { expected_response:true }...: avg=163.42ms min=51.38ms  med=127.04ms p(90)=305.82ms p(95)=336.38ms max=366.94ms
+     http_req_failed................: 0.00%   0 out of 11
+     http_req_receiving.............: avg=202.98µs min=157.82µs med=199.96µs p(90)=251.52µs p(95)=252.35µs max=253.17µs
+     http_req_sending...............: avg=315.86µs min=124.84µs med=197.87µs p(90)=490.91µs p(95)=790.56µs max=1.09ms  
+     http_req_tls_handshaking.......: avg=1.83ms   min=0s       med=0s       p(90)=5.62ms   p(95)=7.35ms   max=9.08ms  
+     http_req_waiting...............: avg=162.9ms  min=50.97ms  med=126.72ms p(90)=304.48ms p(95)=335.56ms max=366.64ms
+     http_reqs......................: 11      0.928296/s
+     iteration_duration.............: avg=11.22s   min=11.22s   med=11.22s   p(90)=11.22s   p(95)=11.22s   max=11.22s  
+     iterations.....................: 1       0.084391/s
+   ✓ ready_timeouts.................: 0       0/s
+     time_to_ready_ms...............: avg=10.1s    min=10.1s    med=10.1s    p(90)=10.1s    p(95)=10.1s    max=10.1s   
+     upload_confirm_ms..............: avg=368ms    min=368ms    med=368ms    p(90)=368ms    p(95)=368ms    max=368ms   
+   ✓ upload_failures................: 0.00%   0 out of 1
+   ✓ upload_request_ms..............: avg=204ms    min=204ms    med=204ms    p(90)=204ms    p(95)=204ms    max=204ms   
+     upload_transfer_ms.............: avg=295ms    min=295ms    med=295ms    p(90)=295ms    p(95)=295ms    max=295ms   
+     vus............................: 1       min=1       max=1
+     vus_max........................: 1       min=1       max=1
+
+
+running (00m11.8s), 0/1 VUs, 1 complete and 0 interrupted iterations
+rafaga ✓ [ 100% ] 1 VUs  00m11.2s/20m0s  1/1 iters, 1 per VU
