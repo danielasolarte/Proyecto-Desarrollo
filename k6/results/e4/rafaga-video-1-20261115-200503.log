@@ -1,0 +1,69 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: rafaga-worker-e4.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 20m30s max duration (incl. graceful stop):
+              * rafaga: 1 iterations for each of 1 VUs (maxDuration: 20m0s, gracefulStop: 30s)
+
+time="2026-11-15T20:05:04Z" level=info msg="inicio_rafaga=2026-11-15T20:05:04.297Z tipo=video rafaga=1 archivo=./media/corto_360p_15s.mp4 bytes=237848" source=console
+
+running (00m01.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m00.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m02.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m01.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m03.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m02.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m04.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m03.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m05.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m04.4s/20m0s  0/1 iters, 1 per VU
+
+running (00m06.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+rafaga   [   0% ] 1 VUs  00m05.4s/20m0s  0/1 iters, 1 per VU
+time="2026-11-15T20:05:10Z" level=info msg="listo carga=1 resource_id=59dac2c1-306a-4dec-8dc3-8223526e2048 time_to_ready_ms=5050" source=console
+time="2026-11-15T20:05:10Z" level=info msg="fin_rafaga=2026-11-15T20:05:10.544Z" source=console
+
+     ✓ recurso 201
+     ✓ initiate 201
+     ✓ url de la parte 200
+     ✓ PUT a storage 2xx
+     ✓ complete 200
+
+     checks.........................: 100.00% 5 out of 5
+     data_received..................: 24 kB   3.5 kB/s
+     data_sent......................: 243 kB  35 kB/s
+     http_req_blocked...............: avg=4.11ms   min=530ns    med=893ns    p(90)=15.14ms  p(95)=17.14ms  max=19.15ms 
+     http_req_connecting............: avg=362.05µs min=0s       med=0s       p(90)=1.25ms   p(95)=1.3ms    max=1.35ms  
+     http_req_duration..............: avg=182.93ms min=48.19ms  med=146.63ms p(90)=340.12ms p(95)=374.45ms max=408.78ms
+       { expected_response:true }...: avg=182.93ms min=48.19ms  med=146.63ms p(90)=340.12ms p(95)=374.45ms max=408.78ms
+     http_req_failed................: 0.00%   0 out of 10
+     http_req_receiving.............: avg=205.1µs  min=158.79µs med=182.94µs p(90)=227.12µs p(95)=321.48µs max=415.83µs
+     http_req_sending...............: avg=955.17µs min=88.84µs  med=184.26µs p(90)=1.06ms   p(95)=4.44ms   max=7.83ms  
+     http_req_tls_handshaking.......: avg=2.26ms   min=0s       med=0s       p(90)=6.3ms    p(95)=9.11ms   max=11.93ms 
+     http_req_waiting...............: avg=181.77ms min=47.82ms  med=146.23ms p(90)=338.87ms p(95)=369.7ms  max=400.53ms
+     http_reqs......................: 10      1.453309/s
+     iteration_duration.............: avg=6.24s    min=6.24s    med=6.24s    p(90)=6.24s    p(95)=6.24s    max=6.24s   
+     iterations.....................: 1       0.145331/s
+   ✓ ready_timeouts.................: 0       0/s
+     time_to_ready_ms...............: avg=5.05s    min=5.05s    med=5.05s    p(90)=5.05s    p(95)=5.05s    max=5.05s   
+     upload_confirm_ms..............: avg=324ms    min=324ms    med=324ms    p(90)=324ms    p(95)=324ms    max=324ms   
+   ✓ upload_failures................: 0.00%   0 out of 1
+   ✓ upload_request_ms..............: avg=207ms    min=207ms    med=207ms    p(90)=207ms    p(95)=207ms    max=207ms   
+     upload_transfer_ms.............: avg=428ms    min=428ms    med=428ms    p(90)=428ms    p(95)=428ms    max=428ms   
+     vus............................: 1       min=1       max=1
+     vus_max........................: 1       min=1       max=1
+
+
+running (00m06.9s), 0/1 VUs, 1 complete and 0 interrupted iterations
+rafaga ✓ [ 100% ] 1 VUs  00m06.2s/20m0s  1/1 iters, 1 per VU
