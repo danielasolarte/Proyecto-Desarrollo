@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { derivadoListo, VisorRecurso } from './VisorRecurso'
 
 const hlsMock = vi.hoisted(() => {
@@ -111,5 +111,30 @@ describe('VisorRecurso', () => {
     render(<VisorRecurso recurso={{ id: 'r1', title: 'Clase 1', type: 'video' }} />)
     await vi.waitFor(() => expect(document.querySelector('video')?.getAttribute('src')).toBe(URL_FIRMADA))
     expect(hlsMock.instancia.loadSource).not.toHaveBeenCalled()
+  })
+
+  it('avisa cuando el navegador no tiene ni hls.js ni HLS nativo', async () => {
+    api({
+      '/api/v1/resources/r1/media': () => json({ id: 'a1', resource_id: 'r1', kind: 'video', hls_manifest_key: 'h' }),
+      '/api/v1/resources/r1/playback': () => json({ url: URL_FIRMADA }),
+    })
+    hlsMock.Hls.isSupported.mockReturnValue(false)
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('')
+    render(<VisorRecurso recurso={{ id: 'r1', title: 'Clase 1', type: 'video' }} />)
+    expect(await screen.findByText(/no puede reproducir el contenido/)).toBeTruthy()
+    expect(document.querySelector('video')?.getAttribute('src')).toBeNull()
+  })
+
+  it('muestra un error cuando hls.js reporta un fallo fatal', async () => {
+    api({
+      '/api/v1/resources/r1/media': () => json({ id: 'a1', resource_id: 'r1', kind: 'audio', hls_manifest_key: 'h' }),
+      '/api/v1/resources/r1/playback': () => json({ url: URL_FIRMADA }),
+    })
+    render(<VisorRecurso recurso={{ id: 'r1', title: 'Podcast', type: 'audio' }} />)
+    await vi.waitFor(() => expect(hlsMock.instancia.on).toHaveBeenCalled())
+    const [, manejador] = hlsMock.instancia.on.mock.calls[0] as [string, (e: string, d: { fatal: boolean }) => void]
+    act(() => manejador('hlsError', { fatal: true }))
+    expect(await screen.findByText(/No pudimos reproducir el contenido/)).toBeTruthy()
+    expect(document.querySelector('audio')).toBeTruthy()
   })
 })
