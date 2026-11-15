@@ -159,10 +159,6 @@
             "value": 1
         }
     },
-    "setup_data": {
-        "token": "Dprensb99DZL-6Kgd4b297huOR8YgimMnsxMDsFdUzY",
-        "unidadId": "f0cebd39-42ce-4363-b666-2439b53a1c54"
-    },
     "root_group": {
         "checks": {
             "recurso 201": {

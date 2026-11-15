@@ -188,3 +188,42 @@ Al finalizar la carga, las instancias activas descendieron a 0 y quedaron instan
 - `k6/results/e4/frontend-cloudrun-config.txt`
 - `k6/results/e4/frontend-iam.txt`
 - `docs/entrega4/evidencias/frontend-instance-count-20261109.png`
+
+## Prueba de escalamiento del worker
+
+### Configuración
+
+- Servicio: `mooc-worker`, concurrencia 1 y máximo 3 instancias.
+- Script: `k6/run-rafaga-worker-e4.ps1`, que sube una ráfaga de archivos con una cuenta de profesor.
+- Archivos: presentación PPTX de 32.254 bytes y video de 15 s, 640×360, de unos 238 KB.
+- Ráfagas: 1 y 9 presentaciones, 1 y 6 videos, el 12 de noviembre de 2026 entre las 01:34 y las 02:01 UTC.
+
+### Instancias y cola
+
+Durante la ráfaga de 9 presentaciones:
+
+- El worker escaló hasta **3 instancias activas** y no pasó de ahí.
+- Los mensajes pendientes en `mooc-media-jobs-worker` subieron a unos 5 y volvieron a 0.
+- El mensaje sin confirmar más antiguo llegó a unos 20 s y volvió a 0.
+- La mayoría de las entregas se confirmaron con 204. Hubo respuestas 500 transitorias que Pub/Sub reintentó con éxito.
+- Al terminar, `mooc-media-jobs-dlq-revision` respondió `Listed 0 items`: ningún trabajo terminó en el tópico de fallidos.
+
+Una de las 9 cargas falló antes de llegar al backend con `connection refused`; las otras 8 completaron el flujo. La ráfaga de 6 videos completó las 6 cargas, con 0 % de errores HTTP y p95 de 640 ms en la solicitud de carga.
+
+### Tiempo hasta que el recurso queda listo: pendiente
+
+En esta corrida el script esperaba con `GET /resources/:id/playback`. Ese endpoint responde 200 apenas el original está guardado, porque si todavía no hay HLS ni PDF firma la URL del original. Por eso todas las cargas aparecieron listas en la primera consulta (5,05 s, el intervalo de espera del script), y ese valor no mide la conversión. Como referencia, en los registros del 11 de noviembre la conversión a HLS de un video corto tardó unos 71 s (`k6/results/e4/worker-idempotencia-hls-20261111.txt`).
+
+El tiempo hasta que el recurso queda listo y el modelo de capacidad del worker se completan con una nueva corrida que espera con `GET /resources/:id/media` (`converted_pdf_key` para presentaciones y `hls_manifest_key` para videos).
+
+### Evidencias
+
+- `docs/entrega4/evidencias/04-instancias.png`
+- `docs/entrega4/evidencias/04-pendientes.png`
+- `docs/entrega4/evidencias/04-edad.png`
+- `docs/entrega4/evidencias/04-respuestas.png`
+- `k6/results/e4/rafaga-presentacion-1-20261112-013408.log` y `.json`
+- `k6/results/e4/rafaga-presentacion-9-20261112-014051.log` y `.json`
+- `k6/results/e4/rafaga-video-1-20261112-020016.log` y `.json`
+- `k6/results/e4/rafaga-video-6-20261112-020124.log` y `.json`
+- `k6/results/e4/pubsub-dlq-config-20261111.txt`

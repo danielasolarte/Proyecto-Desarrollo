@@ -5,42 +5,42 @@
         "id": "d41d8cd98f00b204e9800998ecf8427e",
         "groups": {},
         "checks": {
-                "recurso 201": {
-                    "name": "recurso 201",
-                    "path": "::recurso 201",
-                    "id": "c9b85d1c4988f6f2162ffecc5b859b8d",
-                    "passes": 6,
-                    "fails": 0
-                },
-                "initiate 201": {
-                    "path": "::initiate 201",
-                    "id": "1c360810576573f7fcda0eda13163a3c",
-                    "passes": 6,
-                    "fails": 0,
-                    "name": "initiate 201"
-                },
-                "url de la parte 200": {
-                    "name": "url de la parte 200",
-                    "path": "::url de la parte 200",
-                    "id": "c6aa9db6e094450323a49928c72eb04a",
-                    "passes": 6,
-                    "fails": 0
-                },
-                "PUT a storage 2xx": {
-                    "name": "PUT a storage 2xx",
-                    "path": "::PUT a storage 2xx",
-                    "id": "36937d68170aa171657388d116b01aac",
-                    "passes": 6,
-                    "fails": 0
-                },
-                "complete 200": {
-                    "passes": 6,
-                    "fails": 0,
-                    "name": "complete 200",
-                    "path": "::complete 200",
-                    "id": "2596e0ceacf121d4e6191001050c217a"
-                }
+            "recurso 201": {
+                "name": "recurso 201",
+                "path": "::recurso 201",
+                "id": "c9b85d1c4988f6f2162ffecc5b859b8d",
+                "passes": 6,
+                "fails": 0
+            },
+            "initiate 201": {
+                "path": "::initiate 201",
+                "id": "1c360810576573f7fcda0eda13163a3c",
+                "passes": 6,
+                "fails": 0,
+                "name": "initiate 201"
+            },
+            "url de la parte 200": {
+                "name": "url de la parte 200",
+                "path": "::url de la parte 200",
+                "id": "c6aa9db6e094450323a49928c72eb04a",
+                "passes": 6,
+                "fails": 0
+            },
+            "PUT a storage 2xx": {
+                "name": "PUT a storage 2xx",
+                "path": "::PUT a storage 2xx",
+                "id": "36937d68170aa171657388d116b01aac",
+                "passes": 6,
+                "fails": 0
+            },
+            "complete 200": {
+                "passes": 6,
+                "fails": 0,
+                "name": "complete 200",
+                "path": "::complete 200",
+                "id": "2596e0ceacf121d4e6191001050c217a"
             }
+        }
     },
     "metrics": {
         "http_req_blocked": {
@@ -201,9 +201,5 @@
             "avg": 6088.596599166667,
             "min": 5841.062159
         }
-    },
-    "setup_data": {
-        "token": "WxEtkURpD0Iy9zoqJvFmQ6GQeqFOvhNBacl7HSbjN3I",
-        "unidadId": "9ae52ef0-6944-4523-8969-4d98f51d0ca3"
     }
 }

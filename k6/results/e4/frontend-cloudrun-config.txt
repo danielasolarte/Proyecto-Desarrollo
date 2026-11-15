@@ -5,8 +5,8 @@ metadata:
     run.googleapis.com/maxScale: '3'
     run.googleapis.com/operation-id: b6327c5a-e8b8-47a0-99a3-eefe001528e1
     run.googleapis.com/urls: '["https://mooc-frontend-828976161294.us-central1.run.app","https://mooc-frontend-yufxihdm4q-uc.a.run.app"]'
-    serving.knative.dev/creator: camilafajardo32@gmail.com
-    serving.knative.dev/lastModifier: camilafajardo32@gmail.com
+    serving.knative.dev/creator: <correo>
+    serving.knative.dev/lastModifier: <correo>
 spec:
   template:
     metadata:
