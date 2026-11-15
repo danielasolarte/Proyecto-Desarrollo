@@ -329,7 +329,16 @@ func (p *Processor) convertPresentationToPDF(job *mediadomain.MediaJob, asset *m
 		return fmt.Errorf("subiendo pdf convertido: %w", err)
 	}
 
-	return p.setResourceProcessingStatus(asset.ResourceID, coursesdomain.ProcessingReady, &asset.ID)
+	asset.ConvertedPDFKey = &remoteKey
+	if err := p.mediaRepo.UpdateAsset(asset); err != nil {
+		return fmt.Errorf("actualizando asset con pdf convertido: %w", err)
+	}
+
+	return p.setResourceProcessingStatus(
+		asset.ResourceID,
+		coursesdomain.ProcessingReady,
+		&asset.ID,
+	)
 }
 
 // ---------- validación de contenido real ----------
