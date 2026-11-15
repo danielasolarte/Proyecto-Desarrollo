@@ -129,10 +129,10 @@ Los resultados quedan en `k6/results/e4/`. Mientras corre, se capturan las gráf
 
 ### Verificación de infraestructura
 
-Para comprobar que la infraestructura desplegada coincide con la definición de Terraform se usa la misma etiqueta con la que se construyeron las imágenes desplegadas. En la validación final de la E4 fue `255f3ec`:
+Para comprobar que la infraestructura desplegada coincide con la definición de Terraform se usa la misma etiqueta con la que se construyeron las imágenes desplegadas. En la validación final de la E4 fue `a0d2082`, el commit de `main` con todos los cambios de la entrega:
 
 ```powershell
-.\deploy\gcp\e4\tf.ps1 plan -Tag 255f3ec
+.\deploy\gcp\e4\tf.ps1 plan -Tag a0d2082
 ```
 
 El resultado esperado es:
