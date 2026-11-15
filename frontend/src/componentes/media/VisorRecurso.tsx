@@ -130,7 +130,12 @@ case 'audio':
   }
 }
 
-// HLS con hls.js (Chrome, Firefox, Edge). Safari reproduce HLS de forma nativa.
+// HLS con hls.js (Chrome, Firefox, Edge). Safari en iPhone no tiene MediaSource
+// y reproduce HLS de forma nativa.
+// Se prefiere hls.js siempre que el navegador lo soporte: Chrome reciente
+// responde "maybe" a canPlayType('application/vnd.apple.mpegurl'), pero su
+// reproductor nativo no abre los segmentos .ts que genera el worker
+// ("no supported sources"). Por eso el modo nativo queda solo como respaldo.
 // hls.js se carga solo cuando hace falta, para no engordar el resto de la app.
 // Los segmentos se piden al bucket con rutas relativas al manifiesto.
 function ReproductorHLS({
@@ -154,24 +159,28 @@ function ReproductorHLS({
     let vigente = true
     setError('')
 
-    if (elemento.canPlayType('application/vnd.apple.mpegurl')) {
+    const nativo = () => {
+      if (!elemento.canPlayType('application/vnd.apple.mpegurl')) return false
       elemento.src = url
-    } else {
-      import('hls.js').then(({ default: Hls }) => {
-        if (!vigente) return
-        if (!Hls.isSupported()) {
-          setError('Este navegador no puede reproducir el contenido. Prueba con Chrome, Firefox, Edge o Safari.')
-          return
-        }
-        const hls = new Hls()
-        hls.on(Hls.Events.ERROR, (_evento, datos) => {
-          if (datos.fatal) setError('No pudimos reproducir el contenido. Recarga la página para intentarlo de nuevo.')
-        })
-        hls.loadSource(url)
-        hls.attachMedia(elemento)
-        destruir = () => hls.destroy()
-      }).catch(() => { if (vigente) setError('No pudimos cargar el reproductor.') })
+      return true
     }
+
+    import('hls.js').then(({ default: Hls }) => {
+      if (!vigente) return
+      if (!Hls.isSupported()) {
+        if (!nativo()) setError('Este navegador no puede reproducir el contenido. Prueba con Chrome, Firefox, Edge o Safari.')
+        return
+      }
+      const hls = new Hls()
+      hls.on(Hls.Events.ERROR, (_evento, datos) => {
+        if (datos.fatal) setError('No pudimos reproducir el contenido. Recarga la página para intentarlo de nuevo.')
+      })
+      hls.loadSource(url)
+      hls.attachMedia(elemento)
+      destruir = () => hls.destroy()
+    }).catch(() => {
+      if (vigente && !nativo()) setError('No pudimos cargar el reproductor.')
+    })
     return () => {
       vigente = false
       destruir?.()
