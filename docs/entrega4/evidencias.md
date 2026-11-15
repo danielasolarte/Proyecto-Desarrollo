@@ -11,11 +11,16 @@ Las capturas están en `docs/entrega4/evidencias/` y las salidas de comandos y d
 | 1 | Servicios desplegados, máximo 3 instancias y configuración | Listo |
 | 2 | Una tarea de punta a punta en los registros | Listo |
 | 3 | Suscripción push autenticada y tópico de fallidos | Listo |
-| 4 | Métricas de instancias y mensajes pendientes | Listo; el tiempo de procesamiento del worker se mide de nuevo |
+| 4 | Métricas de instancias y mensajes pendientes | Listo |
 | 5 | El worker solo acepta a Pub/Sub | Listo |
 | 6 | Cuentas de servicio y permisos mínimos | Listo |
+<<<<<<< Updated upstream
 | 7 | Ningún secreto en el repositorio ni en el estado | Repositorio listo; falta el estado de Terraform |
 | 8 | Reentrega sin efectos duplicados | Listo |
+=======
+| 7 | Ningún secreto en el repositorio ni en el estado | Listo |
+| 8 | Reentrega sin efectos duplicados | Reentrega lista; falta el reemplazo de instancia |
+>>>>>>> Stashed changes
 | 9 | Despliegue reproducible y reversión | Listo |
 
 URL desplegadas:
@@ -132,7 +137,7 @@ Captura: `03-suscripcion.png`.
 
 ## 4. Métricas: instancias y mensajes pendientes
 
-**Resultado.** El backend llegó a 3 instancias y el frontend a 2 bajo carga, sin errores. En la ráfaga de cargas, el worker llegó a 3 instancias, la suscripción acumuló unos 5 mensajes pendientes, el más antiguo esperó unos 20 s y luego la cola volvió a 0, sin mensajes en el tópico de fallidos. El detalle está en [`escalamiento.md`](escalamiento.md). El tiempo hasta que cada recurso queda listo se está midiendo de nuevo.
+**Resultado.** El backend llegó a 3 instancias y el frontend a 2 bajo carga, sin errores. En la ráfaga de cargas, el worker llegó a 3 instancias, la suscripción acumuló unos 5 mensajes pendientes, el más antiguo esperó unos 20 s y luego la cola volvió a 0, sin mensajes en el tópico de fallidos. Esperando hasta que existe el derivado real, una presentación quedó lista en unos 10 s y un video corto en unos 5 s; en las ráfagas de 9 presentaciones y 6 videos el p95 fue de 15,75 s y 10,23 s, sin timeouts. El detalle está en [`escalamiento.md`](escalamiento.md).
 
 **Evidencia**
 
@@ -253,12 +258,12 @@ Debe coincidir con la lista de [`arquitectura.md`](arquitectura.md). Captura: `0
 
 ## 7. Ningún secreto en el repositorio ni en el estado
 
-**Resultado.** La búsqueda en el repositorio no encontró secretos reales: las coincidencias son la base local de desarrollo (`mooc:mooc` en localhost), plantillas con `CAMBIAR_CLAVE`, variables de entorno y la propia búsqueda de la integración continua; el archivo de evidencia explica cada una. Falta revisar el estado de Terraform, que requiere permiso de lectura sobre su bucket. Los resúmenes de k6 ya no guardan tokens de sesión: `k6/run-rafaga-worker-e4.ps1` quita `setup_data` al terminar, y los tokens de las entregas anteriores en `k6/results/` se reemplazaron por `<redactado>`.
+**Resultado.** La búsqueda en el repositorio no encontró secretos reales: las coincidencias son la base local de desarrollo (`mooc:mooc` en localhost), plantillas con `CAMBIAR_CLAVE`, variables de entorno y la propia búsqueda de la integración continua; el archivo de evidencia explica cada una. El estado de Terraform tampoco tiene secretos: la búsqueda de cadenas de conexión, llaves privadas y `secret_data` no encontró coincidencias. Los resúmenes de k6 ya no guardan tokens de sesión: `k6/run-rafaga-worker-e4.ps1` quita `setup_data` al terminar, y los tokens de las entregas anteriores en `k6/results/` se reemplazaron por `<redactado>`.
 
 **Evidencia**
 
 - `k6/results/e4/sin-secretos-repo-20261114.txt`
-- Pendiente: la revisión del estado de Terraform
+- `k6/results/e4/sin-secretos-estado-20261115.txt`
 
 **Cómo repetirlo**
 
@@ -340,11 +345,12 @@ Cloud Run no permite matar una instancia a mano, así que la prueba deja el job 
 
 ## 9. Despliegue reproducible y reversión
 
-**Resultado.** Con la etiqueta desplegada (`255f3ec`), `tf.ps1 plan -Tag 255f3ec` respondió `No changes. Your infrastructure matches the configuration.` En la reversión, el tráfico del backend pasó de `mooc-backend-00003-wmm` a `mooc-backend-00002-84s`, `GET /health` respondió 200 y se restauró la revisión actual.
+**Resultado.** Después del despliegue final, con las cuatro imágenes construidas desde `main` con la etiqueta `a0d2082`, `tf.ps1 plan -Tag a0d2082` respondió `No changes. Your infrastructure matches the configuration.`: lo que corre en la nube es exactamente lo del repositorio. Lo mismo se había comprobado el 12 de noviembre con la etiqueta `255f3ec`. En la reversión, el tráfico del backend pasó de `mooc-backend-00003-wmm` a `mooc-backend-00002-84s`, `GET /health` respondió 200 y se restauró la revisión actual.
 
 **Evidencia**
 
-- `k6/results/e4/terraform-plan-sin-cambios-20261112.txt`
+- `k6/results/e4/terraform-plan-sin-cambios-20261115.txt` (despliegue final, `a0d2082`)
+- `k6/results/e4/terraform-plan-sin-cambios-20261112.txt` (`255f3ec`)
 - `k6/results/e4/backend-rollback-20261112.txt`
 
 **Cómo repetirlo**

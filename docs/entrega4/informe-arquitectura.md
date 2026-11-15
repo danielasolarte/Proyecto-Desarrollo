@@ -179,12 +179,12 @@ Backend y worker registran cada paso con el mismo `job_id`, junto con `message_i
 |---|---|---:|---:|---:|
 | Backend | Catálogo y login, de 20 a 120 iteraciones/s | 3 | 0 % | 4,31 s |
 | Frontend | SPA con tasa creciente | 2 | 0 % | 57 ms |
-| Worker | Ráfagas de 9 presentaciones y 6 videos | 3 | Ver nota | [pendiente] |
+| Worker | Ráfagas de 9 presentaciones y 6 videos | 3 | 0 timeouts | 15,75 s (presentaciones), 10,23 s (videos) |
 
 - **Backend:** escaló hasta 3 instancias y no pasó de ahí, sin errores HTTP. El p95 subió a 4,31 s y k6 descartó 1.077 iteraciones: la carga superó lo que sostienen 3 instancias con esta configuración (sección 10).
 - **Frontend:** 2 instancias bastaron para 93.000 solicitudes con p95 de 57 ms.
-- **Worker:** durante la ráfaga de presentaciones el worker llegó a 3 instancias, la suscripción acumuló unos 5 mensajes pendientes y el mensaje sin confirmar más antiguo llegó a unos 20 s; después la cola volvió a 0 y el tópico de fallidos quedó vacío. Hubo respuestas 500 transitorias que Pub/Sub reintentó con éxito. En la ráfaga de 9 presentaciones, una carga falló antes de llegar al backend (`connection refused`).
-- **Nota sobre el worker:** el tiempo hasta que un recurso queda listo se está midiendo de nuevo, porque la primera versión de la prueba consultaba un endpoint que responde antes de que termine la conversión. Los valores de esta fila se completan con la nueva medición.
+- **Worker:** el worker llegó a 3 instancias y no pasó de ahí; la suscripción acumuló unos 5 mensajes pendientes y la cola volvió a 0 en cerca de un minuto, con el tópico de fallidos vacío. Pub/Sub reintentó con éxito algunas respuestas transitorias. El tiempo se mide hasta que existe el derivado real (`converted_pdf_key` o `hls_manifest_key`): una presentación sola quedó lista en unos 10 s y un video corto en unos 5 s; en las ráfagas de 9 presentaciones y 6 videos, el p95 fue de 15,75 s y 10,23 s, sin timeouts, muy por debajo de los objetivos de 2 y 5 minutos.
+- **Corrección encontrada en la prueba:** al repetir la medición se vio que el worker generaba el PDF de las presentaciones pero no guardaba `converted_pdf_key` en el recurso. Se corrigió en `internal/media/worker/processor.go` y se desplegó una revisión nueva del worker.
 
 Detalle de cada prueba, gráficas y archivos: [`escalamiento.md`](escalamiento.md).
 
@@ -216,7 +216,7 @@ Detalle de cada prueba, gráficas y archivos: [`escalamiento.md`](escalamiento.m
 ## 9. Operación
 
 - **Despliegue desde cero:** bucket del estado, base con Terraform, valores de los secretos, imágenes, migraciones, backend y por último frontend y worker. Detalle en [`despliegue.md`](despliegue.md).
-- **Reproducibilidad:** con la etiqueta desplegada, `tf.ps1 plan` responde `No changes` (`k6/results/e4/terraform-plan-sin-cambios-20261112.txt`).
+- **Reproducibilidad:** con la etiqueta de las imágenes desplegadas (`a0d2082`), `tf.ps1 plan` responde `No changes` (`k6/results/e4/terraform-plan-sin-cambios-20261115.txt`).
 - **Reversión:** se llevó el tráfico del backend a la revisión anterior, se comprobó `GET /health` con 200 y se restauró la revisión actual (`k6/results/e4/backend-rollback-20261112.txt`).
 - **Control de costos:** cualquiera del grupo enciende Cloud SQL para trabajar y la apaga al terminar. Los servicios de Cloud Run bajan a 0 instancias solos.
 
@@ -230,7 +230,7 @@ Detalle de cada prueba, gráficas y archivos: [`escalamiento.md`](escalamiento.m
 
 - Cloud Run cobra solo mientras atiende; con mínimo 0, sin tráfico el costo de los servicios es casi nulo.
 - Cloud SQL cobra mientras está encendida; por eso se apaga cuando nadie trabaja.
-- Costo observado durante la entrega: [completar con la facturación del proyecto].
+- Costo observado en noviembre: unos US$1,05 de uso (US$0,88 de Cloud SQL y US$0,17 de Cloud Run). Google aplicó ahorros por el mismo valor, así que el costo neto facturado fue US$0,00. Cloud Storage y Compute Engine no generaron costo.
 
 **Puntos únicos de falla y limitaciones**
 
