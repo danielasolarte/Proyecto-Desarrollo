@@ -194,27 +194,59 @@ Al finalizar la carga, las instancias activas descendieron a 0 y quedaron instan
 ### Configuración
 
 - Servicio: `mooc-worker`, concurrencia 1 y máximo 3 instancias.
-- Script: `k6/run-rafaga-worker-e4.ps1`, que sube una ráfaga de archivos con una cuenta de profesor.
-- Archivos: presentación PPTX de 32.254 bytes y video de 15 s, 640×360, de unos 238 KB.
-- Ráfagas: 1 y 9 presentaciones, 1 y 6 videos, el 12 de noviembre de 2026 entre las 01:34 y las 02:01 UTC.
+- Script: `k6/run-rafaga-worker-e4.ps1`, que crea el recurso, solicita la carga, transfiere el archivo a Cloud Storage, confirma la carga y espera hasta que exista el derivado real.
+- Presentaciones: se considera listo cuando `GET /resources/:id/media` expone `converted_pdf_key`.
+- Videos: se considera listo cuando `GET /resources/:id/media` expone `hls_manifest_key`.
+- Intervalo de consulta del script: aproximadamente 5 s.
+- Ráfagas finales: 1 y 9 presentaciones, y 1 y 6 videos.
 
-### Instancias y cola
+Durante la repetición de las pruebas se detectó que la versión anterior del script utilizaba `GET /resources/:id/playback`. Ese endpoint puede responder 200 cuando únicamente está disponible el archivo original, por lo que los tiempos cercanos a 5 s obtenidos inicialmente no demostraban que el procesamiento multimedia hubiera terminado. La prueba se corrigió para consultar `/media` y comprobar explícitamente la existencia de `converted_pdf_key` o `hls_manifest_key`.
 
-Durante la ráfaga de 9 presentaciones:
+La repetición también permitió detectar un defecto en el procesamiento de presentaciones: el worker generaba y almacenaba correctamente el PDF convertido, pero no persistía `converted_pdf_key` en el `MediaAsset`. Se corrigió el worker para guardar ese campo mediante `UpdateAsset` antes de marcar el recurso como listo y se desplegó una nueva revisión. A partir de esa corrección, `/media` refleja correctamente la disponibilidad del PDF derivado.
 
-- El worker escaló hasta **3 instancias activas** y no pasó de ahí.
-- Los mensajes pendientes en `mooc-media-jobs-worker` subieron a unos 5 y volvieron a 0.
-- El mensaje sin confirmar más antiguo llegó a unos 20 s y volvió a 0.
-- La mayoría de las entregas se confirmaron con 204. Hubo respuestas 500 transitorias que Pub/Sub reintentó con éxito.
-- Al terminar, `mooc-media-jobs-dlq-revision` respondió `Listed 0 items`: ningún trabajo terminó en el tópico de fallidos.
+### Resultados finales
 
-Una de las 9 cargas falló antes de llegar al backend con `connection refused`; las otras 8 completaron el flujo. La ráfaga de 6 videos completó las 6 cargas, con 0 % de errores HTTP y p95 de 640 ms en la solicitud de carga.
+| Prueba | Cargas aceptadas | Checks | `upload_request_ms` p95 | `time_to_ready_ms` p95 | `ready_timeouts` |
+|---|---:|---:|---:|---:|---:|
+| Presentación ×1 | 1/1 | 100 % | 204 ms | 10,10 s | 0 |
+| Presentación ×9 | 9/9 | 100 % | 414,4 ms | 15,75 s | 0 |
+| Video ×1 | 1/1 | 100 % | 207 ms | 5,05 s | 0 |
+| Video ×6 | 6/6 | 100 % | 310 ms | 10,23 s | 0 |
 
-### Tiempo hasta que el recurso queda listo: pendiente
+En las cuatro corridas finales no hubo fallos de carga ni timeouts de procesamiento. El objetivo de creación de una solicitud de carga, definido como p95 menor a 2 s sin incluir la transferencia del archivo, se cumplió ampliamente en todos los escenarios.
 
-En esta corrida el script esperaba con `GET /resources/:id/playback`. Ese endpoint responde 200 apenas el original está guardado, porque si todavía no hay HLS ni PDF firma la URL del original. Por eso todas las cargas aparecieron listas en la primera consulta (5,05 s, el intervalo de espera del script), y ese valor no mide la conversión. Como referencia, en los registros del 11 de noviembre la conversión a HLS de un video corto tardó unos 71 s (`k6/results/e4/worker-idempotencia-hls-20261111.txt`).
+Las presentaciones quedaron procesadas en un p95 máximo observado de 15,75 s, muy por debajo del objetivo de 2 minutos. Los videos cortos quedaron con HLS disponible en un p95 máximo observado de 10,23 s, también muy por debajo del objetivo de 5 minutos.
 
-El tiempo hasta que el recurso queda listo y el modelo de capacidad del worker se completan con una nueva corrida que espera con `GET /resources/:id/media` (`converted_pdf_key` para presentaciones y `hls_manifest_key` para videos).
+La corrida final de seis videos se ejecutó desde un equipo local contra la misma infraestructura desplegada en GCP. Esto se hizo después de observar repetidamente en Cloud Shell errores `connect: connection refused` durante la creación inicial del recurso, antes de que las solicitudes alcanzaran el backend. Las cargas que sí llegaban al backend eran procesadas correctamente. Desde el cliente local se obtuvo una corrida limpia de 6/6, sin errores HTTP, fallos de carga ni timeouts. El cambio afectó únicamente al generador de carga; backend, Cloud Storage, Pub/Sub y worker permanecieron desplegados en GCP.
+
+### Instancias y comportamiento de la cola
+
+Las gráficas obtenidas durante la ráfaga de presentaciones muestran el comportamiento de escalamiento de la infraestructura:
+
+- El worker escaló hasta **3 instancias activas**, respetando el máximo configurado.
+- Los mensajes pendientes en `mooc-media-jobs-worker` aumentaron temporalmente y luego regresaron a 0.
+- La edad del mensaje sin confirmar más antiguo aumentó durante la ráfaga y posteriormente regresó a 0.
+- Pub/Sub registró confirmaciones exitosas y reintentó respuestas transitorias.
+- Al finalizar las pruebas, la suscripción de revisión de la DLQ respondió `Listed 0 items`, por lo que ningún trabajo terminó en el tópico de fallidos.
+
+Estas gráficas siguen siendo válidas para demostrar el comportamiento de escalamiento y drenaje de la cola; la repetición de las ráfagas corrigió específicamente la medición del tiempo hasta que el derivado multimedia está realmente disponible.
+
+### Capacidad observada
+
+Tomando como referencia las ejecuciones aisladas, una presentación alcanzó el estado listo en aproximadamente 10,10 s y un video en aproximadamente 5,05 s. Esto corresponde, de forma aproximada, a:
+
+- Presentaciones: `60 / 10,10 ≈ 5,94` trabajos/minuto por worker.
+- Videos: `60 / 5,05 ≈ 11,88` trabajos/minuto por worker.
+
+Con un máximo de 3 instancias, la capacidad nominal observada sería aproximadamente 17,8 presentaciones/minuto o 35,6 videos/minuto si las instancias estuvieran ocupadas de forma continua.
+
+Estos valores son una estimación y no una tasa exacta de servicio: `time_to_ready_ms` se observa mediante polling en intervalos de aproximadamente 5 s y además puede incluir tiempo de cola, arranque y comunicación entre servicios. Las ráfagas muestran este efecto: el p95 aumentó a 15,75 s para nueve presentaciones y a 10,23 s para seis videos, sin producir timeouts.
+
+Para una tasa de entrada `e` y una capacidad aproximada por worker `c`, mientras las tres instancias están ocupadas la variación de la cola puede expresarse como:
+
+`Δcola ≈ e - 3c`
+
+Si `e > 3c`, la cola aumenta temporalmente; cuando la tasa de entrada baja por debajo de la capacidad agregada, Pub/Sub conserva los mensajes y los workers continúan procesándolos hasta que la cola vuelve a cero. Este comportamiento fue observado en Monitoring durante las pruebas.
 
 ### Evidencias
 
@@ -222,8 +254,8 @@ El tiempo hasta que el recurso queda listo y el modelo de capacidad del worker s
 - `docs/entrega4/evidencias/04-pendientes.png`
 - `docs/entrega4/evidencias/04-edad.png`
 - `docs/entrega4/evidencias/04-respuestas.png`
-- `k6/results/e4/rafaga-presentacion-1-20261112-013408.log` y `.json`
-- `k6/results/e4/rafaga-presentacion-9-20261112-014051.log` y `.json`
-- `k6/results/e4/rafaga-video-1-20261112-020016.log` y `.json`
-- `k6/results/e4/rafaga-video-6-20261112-020124.log` y `.json`
+- `k6/results/e4/rafaga-presentacion-1-20261115-194921.log` y `.json`
+- `k6/results/e4/rafaga-presentacion-9-20261115-150157.log` y `.json`
+- `k6/results/e4/rafaga-video-1-20261115-200503.log` y `.json`
+- `k6/results/e4/rafaga-video-6-20261115-152357.log` y `.json`
 - `k6/results/e4/pubsub-dlq-config-20261111.txt`
