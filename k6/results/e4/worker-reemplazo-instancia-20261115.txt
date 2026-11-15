@@ -1,0 +1,49 @@
+Prueba de reemplazo de instancia del worker (E4) · 15 de noviembre de 2026 (hora de Colombia, UTC-5)
+Responsable: Samara. Procedimiento: docs/entrega4/evidencias.md, sección 8, "Reemplazo de instancia".
+Hecha desde la consola de Google Cloud (Cloud SQL Studio, Pub/Sub, Logging y Cloud Storage).
+
+Job usado: e3406799-8e6e-4ac7-bee3-e5934a6aad1c (transcode_hls, ya terminado)
+Recurso:   13634a32-c0d7-40aa-833c-3f0e819e2c85
+
+1. Derivados antes (gs://mooc-e4-medios-proyectodesarrollo-513918/resources/13634a32-.../hls/)
+   playlist.m3u8    179 B      creado 15 nov 2026 3:24:29 p. m.
+   segment_000.ts   858.2 KB   creado 15 nov 2026 3:24:29 p. m.
+   segment_001.ts   676.6 KB   creado 15 nov 2026 3:24:29 p. m.
+   Total: 3 objetos
+
+2. Instancia muerta simulada (Cloud SQL Studio, 16:14:5x)
+   UPDATE media_jobs SET status = 'processing', locked_at = now() WHERE id = '<job>';
+   SELECT -> status processing, attempts 1, locked_at 2026-11-15T21:14:5x Z
+   Captura: docs/entrega4/evidencias/08-reemplazo-antes.png
+
+3. Mensaje publicado en mooc-media-jobs (consola de Pub/Sub)
+   cuerpo {"job_id":"e3406799-8e6e-4ac7-bee3-e5934a6aad1c"}
+   atributos job_type=transcode_hls, contract_version=1
+   message_id 23478053744048996
+
+4. Registros de mooc-worker (jsonPayload.job_id = el job), en orden
+   15:24:26.097  job tomado, procesando                                   (procesamiento original)
+   15:24:29.434  job terminado y guardado                                 (procesamiento original)
+   16:15:06.497  otra entrega está procesando el job, Pub/Sub reintentará  estado_final=ocupado
+   16:15:17.902  otra entrega está procesando el job, Pub/Sub reintentará  estado_final=ocupado
+   16:15:31.999  otra entrega está procesando el job, Pub/Sub reintentará  estado_final=ocupado
+   16:15:48.972  otra entrega está procesando el job, Pub/Sub reintentará  estado_final=ocupado, delivery_attempt=4
+   16:16:09.992  job tomado, procesando
+   16:16:13.516  job terminado y guardado                                 estado_final=done, delivery_attempt=5,
+                                                                          intento=2, max_intentos=3, duracion_ms=3531
+   Las 5 entregas tienen el mismo message_id (23478053744048996).
+   Mientras el bloqueo tenía menos de 60 s, el worker respondió 429 sin tocar el job (4 entregas).
+   Al vencer, la siguiente entrega lo tomó y lo terminó una sola vez.
+   Captura: docs/entrega4/evidencias/08-reemplazo-registros.png
+
+5. Después (Cloud SQL Studio)
+   SELECT -> status done, attempts 2 (antes 1), locked_at vacío
+   Captura: docs/entrega4/evidencias/08-reemplazo-despues.png
+
+6. Derivados después
+   playlist.m3u8    179 B      15 nov 2026 4:16:13 p. m.
+   segment_000.ts   858.2 KB   15 nov 2026 4:16:13 p. m.
+   segment_001.ts   676.6 KB   15 nov 2026 4:16:13 p. m.
+   Total: 3 objetos. Mismo número, mismos nombres y tamaños: el HLS se reescribió en las mismas rutas, sin copias.
+
+Resultado: el worker tolera que una instancia muera a mitad de un trabajo. El job no se pierde ni se duplica.

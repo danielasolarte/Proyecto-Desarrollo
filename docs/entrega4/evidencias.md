@@ -15,7 +15,7 @@ Las capturas están en `docs/entrega4/evidencias/` y las salidas de comandos y d
 | 5 | El worker solo acepta a Pub/Sub | Listo |
 | 6 | Cuentas de servicio y permisos mínimos | Listo |
 | 7 | Ningún secreto en el repositorio ni en el estado | Repositorio listo; falta el estado de Terraform |
-| 8 | Reentrega sin efectos duplicados | Reentrega lista; falta el reemplazo de instancia |
+| 8 | Reentrega sin efectos duplicados | Listo |
 | 9 | Despliegue reproducible y reversión | Listo |
 
 URL desplegadas:
@@ -271,12 +271,17 @@ Los dos deben salir vacíos. El primero busca cadenas de conexión con clave, ll
 
 ## 8. Reentrega sin efectos duplicados
 
-**Resultado.** El 11 de noviembre se publicó dos veces el mensaje de un trabajo HLS ya terminado. Las dos entregas quedaron registradas como `reentrega de un job ya terminado, no se procesa` (`estado_final` ya_terminado): el worker respondió 204 sin repetir la conversión. La prueba de reemplazo de instancia está pendiente.
+**Resultado.** El 11 de noviembre se publicó dos veces el mensaje de un trabajo HLS ya terminado. Las dos entregas quedaron registradas como `reentrega de un job ya terminado, no se procesa` (`estado_final` ya_terminado): el worker respondió 204 sin repetir la conversión.
+
+El 15 de noviembre se probó el reemplazo de instancia con el job HLS `e3406799-8e6e-4ac7-bee3-e5934a6aad1c`. Se dejó en `processing` con un bloqueo nuevo, como lo dejaría una instancia que murió, y se publicó su mensaje. Mientras el bloqueo tenía menos de 60 s, el worker rechazó cuatro entregas con 429 (`estado_final` ocupado) sin tocar el job. Al vencer, la quinta entrega del mismo `message_id` lo tomó y lo terminó en 3,5 s (`estado_final` done, `intento` 2). En la base pasó de `attempts` 1 a 2 y quedó `done` sin bloqueo; en el bucket siguen los mismos 3 archivos HLS (manifiesto y 2 segmentos, mismos tamaños), reescritos en las mismas rutas.
 
 **Evidencia**
 
 - `k6/results/e4/worker-idempotencia-hls-20261111.txt`
-- Pendiente: `08-reemplazo-antes.png`, `08-reemplazo-registros.png` y `08-reemplazo-despues.png`
+- `k6/results/e4/worker-reemplazo-instancia-20261115.txt`
+- `docs/entrega4/evidencias/08-reemplazo-antes.png`
+- `docs/entrega4/evidencias/08-reemplazo-registros.png`
+- `docs/entrega4/evidencias/08-reemplazo-despues.png`
 
 **Cómo repetirlo**
 
