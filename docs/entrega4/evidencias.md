@@ -14,13 +14,8 @@ Las capturas están en `docs/entrega4/evidencias/` y las salidas de comandos y d
 | 4 | Métricas de instancias y mensajes pendientes | Listo |
 | 5 | El worker solo acepta a Pub/Sub | Listo |
 | 6 | Cuentas de servicio y permisos mínimos | Listo |
-<<<<<<< Updated upstream
-| 7 | Ningún secreto en el repositorio ni en el estado | Repositorio listo; falta el estado de Terraform |
-| 8 | Reentrega sin efectos duplicados | Listo |
-=======
 | 7 | Ningún secreto en el repositorio ni en el estado | Listo |
-| 8 | Reentrega sin efectos duplicados | Reentrega lista; falta el reemplazo de instancia |
->>>>>>> Stashed changes
+| 8 | Reentrega sin efectos duplicados | Listo |
 | 9 | Despliegue reproducible y reversión | Listo |
 
 URL desplegadas:
