@@ -23,7 +23,8 @@ Toda la infraestructura se crea con Terraform (`infra/terraform/`) en el proyect
 - Frontend: https://mooc-frontend-yufxihdm4q-uc.a.run.app
 - Backend: https://mooc-backend-yufxihdm4q-uc.a.run.app (también responde detrás del frontend en `/api/v1`).
 - Tag evaluado: `entrega-4`.
-- Video de sustentación: _(pendiente)_
+- Video de sustentación: https://canva.link/gxswa9rjyi1o89o
+- Presentación usada en el video: [`docs/entrega4/Sustentacion-Entrega4.pptx`](docs/entrega4/Sustentacion-Entrega4.pptx).
 
 El frontend (nginx) sirve la SPA y reenvía `/api/*` al backend, así que la sesión por cookies y el CSRF funcionan sin CORS. El bucket sí tiene CORS para el origen del frontend, porque el navegador sube y descarga los archivos directo con URL firmadas.
 
