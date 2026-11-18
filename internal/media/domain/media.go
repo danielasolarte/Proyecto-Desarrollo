@@ -40,6 +40,10 @@ const (
 type JobType string
 
 const (
+	// JobValidateUpload verifica el checksum, el MIME real y la firma de
+	// las presentaciones antes del antivirus. Desde la Entrega 5 lo ejecuta
+	// la Cloud Function mooc-validar-carga, no el worker.
+	JobValidateUpload           JobType = "validate_upload"
 	JobScanAntivirus            JobType = "scan_antivirus"
 	JobTranscodeHLS             JobType = "transcode_hls"
 	JobConvertPresentationToPDF JobType = "convert_presentation_to_pdf"
@@ -237,4 +241,13 @@ type ObjectStorage interface {
 // en Postgres, se necesita poder reintentar solo esa parte.
 type JobQueue interface {
 	EnqueueMediaJob(job *MediaJob) error
+}
+
+// JobRouter es opcional: una cola que lo implementa indica si tiene un
+// destino propio para un tipo de trabajo. CompleteUpload lo usa como
+// interruptor de transición de la Entrega 5: solo encola validate_upload
+// cuando la cola sabe a qué tema publicarlo (es decir, cuando la Cloud
+// Function está desplegada); si no, empieza por scan_antivirus como antes.
+type JobRouter interface {
+	Routes(t JobType) bool
 }

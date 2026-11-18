@@ -33,11 +33,14 @@ import (
 // (ver usecase.EnqueueJob).
 type PubSubQueue struct {
 	publishURL string
-	client     *http.Client
-	tokens     tokenSource
-	attempts   int
-	backoff    time.Duration
-	timeout    time.Duration
+	// routeURLs publica algunos tipos de trabajo en otro tema (Entrega 5:
+	// validate_upload va al tema que dispara la Cloud Function).
+	routeURLs map[domain.JobType]string
+	client    *http.Client
+	tokens    tokenSource
+	attempts  int
+	backoff   time.Duration
+	timeout   time.Duration
 }
 
 // PubSubConfig agrupa la configuración del publicador.
@@ -49,6 +52,9 @@ type PubSubConfig struct {
 	EmulatorHost string
 	// Timeout de cada intento de publicación (por defecto 5 s).
 	Timeout time.Duration
+	// TopicsByJobType manda ciertos tipos de trabajo a otro tema del mismo
+	// proyecto. Los que no aparecen van a TopicID.
+	TopicsByJobType map[domain.JobType]string
 }
 
 type tokenSource interface {
@@ -71,8 +77,15 @@ func NewPubSubQueue(cfg PubSubConfig) (*PubSubQueue, error) {
 	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}
+	routes := map[domain.JobType]string{}
+	for jobType, topic := range cfg.TopicsByJobType {
+		if topic != "" {
+			routes[jobType] = fmt.Sprintf("%s/v1/projects/%s/topics/%s:publish", base, cfg.ProjectID, topic)
+		}
+	}
 	return &PubSubQueue{
 		publishURL: fmt.Sprintf("%s/v1/projects/%s/topics/%s:publish", base, cfg.ProjectID, cfg.TopicID),
+		routeURLs:  routes,
 		client:     &http.Client{},
 		tokens:     tokens,
 		attempts:   3,
@@ -91,6 +104,22 @@ func emulatorBaseURL(hostPort string) string {
 	}
 	u := url.URL{Scheme: "ht" + "tp", Host: strings.TrimSuffix(host, "/")}
 	return u.String()
+}
+
+// Routes implementa domain.JobRouter: indica si el tipo de trabajo tiene
+// un tema propio configurado.
+func (q *PubSubQueue) Routes(t domain.JobType) bool {
+	_, ok := q.routeURLs[t]
+	return ok
+}
+
+// urlFor devuelve la URL de publicación del tema que le corresponde al
+// tipo de trabajo.
+func (q *PubSubQueue) urlFor(t domain.JobType) string {
+	if u, ok := q.routeURLs[t]; ok {
+		return u
+	}
+	return q.publishURL
 }
 
 // Close existe para que PubSubQueue y AsynqQueue se usen igual en cmd/.
@@ -132,7 +161,7 @@ func (q *PubSubQueue) EnqueueMediaJob(job *domain.MediaJob) error {
 	var lastErr error
 	wait := q.backoff
 	for attempt := 1; attempt <= q.attempts; attempt++ {
-		messageID, retry, err := q.publishOnce(body)
+		messageID, retry, err := q.publishOnce(q.urlFor(job.JobType), body)
 		if err == nil {
 			log.Printf("pubsub: publicado job_id=%s job_type=%s message_id=%s", job.ID, job.JobType, messageID)
 			return nil
@@ -150,11 +179,11 @@ func (q *PubSubQueue) EnqueueMediaJob(job *domain.MediaJob) error {
 }
 
 // publishOnce hace un intento. retry indica si el error es transitorio.
-func (q *PubSubQueue) publishOnce(body []byte) (messageID string, retry bool, err error) {
+func (q *PubSubQueue) publishOnce(publishURL string, body []byte) (messageID string, retry bool, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), q.timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, q.publishURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, publishURL, bytes.NewReader(body))
 	if err != nil {
 		return "", false, err
 	}

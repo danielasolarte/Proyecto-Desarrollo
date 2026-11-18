@@ -74,3 +74,39 @@ variable "origenes_cors_extra" {
   type        = list(string)
   default     = ["http://localhost:5173"]
 }
+
+# ---------- Entrega 5: Cloud Function de validación ----------
+
+variable "funcion_validar" {
+  description = "Crea la Cloud Function mooc-validar-carga y su disparador de Eventarc. Con true el backend recibe PUBSUB_TOPIC_VALIDACION y cada carga empieza por validate_upload en la función; con false todo sigue como en la E4 (el worker valida dentro de scan_antivirus)."
+  type        = bool
+  default     = false
+}
+
+variable "topic_validacion" {
+  description = "Topic de Pub/Sub que dispara la Cloud Function de validación (Eventarc)."
+  type        = string
+  default     = "mooc-media-validate"
+}
+
+variable "funcion_validar_config" {
+  description = "Recursos y escalado de la Cloud Function de validación. La validación lee el archivo por partes (no lo carga entero), así que 512 MiB alcanzan; la concurrencia es 1 por instancia, como el worker."
+  type = object({
+    memoria        = string
+    cpu            = string
+    timeout_s      = number
+    max_instancias = number
+    min_instancias = number
+    concurrencia   = number
+    conexiones_bd  = number
+  })
+  default = {
+    memoria        = "512Mi"
+    cpu            = "1"
+    timeout_s      = 300
+    max_instancias = 3
+    min_instancias = 0
+    concurrencia   = 1
+    conexiones_bd  = 2
+  }
+}

@@ -293,11 +293,20 @@ type mediaQueue interface {
 func newMediaQueue() (mediaQueue, error) {
 	if topic := os.Getenv("PUBSUB_TOPIC"); topic != "" {
 		log.Printf("cola de trabajos: Pub/Sub, topic %s", topic)
+		// Entrega 5: si existe el tema de validación (lo define Terraform
+		// cuando la Cloud Function está habilitada), validate_upload se
+		// publica allí y CompleteUpload empieza por esa tarea.
+		routes := map[mediaDomain.JobType]string{}
+		if v := os.Getenv("PUBSUB_TOPIC_VALIDACION"); v != "" {
+			log.Printf("cola de trabajos: validate_upload va al topic %s (Cloud Function)", v)
+			routes[mediaDomain.JobValidateUpload] = v
+		}
 		return mediaPlatform.NewPubSubQueue(mediaPlatform.PubSubConfig{
-			ProjectID:    os.Getenv("PUBSUB_PROJECT"),
-			TopicID:      topic,
-			EmulatorHost: os.Getenv("PUBSUB_EMULATOR_HOST"),
-			Timeout:      time.Duration(intEnv("PUBSUB_PUBLISH_TIMEOUT_MS", 5000)) * time.Millisecond,
+			ProjectID:       os.Getenv("PUBSUB_PROJECT"),
+			TopicID:         topic,
+			EmulatorHost:    os.Getenv("PUBSUB_EMULATOR_HOST"),
+			Timeout:         time.Duration(intEnv("PUBSUB_PUBLISH_TIMEOUT_MS", 5000)) * time.Millisecond,
+			TopicsByJobType: routes,
 		})
 	}
 	if addr := os.Getenv("REDIS_ADDR"); addr != "" {
