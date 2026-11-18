@@ -24,7 +24,7 @@ locals {
 
   # Quién lee cada secreto.
   lectores_secretos = {
-    DATABASE_URL  = ["backend", "worker", "migraciones"]
+    DATABASE_URL  = ["backend", "worker", "migraciones", "funcion-validar"]
     S3_ACCESS_KEY = ["backend", "worker"]
     S3_SECRET_KEY = ["backend", "worker"]
 

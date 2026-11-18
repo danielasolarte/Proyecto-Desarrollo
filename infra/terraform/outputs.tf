@@ -52,3 +52,24 @@ output "imagenes_desplegadas" {
   description = "Imagen exacta (con digest) de cada servicio."
   value       = { for s, img in data.google_artifact_registry_docker_image.servicio : s => img.self_link }
 }
+
+# ---------- Entrega 5 ----------
+
+output "topic_validacion" {
+  description = "Topic que dispara la Cloud Function de validación."
+  value       = google_pubsub_topic.validacion.id
+}
+
+output "funcion_validar" {
+  description = "Nombre de la Cloud Function de validación (null si var.funcion_validar = false)."
+  value       = var.funcion_validar ? google_cloudfunctions2_function.validar[0].name : null
+}
+
+output "funcion_validar_disparador" {
+  description = "Disparador de Eventarc de la función (para gcloud eventarc triggers describe)."
+  value       = var.funcion_validar ? google_cloudfunctions2_function.validar[0].event_trigger[0].trigger : null
+}
+
+output "bucket_fuentes" {
+  value = google_storage_bucket.fuentes.name
+}

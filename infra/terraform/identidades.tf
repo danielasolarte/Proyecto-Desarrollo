@@ -7,6 +7,13 @@
 #   sa-worker       publica trabajos encadenados; lee DATABASE_URL y las llaves S3.
 #   sa-pubsub-push  identidad del token OIDC del push; solo puede invocar el worker.
 #   sa-migraciones  corre el job de migraciones; solo lee DATABASE_URL.
+#   sa-funcion-validar  (E5) ejecuta la Cloud Function de validación: lee y
+#                   borra originales del bucket, lee DATABASE_URL y publica
+#                   el siguiente trabajo (scan_antivirus).
+#   sa-disparo-validar  (E5) identidad del disparador de Eventarc; solo
+#                   puede invocar la función.
+#   sa-build-funcion    (E5) compila la función en Cloud Build; solo lee el
+#                   código fuente y publica la imagen en Artifact Registry.
 #   sa-medios       dueña de la llave HMAC con la que backend y worker firman
 #                   URL y leen o escriben en el bucket; solo tiene permiso
 #                   sobre ese bucket.
@@ -22,6 +29,11 @@ locals {
     pubsub-push = "Identidad del push de Pub/Sub hacia el worker"
     migraciones = "Job de migraciones de la E4"
     medios      = "Dueña de la llave HMAC del bucket de medios"
+    # Entrega 5. Se crean aunque la función esté apagada: así los permisos
+    # quedan listos y encender la función no depende de crear cuentas.
+    funcion-validar = "Cloud Function de validación de cargas (E5)"
+    disparo-validar = "Disparador de Eventarc de la función de validación (E5)"
+    build-funcion   = "Compilación de la Cloud Function en Cloud Build (E5)"
   }
 }
 
@@ -38,7 +50,7 @@ resource "google_service_account" "sa" {
 # ejecuta nada, así que no los necesita.
 locals {
   roles_observabilidad = {
-    for par in setproduct(["frontend", "backend", "worker", "migraciones"], ["roles/logging.logWriter", "roles/monitoring.metricWriter"]) :
+    for par in setproduct(["frontend", "backend", "worker", "migraciones", "funcion-validar"], ["roles/logging.logWriter", "roles/monitoring.metricWriter"]) :
     "${par[0]}|${par[1]}" => { cuenta = par[0], rol = par[1] }
   }
 }

@@ -111,6 +111,11 @@ resource "google_cloud_run_v2_service" "backend" {
           # Cloud Run da 10 s entre SIGTERM y SIGKILL.
           SHUTDOWN_DRAIN_SECONDS   = "0"
           SHUTDOWN_TIMEOUT_SECONDS = "8"
+          }, {
+          # Entrega 5: interruptor de transición. Solo con la función
+          # desplegada el backend publica validate_upload en este topic;
+          # sin la variable, cada carga empieza por scan_antivirus (E4).
+          for k, v in { PUBSUB_TOPIC_VALIDACION = google_pubsub_topic.validacion.name } : k => v if var.funcion_validar
         })
         content {
           name  = env.key
@@ -147,6 +152,12 @@ resource "google_cloud_run_v2_service" "backend" {
   depends_on = [
     google_project_service.apis,
     google_secret_manager_secret_iam_member.lectura,
+    # E5: la revisión nueva del backend sale cuando las migraciones ya
+    # corrieron (la 000006 permite validate_upload) y cuando el disparador
+    # de la función existe; un mensaje publicado en un topic sin
+    # suscripción se perdería.
+    google_cloud_run_v2_job.migraciones,
+    google_cloudfunctions2_function.validar,
   ]
 }
 

@@ -4,7 +4,12 @@
 # golang-migrate toma un bloqueo en Postgres, así que dos ejecuciones
 # simultáneas no aplican la misma migración dos veces.
 #
-# Se ejecuta con deploy/gcp/e4/migrar.ps1 (up por defecto, o -Accion version).
+# Entrega 5: Terraform lo ejecuta solo. run_execution_token cambia cuando
+# cambia la imagen del job (que trae las migraciones de ese commit) y
+# entonces apply crea una ejecución y espera a que termine antes de
+# actualizar el backend. Si la imagen no cambia, no se ejecuta nada.
+# deploy/gcp/e4/migrar.ps1 sigue sirviendo para correrlo a mano
+# (up o -Accion version).
 
 resource "google_cloud_run_v2_job" "migraciones" {
   count = var.servicios_habilitados.migraciones ? 1 : 0
@@ -12,6 +17,10 @@ resource "google_cloud_run_v2_job" "migraciones" {
   name                = "mooc-migraciones"
   location            = var.region
   deletion_protection = false
+
+  # 12 caracteres del digest de la imagen: "mooc-migraciones-" + token
+  # queda por debajo del límite de 63.
+  run_execution_token = substr(sha256(data.google_artifact_registry_docker_image.servicio["migraciones"].self_link), 0, 12)
 
   template {
     task_count  = 1

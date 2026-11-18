@@ -14,11 +14,16 @@ type CompleteUploadInput struct {
 	IsAdmin         bool
 }
 
-// firstJobForKind decide qué trabajo se encola apenas el archivo llega
-// íntegro al bucket. El antivirus corre siempre primero, y es también
-// donde ahora se verifica el checksum real y el MIME real (ver
-// worker/processor.go) — StatObject/ETag ya no alcanza para eso.
-func firstJobForKind(kind domain.MediaKind) domain.JobType {
+// firstJob decide qué trabajo se encola apenas el archivo llega íntegro
+// al bucket. Desde la Entrega 5 el primero es validate_upload (checksum
+// real, MIME real y firma de presentaciones), que ejecuta la Cloud
+// Function y luego encola scan_antivirus. Mientras la cola no tenga un
+// destino para validate_upload (función sin desplegar), se empieza por
+// scan_antivirus y el worker valida como en la Entrega 4.
+func firstJob(queue domain.JobQueue) domain.JobType {
+	if r, ok := queue.(domain.JobRouter); ok && r.Routes(domain.JobValidateUpload) {
+		return domain.JobValidateUpload
+	}
 	return domain.JobScanAntivirus
 }
 
@@ -107,7 +112,7 @@ func CompleteUpload(repo domain.MediaRepository, storage domain.ObjectStorage, q
 		}
 	}
 
-	jobType := firstJobForKind(in.ResourceKind)
+	jobType := firstJob(queue)
 	idempotencyKey := fmt.Sprintf("%s:%s", asset.ID, jobType)
 	if _, err := EnqueueJob(repo, queue, asset.ID, jobType, idempotencyKey); err != nil {
 		return nil, err

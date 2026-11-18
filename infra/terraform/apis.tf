@@ -1,4 +1,4 @@
-# APIs que usa la E4. disable_on_destroy = false: un destroy no apaga APIs
+# APIs que usan la E4 y la E5. disable_on_destroy = false: un destroy no apaga APIs
 # (apagarlas puede borrar recursos que no maneja Terraform).
 locals {
   apis = toset([
@@ -15,6 +15,11 @@ locals {
     "artifactregistry.googleapis.com",
     "monitoring.googleapis.com",
     "logging.googleapis.com",
+    # Entrega 5: Cloud Function de 2.a generación con disparador de Eventarc.
+    # Cloud Build compila el código de la función.
+    "cloudfunctions.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "eventarc.googleapis.com",
   ])
 }
 
