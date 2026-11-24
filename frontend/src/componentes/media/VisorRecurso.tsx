@@ -3,8 +3,10 @@
 //
 // Primero consulta el estado del archivo (/media): si el derivado todavía no
 // existe (HLS o PDF convertido), muestra "Procesando" y no ofrece el archivo.
-// Luego pide la URL de lectura (/playback), prefirmada y directa al bucket:
-// el archivo no pasa por la API.
+// Luego pide la URL de lectura (/playback). Para PDF e imágenes es una URL
+// prefirmada directa al bucket. Para video y audio es el manifiesto HLS que
+// arma la API con cada segmento ya firmado: los segmentos se descargan
+// directo del bucket, sin pasar por la API.
 import { useEffect, useRef, useState } from 'react'
 import { apiMedia, type EstadoMedia } from '../../api/media'
 import { ErrorAPI } from '../../api/cliente'

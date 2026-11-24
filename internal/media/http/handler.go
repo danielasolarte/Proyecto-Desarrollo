@@ -11,6 +11,7 @@ package http
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -274,8 +275,10 @@ func (h *Handler) GetMediaStatus(c echo.Context) error {
 
 // ---------- reproducción / descarga ----------
 
-// GetPlaybackURL devuelve una URL prefirmada de lectura hacia el derivado
-// correcto (manifest HLS para video/audio, el propio original para PDF).
+// GetPlaybackURL devuelve la URL con la que el navegador abre el derivado
+// correcto. Para video y audio (HLS) es la ruta del manifiesto firmado
+// que sirve GetPlaybackManifest, en el mismo origen y con la misma sesión;
+// para PDF es una URL prefirmada del PDF convertido o del original.
 func (h *Handler) GetPlaybackURL(c echo.Context) error {
 	user, err := currentUser(c)
 	if err != nil {
@@ -290,16 +293,48 @@ func (h *Handler) GetPlaybackURL(c echo.Context) error {
 		return respondError(c, err)
 	}
 
-	key := asset.OriginalStorageKey
 	if asset.HLSManifestKey != nil {
-		key = *asset.HLSManifestKey
-	} else if asset.ConvertedPDFKey != nil {
+		return c.JSON(http.StatusOK, map[string]any{
+			"url": "/api/v1/resources/" + url.PathEscape(resourceID) + "/playback/manifest.m3u8",
+		})
+	}
+
+	key := asset.OriginalStorageKey
+	if asset.ConvertedPDFKey != nil {
 		key = *asset.ConvertedPDFKey
 	}
 
-	url, err := h.storage.PresignDownload(key, presignedDownloadExpiry)
+	signedURL, err := h.storage.PresignDownload(key, presignedDownloadExpiry)
 	if err != nil {
 		return respondError(c, err)
 	}
-	return c.JSON(http.StatusOK, map[string]any{"url": url})
+	return c.JSON(http.StatusOK, map[string]any{"url": signedURL})
+}
+
+// GetPlaybackManifest sirve el manifiesto HLS con cada segmento ya
+// firmado (ver rewriteHLSManifest). Aplica el mismo control de acceso que
+// GetPlaybackURL. No se guarda en caché porque las firmas vencen.
+func (h *Handler) GetPlaybackManifest(c echo.Context) error {
+	user, err := currentUser(c)
+	if err != nil {
+		return respondError(c, err)
+	}
+	resourceID := c.Param("resourceID")
+	if _, err := h.ensureViewAccess(user, resourceID); err != nil {
+		return respondError(c, err)
+	}
+	asset, err := h.mediaRepo.FindAssetByResourceID(resourceID)
+	if err != nil {
+		return respondError(c, err)
+	}
+	if asset.HLSManifestKey == nil {
+		return respondError(c, mediadomain.ErrNotFound)
+	}
+
+	manifest, err := signedHLSManifest(h.storage, *asset.HLSManifestKey)
+	if err != nil {
+		return respondError(c, err)
+	}
+	c.Response().Header().Set("Cache-Control", "private, no-store")
+	return c.Blob(http.StatusOK, "application/vnd.apple.mpegurl", manifest)
 }

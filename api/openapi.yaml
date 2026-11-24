@@ -763,8 +763,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Devuelve el derivado apropiado del asset. Para estudiantes se exige una inscripcion activa en
-        el curso al que pertenece el recurso.
+      description: Devuelve el derivado apropiado del asset. Para video y audio (HLS) la URL es la ruta relativa
+        del manifiesto firmado (/resources/{resourceID}/playback/manifest.m3u8); para PDF es una URL prefirmada
+        del bucket. Para estudiantes se exige una inscripcion activa en el curso al que pertenece el recurso.
+  /resources/{resourceID}/playback/manifest.m3u8:
+    get:
+      summary: Obtener el manifiesto HLS con los segmentos firmados
+      tags:
+      - multimedia
+      parameters:
+      - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Manifiesto HLS en el que cada segmento es una URL prefirmada del bucket, valida por 2 horas.
+            No se guarda en cache.
+          content:
+            application/vnd.apple.mpegurl:
+              schema:
+                type: string
+        '404':
+          description: El recurso no tiene un HLS listo
+        '403':
+          description: Estudiante sin inscripcion activa o acceso no autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: El bucket de medios es privado y una URL firmada del manifiesto no firma los segmentos que
+        este referencia con rutas relativas. Por eso la API descarga el manifiesto y reemplaza cada segmento
+        por su URL prefirmada. Exige el mismo acceso que /playback.
   /health:
     get:
       summary: Healthcheck de la API
@@ -1482,7 +1509,8 @@ components:
       properties:
         url:
           type: string
-          description: URL prefirmada de lectura, expira en 15 minutos
+          description: URL prefirmada de lectura que expira en 15 minutos o, para video y audio, ruta relativa
+            del manifiesto HLS firmado
     RegisterRequest:
       type: object
       required:

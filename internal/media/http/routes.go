@@ -24,4 +24,5 @@ func RegisterRoutes(e *echo.Echo, h *Handler) {
 
 	g.GET("/resources/:resourceID/media", h.GetMediaStatus)
 	g.GET("/resources/:resourceID/playback", h.GetPlaybackURL)
+	g.GET("/resources/:resourceID/playback/manifest.m3u8", h.GetPlaybackManifest)
 }
