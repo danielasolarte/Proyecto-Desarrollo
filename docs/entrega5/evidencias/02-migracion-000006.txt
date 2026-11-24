@@ -1,0 +1,28 @@
+✔
+JOB: mooc-migraciones
+EXECUTION: mooc-migraciones-79011caf3841
+REGION: us-central1
+RUNNING: 0
+COMPLETE: 1 / 1
+CREATED: 2026-11-23 21:53:22 UTC
+RUN BY: 
+
+✔
+JOB: mooc-migraciones
+EXECUTION: mooc-migraciones-m2crs
+REGION: us-central1
+RUNNING: 0
+COMPLETE: 1 / 1
+CREATED: 2026-11-08 00:42:57 UTC
+RUN BY: camilafajardo32@gmail.com
+TIMESTAMP: 2026-11-23T21:54:25.596823Z
+TEXT_PAYLOAD: 
+
+TIMESTAMP: 2026-11-23T21:54:16.162926Z
+TEXT_PAYLOAD: Container called exit(0).
+
+TIMESTAMP: 2026-11-23T21:54:16.097711Z
+TEXT_PAYLOAD: 6/u validate_upload_job_type (75.516049ms)
+
+TIMESTAMP: 2026-11-23T21:53:21.824441Z
+TEXT_PAYLOAD: 

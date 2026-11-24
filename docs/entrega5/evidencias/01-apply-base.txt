@@ -1,0 +1,19 @@
+Despliegue base de la Entrega 5
+Fecha: 2026-11-23
+Commit: 534bc6e
+funcion_validar = false
+
+Plan previo:
+Plan: 19 to add, 4 to change, 0 to destroy.
+
+Resultado del apply:
+Apply complete! Resources: 19 added, 4 changed, 0 destroyed.
+
+Recursos principales creados para la E5:
+- bucket mooc-e5-fuentes-proyectodesarrollo-513918
+- topic mooc-media-validate
+- cuenta sa-build-funcion
+- cuenta sa-disparo-validar
+- cuenta sa-funcion-validar
+
+La Cloud Function y su trigger de Eventarc todavía no fueron desplegados porque funcion_validar=false.

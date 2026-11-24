@@ -80,3 +80,43 @@ Con `funcion_validar = false`, `plan` y `apply` borran la función y su disparad
   - un cambio aplicado (por ejemplo, `max_instancias`);
   - `plan` sin cambios;
   - una carga real que pase por la función.
+
+## Despliegue base de la E5 con la función desactivada
+
+El primer despliegue de la Entrega 5 se realizó desde `main`, commit `534bc6e`, manteniendo `funcion_validar = false`. Esto permitió desplegar y validar la infraestructura base de la E5 sin activar todavía la Cloud Function de validación ni su trigger de Eventarc.
+
+Las imágenes de backend, frontend, worker y migraciones fueron construidas y publicadas con la etiqueta `534bc6e`.
+
+El plan previo al despliegue fue:
+
+```text
+Plan: 19 to add, 4 to change, 0 to destroy.
+```
+
+Los recursos nuevos corresponden principalmente a la infraestructura preparatoria de la E5: el topic mooc-media-validate, el bucket de fuentes, las nuevas cuentas de servicio, los permisos requeridos y las APIs necesarias para Cloud Functions, Eventarc y Cloud Build.
+
+El despliegue terminó correctamente:
+Apply complete! Resources: 19 added, 4 changed, 0 destroyed.
+
+Con funcion_validar = false no se desplegaron todavía la Cloud Function ni el trigger de Eventarc.
+Migración 000006
+Como parte del despliegue, Terraform ejecutó el job mooc-migraciones. La ejecución terminó correctamente con 1/1 tareas completadas.
+
+En los registros apareció:
+6/u validate_upload_job_type
+Container called exit(0).
+
+Esto confirma que la migración 000006 se aplicó correctamente y dejó disponible el nuevo tipo de trabajo validate_upload.
+Verificación posterior
+Después del apply se ejecutó nuevamente:
+terraform -chdir=infra/terraform plan
+
+El resultado fue:
+No changes. Your infrastructure matches the configuration.
+
+Esto confirma que la infraestructura desplegada coincide con la configuración declarada en Terraform.
+
+Evidencias:
+- evidencias/01-apply-base.txt
+- evidencias/02-migracion-000006.txt
+- evidencias/03-plan-sin-cambios-base.txt
