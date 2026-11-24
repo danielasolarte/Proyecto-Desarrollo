@@ -61,6 +61,8 @@ Lo que pasa en `apply`, en orden:
 
 Para confirmar que todo coincide con el código, un segundo `plan` debe decir `No changes`.
 
+Tráfico de Cloud Run: Terraform fija el 100 % del tráfico de frontend, backend y worker en la última revisión (bloque `traffic` en `cloudrun.tf`). Así un `gcloud run services update-traffic` hecho a mano, como el del ensayo de reversión de la E4, aparece en `plan` y `apply` lo corrige; no hace falta ningún comando aparte. Para volver a una versión anterior se despliega su etiqueta (`image_tag`) con `plan` y `apply`.
+
 ## 5. Recursos que ya existen
 
 - La E5 reutiliza el mismo estado remoto de la E4 (prefijo `entrega4` en el bucket de estado). Todo lo de la E4 ya está en ese estado, así que `plan` solo muestra lo nuevo de la E5.
