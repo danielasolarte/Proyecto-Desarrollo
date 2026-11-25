@@ -59,6 +59,18 @@ resource "google_cloud_run_v2_service" "backend" {
   ingress             = "INGRESS_TRAFFIC_ALL"
   deletion_protection = false
 
+  # E5: Terraform fija el tráfico en la última revisión. En la E4, el
+  # ensayo de reversión (gcloud run services update-traffic) dejó el 100 %
+  # en una revisión vieja y los despliegues siguientes no se veían; como el
+  # bloque no estaba declarado, plan no lo detectaba. Con este bloque, apply
+  # devuelve el tráfico a la revisión nueva y plan avisa si alguien lo
+  # cambia a mano. Para revertir, se despliega la etiqueta anterior
+  # (image_tag) con plan y apply.
+  traffic {
+    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
+    percent = 100
+  }
+
   template {
     service_account                  = google_service_account.sa["backend"].email
     timeout                          = "60s"
@@ -175,6 +187,18 @@ resource "google_cloud_run_v2_service" "frontend" {
   ingress             = "INGRESS_TRAFFIC_ALL"
   deletion_protection = false
 
+  # E5: Terraform fija el tráfico en la última revisión. En la E4, el
+  # ensayo de reversión (gcloud run services update-traffic) dejó el 100 %
+  # en una revisión vieja y los despliegues siguientes no se veían; como el
+  # bloque no estaba declarado, plan no lo detectaba. Con este bloque, apply
+  # devuelve el tráfico a la revisión nueva y plan avisa si alguien lo
+  # cambia a mano. Para revertir, se despliega la etiqueta anterior
+  # (image_tag) con plan y apply.
+  traffic {
+    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
+    percent = 100
+  }
+
   template {
     service_account                  = google_service_account.sa["frontend"].email
     timeout                          = "60s"
@@ -223,6 +247,18 @@ resource "google_cloud_run_v2_service" "worker" {
   location            = var.region
   ingress             = "INGRESS_TRAFFIC_ALL" # protegido por IAM: sin allUsers, cualquier llamada sin identidad recibe 403
   deletion_protection = false
+
+  # E5: Terraform fija el tráfico en la última revisión. En la E4, el
+  # ensayo de reversión (gcloud run services update-traffic) dejó el 100 %
+  # en una revisión vieja y los despliegues siguientes no se veían; como el
+  # bloque no estaba declarado, plan no lo detectaba. Con este bloque, apply
+  # devuelve el tráfico a la revisión nueva y plan avisa si alguien lo
+  # cambia a mano. Para revertir, se despliega la etiqueta anterior
+  # (image_tag) con plan y apply.
+  traffic {
+    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
+    percent = 100
+  }
 
   template {
     service_account                  = google_service_account.sa["worker"].email

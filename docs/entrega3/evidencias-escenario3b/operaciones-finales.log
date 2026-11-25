@@ -11,7 +11,7 @@ USER: 167186676477@cloudservices.gserviceaccount.com
 TIMESTAMP: 2026-10-28T20:44:50.796-07:00
 TYPE: compute.instanceGroupManagers.deleteInstances
 TARGET: mooc-worker-mig
-USER: camilafajardo32@gmail.com
+USER: [correo oculto]
 
 TIMESTAMP: 2026-10-28T20:36:28.582-07:00
 TYPE: insert
@@ -71,4 +71,4 @@ USER: 167186676477@cloudservices.gserviceaccount.com
 TIMESTAMP: 2026-10-22T07:35:36.452-07:00
 TYPE: compute.autoscalers.insert
 TARGET: mooc-worker-mig-nvbn
-USER: am.juradoc@gmail.com
+USER: [correo oculto]
