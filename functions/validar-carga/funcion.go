@@ -24,6 +24,10 @@ import (
 	"time"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	// El main que genera Cloud Build importa funcframework. Se importa aquí
+	// también para que go.mod y go.sum lleven todas sus dependencias y la
+	// compilación no tenga que resolver nada nuevo.
+	_ "github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

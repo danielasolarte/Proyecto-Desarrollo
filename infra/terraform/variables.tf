@@ -78,9 +78,9 @@ variable "origenes_cors_extra" {
 # ---------- Entrega 5: Cloud Function de validación ----------
 
 variable "funcion_validar" {
-  description = "Crea la Cloud Function mooc-validar-carga y su disparador de Eventarc. Con true el backend recibe PUBSUB_TOPIC_VALIDACION y cada carga empieza por validate_upload en la función; con false todo sigue como en la E4 (el worker valida dentro de scan_antivirus)."
+  description = "Crea la Cloud Function mooc-validar-carga y su disparador de Eventarc, y el backend recibe PUBSUB_TOPIC_VALIDACION: cada carga empieza por validate_upload en la función. Desde que el worker ya no valida (Entrega 5), debe quedar en true; false solo sirve para desplegar la base sin la función."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "topic_validacion" {
