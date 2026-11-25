@@ -39,7 +39,7 @@ Por qué esta tarea y no las otras:
 - Es el punto natural para filtrar: si el archivo no coincide con lo declarado, se borra y se detiene la cadena antes de ocupar una instancia del worker de 2 vCPU y 4 GiB.
 - El resultado es el mismo que en la E4: los mismos campos en `media_assets` (checksum y MIME reales), el mismo borrado del original cuando falla y el mismo encadenamiento hacia el antivirus.
 
-Se reconoce el límite: no se migra un trabajo entero del worker sino su primera etapa, separada como trabajo propio. Se eligió así porque mover el antivirus o la conversión a una función exigiría empaquetar binarios pesados y aumentaría el riesgo sin mejorar el resultado. El worker deja de hacer la validación (Mateo la quita de `scan_antivirus` y el worker rechaza `validate_upload`).
+Se reconoce el límite: no se migra un trabajo entero del worker sino su primera etapa, separada como trabajo propio. Se eligió así porque mover el antivirus o la conversión a una función exigiría empaquetar binarios pesados y aumentaría el riesgo sin mejorar el resultado. El worker ya no hace la validación: `scan_antivirus` solo pasa ClamAV, y si le llega un `validate_upload` lo deja en `dead_letter` (PR #30).
 
 ## 4. Diseño
 
