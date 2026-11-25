@@ -45,11 +45,11 @@ Acuerdo entre el backend (Daniela), la Cloud Function `mooc-validar-carga` (Mate
 - **Mismo resultado que la E4.** Los mismos campos quedan guardados, los mismos archivos se borran y la cadena sigue igual: `scan_antivirus`, luego `transcode_hls` o `convert_presentation_to_pdf`.
 - **Tope de intentos en Postgres.** La suscripción que crea Eventarc no tiene tópico de fallidos, así que el tope lo pone `max_attempts`, igual que en el worker.
 
-## 4. Cambios en el worker (Mateo)
+## 4. Cambios en el worker (hechos, PR #30)
 
-- Quitar de `scan_antivirus` el checksum, el MIME y la firma ZIP. El escaneo con ClamAV y el encadenamiento no cambian.
-- Si al worker le llega un `validate_upload` (por ejemplo, alguien lo publicó en `mooc-media-jobs` por error), lo rechaza: el job queda `dead_letter` con un mensaje claro y se confirma. Hoy ya cae en `tipo de job desconocido`; falta forzar que no se reintente.
-- Orden: quitar la validación del worker **en el mismo despliegue** en que Camila activa `funcion_validar = true`. Si se quita antes, las cargas pasarían sin validar mientras la función está apagada.
+- `scan_antivirus` ya no verifica el checksum, el MIME ni la firma ZIP: solo escanea con ClamAV y encadena HLS o PDF.
+- Si al worker le llega un `validate_upload` (por ejemplo, publicado en `mooc-media-jobs` por error), lo deja en `dead_letter` al primer intento con un mensaje claro y confirma el mensaje.
+- Por eso `funcion_validar` quedó en `true` por defecto en Terraform: worker y función se despliegan juntos. Con `false` las cargas pasarían sin validar.
 
 ## 5. Configuración de la función (Terraform)
 
