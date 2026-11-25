@@ -78,10 +78,11 @@ func CompleteUpload(repo domain.MediaRepository, storage domain.ObjectStorage, q
 	}
 
 	// El checksum declarado se guarda aquí "provisionalmente" en el campo
-	// que normalmente lleva el checksum REAL: el worker lo recalcula de
-	// verdad al descargar el archivo (ver scanAntivirus en processor.go)
-	// y lo contrasta contra este valor antes de sobreescribirlo con el
-	// definitivo. Evita necesitar una columna aparte solo para esto.
+	// que normalmente lleva el checksum REAL: la Cloud Function
+	// mooc-validar-carga (functions/validar-carga, paso validate_upload)
+	// lo recalcula leyendo el archivo y lo contrasta contra este valor
+	// antes de sobreescribirlo con el definitivo. Evita necesitar una
+	// columna aparte solo para esto.
 	declaredChecksum := session.DeclaredChecksumSHA256
 
 	asset, err := repo.FindAssetByResourceID(session.ResourceID)
