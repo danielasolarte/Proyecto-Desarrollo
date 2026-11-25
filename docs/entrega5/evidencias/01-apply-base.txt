@@ -17,3 +17,4 @@ Recursos principales creados para la E5:
 - cuenta sa-funcion-validar
 
 La Cloud Function y su trigger de Eventarc todavía no fueron desplegados porque funcion_validar=false.
+
