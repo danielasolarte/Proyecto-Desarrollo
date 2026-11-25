@@ -8,9 +8,27 @@ objetos (MinIO en local, Cloud Storage en la nube).
 
 Este README está organizado por entrega, con la más reciente arriba:
 
+- [Entrega 5: función serverless e infraestructura como código](#entrega-5-función-serverless-e-infraestructura-como-código) (entrega final).
 - [Entrega 4: Cloud Run, Pub/Sub y Terraform](#entrega-4-cloud-run-pubsub-y-terraform).
 - [Estructura del repositorio](#estructura-del-repositorio) y [desarrollo local](#desarrollo-local).
 - [Entregas anteriores](#entregas-anteriores): Entrega 3 (aplicación elástica IaaS), Entrega 2 (despliegue básico en GCP) y Entrega 1 (backend).
+
+## Entrega 5: función serverless e infraestructura como código
+
+La validación de cada carga (SHA-256 real, MIME real y firma ZIP de las presentaciones) pasó del worker a la Cloud Function de segunda generación `mooc-validar-carga`, activada por Pub/Sub con Eventarc (topic `mooc-media-validate`). Si el archivo pasa, la función encola `scan_antivirus` para el worker; si no, lo borra y el trabajo queda en `dead_letter`. Los reintentos no duplican efectos. Terraform despliega y actualiza todo con `terraform init`, `plan` y `apply`: Cloud Run, Pub/Sub, la función con su código y su disparador, cuentas de servicio, permisos, secretos, migraciones y tráfico.
+
+- Tag evaluado: `entrega-5`.
+- Video de sustentación: [pendiente: enlace].
+- Presentación y guion: [`docs/entrega5/Sustentacion-Entrega5.pptx`](docs/entrega5/Sustentacion-Entrega5.pptx) y [`docs/entrega5/Guion-Entrega5.docx`](docs/entrega5/Guion-Entrega5.docx).
+
+### Documentación
+
+- Informe de arquitectura (cambios frente a la E4, componentes, despliegue, reintentos, Terraform, seguridad, limitaciones, alternativas y cumplimiento de la arquitectura requerida): [`docs/entrega5/informe-arquitectura.md`](docs/entrega5/informe-arquitectura.md).
+- Análisis serverless y diagrama actualizado: [`docs/entrega5/analisis-serverless.md`](docs/entrega5/analisis-serverless.md).
+- Contrato de `validate_upload`, idempotencia y reintentos: [`docs/entrega5/contrato-validacion.md`](docs/entrega5/contrato-validacion.md).
+- Guía de despliegue (prerrequisitos, parámetros, imágenes y código, recursos existentes): [`docs/entrega5/despliegue.md`](docs/entrega5/despliegue.md).
+- Código de la función y sus pruebas: [`functions/validar-carga/`](functions/validar-carga/).
+- Evidencias del despliegue y las actualizaciones con Terraform: [`docs/entrega5/evidencias/`](docs/entrega5/evidencias/).
 
 ## Entrega 4: Cloud Run, Pub/Sub y Terraform
 
