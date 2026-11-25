@@ -79,6 +79,17 @@ jobs:
       - name: Unit tests
         run: go test -coverprofile=coverage.out ./cmd/... ./internal/...
 
+      # Entrega 5: la Cloud Function es un modulo de Go aparte. go mod verify
+      # comprueba go.sum contra sum.golang.org (lo mismo que hace Cloud Build
+      # al compilarla).
+      - name: Cloud Function validar-carga
+        working-directory: functions/validar-carga
+        run: |
+          go mod download
+          go mod verify
+          go vet ./...
+          go test -cover ./...
+
       # Cobertura del frontend (Vitest) para SonarQube. Las rutas del lcov
       # salen relativas a frontend/ y SonarQube las resuelve desde la raiz.
       - name: Setup Node

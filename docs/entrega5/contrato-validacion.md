@@ -43,11 +43,11 @@ Acuerdo entre el backend (Daniela), la Cloud Function `mooc-validar-carga` (Mate
 - **Mismo resultado que la E4.** Los mismos campos quedan guardados, los mismos archivos se borran y la cadena sigue igual: `scan_antivirus`, luego `transcode_hls` o `convert_presentation_to_pdf`.
 - **Tope de intentos en Postgres.** La suscripción que crea Eventarc no tiene tópico de fallidos, así que el tope lo pone `max_attempts`, igual que en el worker.
 
-## 4. Cambios en el worker (Mateo)
+## 4. Cambios en el worker
 
-- Quitar de `scan_antivirus` el checksum, el MIME y la firma ZIP. El escaneo con ClamAV y el encadenamiento no cambian.
-- Si al worker le llega un `validate_upload` (por ejemplo, alguien lo publicó en `mooc-media-jobs` por error), lo rechaza: el job queda `dead_letter` con un mensaje claro y se confirma. Hoy ya cae en `tipo de job desconocido`; falta forzar que no se reintente.
-- Orden: quitar la validación del worker **en el mismo despliegue** en que Camila activa `funcion_validar = true`. Si se quita antes, las cargas pasarían sin validar mientras la función está apagada.
+- `scan_antivirus` ya no verifica el checksum, el MIME ni la firma ZIP: solo escanea con ClamAV y encadena HLS o PDF.
+- Si al worker le llega un `validate_upload` (por ejemplo, publicado en `mooc-media-jobs` por error), lo deja en `dead_letter` al primer intento con un mensaje claro y confirma el mensaje (`internal/media/worker/processor_test.go`).
+- Por eso `funcion_validar` quedó en `true` por defecto en Terraform: worker y función se despliegan juntos. Con `false` las cargas pasarían sin validar.
 
 ## 5. Configuración de la función (Terraform)
 
@@ -70,11 +70,26 @@ Recursos y escalado (variable `funcion_validar_config`):
 - de 0 a 3 instancias;
 - 1 petición por instancia.
 
-## 6. Cómo armar el código (Mateo decide)
+## 6. Cómo está hecho el código
 
-La carpeta `functions/validar-carga/` es un módulo de Go aparte. Terraform la sube como zip y Cloud Build compila solo esa carpeta. Hay dos formas de reutilizar la lógica del backend:
+`functions/validar-carga/` es un módulo de Go aparte (Terraform sube solo esa carpeta). No importa los paquetes del backend, para no arrastrar a la función MinIO, asynq y Redis; repite las consultas que necesita, que son las mismas del backend:
 
-- **Reutilizar los paquetes** `internal/media/...` con `replace github.com/equipo-mooc/plataforma-mooc => ../..` y `go mod vendor`. La carpeta `vendor/` viaja en el zip y Cloud Build compila sin salir del módulo. Así la función usa el mismo `ClaimJob` y el mismo `EnqueueJob`. Conviene sacar `inspectFile`, `looksLikeZip` y `allowedMimeTypesByKind` a un paquete compartido (por ejemplo `internal/media/validacion`) que usen el worker y la función.
-- **Código propio y pequeño** con `pgx`, `cloud.google.com/go/storage` y `cloud.google.com/go/pubsub`, copiando las dos consultas (tomar el job y encolar) con pruebas que comprueben que se comportan igual.
+- tomar el trabajo: el `UPDATE` condicional de `ClaimJob`;
+- fallar o cerrar: las reglas de `MarkJobFailed` y `MarkJobDone`;
+- encadenar: `INSERT ... ON CONFLICT (idempotency_key) DO NOTHING`, y se publica solo si el trabajo quedó `pending`, como en `EnqueueJob`.
 
-En los dos casos, `go.sum` va en el repo y las pruebas (`*_test.go`) no viajan en el zip.
+Storage y Pub/Sub se usan por su API REST con el token de `sa-funcion-validar` que da el servidor de metadatos.
+
+Dependencias: `functions-framework-go`, `cloudevents/sdk-go` y `pgx`. `go.sum` va en el repo y la CI lo comprueba con `go mod verify`.
+
+Pruebas (`go test ./...` en la carpeta):
+
+- archivo válido: guarda y encola el antivirus;
+- mensaje repetido: no duplica;
+- checksum falso y presentación sin ZIP: se borra el original y el trabajo queda en `dead_letter`;
+- error transitorio: se reintenta y al tercer intento queda en `dead_letter`;
+- falla de Pub/Sub: el reintento no duplica;
+- trabajo tomado por otra instancia, inexistente o de otro tipo;
+- latido del bloqueo;
+- clientes REST de Storage, Pub/Sub y metadatos;
+- lectura del CloudEvent.

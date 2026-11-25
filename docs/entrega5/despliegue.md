@@ -27,7 +27,7 @@ Copia `infra/terraform/terraform.tfvars.example` como `infra/terraform/terraform
 
 - `project_id` y `region`;
 - `image_tag`: commit corto de las imágenes publicadas;
-- `funcion_validar`: `true` para la E5, `false` para volver al flujo de la E4;
+- `funcion_validar`: `true` (valor por defecto). Desde que el worker ya no valida, con `false` las cargas pasarían sin validar;
 - `equipo` y `docentes`: correos con acceso de lectura.
 
 Otros parámetros, con valores por defecto en `variables.tf`:
@@ -72,7 +72,7 @@ Tráfico de Cloud Run: Terraform fija el 100 % del tráfico de frontend, backend
 
 ## 6. Volver atrás
 
-Con `funcion_validar = false`, `plan` y `apply` borran la función y su disparador, y quitan la variable del backend. Las cargas vuelven a empezar por `scan_antivirus` en el worker. Ojo: esto solo da el mismo resultado si el worker todavía valida; ver la sección 4 de [`contrato-validacion.md`](contrato-validacion.md).
+Para volver a una versión anterior se despliega su etiqueta (`image_tag`) con `plan` y `apply`. No se apaga solo la función (`funcion_validar = false`): desde la E5 el worker ya no valida, así que las cargas pasarían sin validar. Ver la sección 4 de [`contrato-validacion.md`](contrato-validacion.md).
 
 ## 7. Pendiente (Camila y Samara)
 

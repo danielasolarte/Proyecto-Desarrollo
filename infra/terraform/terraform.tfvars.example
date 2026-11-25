@@ -12,7 +12,8 @@ region     = "us-central1"
 # migraciones).
 image_tag = "a1b2c3d"
 
-# Cloud Function de validación (E5). En false todo funciona como en la E4.
+# Cloud Function de validación (E5). Debe quedar en true: el worker ya no
+# valida, así que con false las cargas pasarían sin validar.
 funcion_validar = true
 
 # Correos del grupo: pueden ver el proyecto, los registros y las métricas,
