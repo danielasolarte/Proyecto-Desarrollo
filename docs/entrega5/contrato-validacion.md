@@ -24,7 +24,7 @@ Acuerdo entre el backend (Daniela), la Cloud Function `mooc-validar-carga` (Mate
    - el MIME real (`http.DetectContentType` sobre los primeros 512 bytes);
    - en presentaciones, si empieza con la firma ZIP `PK\x03\x04`.
 
-   Las reglas son las mismas de `inspectFile`, `looksLikeZip` y `allowedMimeTypesByKind` en `internal/media/worker/processor.go`.
+   Las reglas son las que tenía el worker hasta la E4 (`inspectFile`, `looksLikeZip` y `allowedMimeTypesByKind`); desde la E5 están en `functions/validar-carga/validacion.go` y se quitaron del worker.
 5. **Si no pasa** (checksum distinto del declarado, MIME no permitido o presentación sin firma ZIP):
    - borra el original del bucket;
    - pone `attempts = max_attempts` y marca el job como fallido, con lo que queda en `dead_letter`;
@@ -32,8 +32,10 @@ Acuerdo entre el backend (Daniela), la Cloud Function `mooc-validar-carga` (Mate
    - **confirma**. Es un fallo permanente, no se reintenta.
 6. **Si pasa:**
    - guarda en `media_assets` el checksum y el MIME reales;
-   - cierra el job como `done`;
-   - encola `scan_antivirus` en `mooc-media-jobs` con la clave `<asset_id>:scan_antivirus`, usando la misma lógica que `usecase.EnqueueJob`.
+   - encola `scan_antivirus` en `mooc-media-jobs` con la clave `<asset_id>:scan_antivirus`, usando la misma lógica que `usecase.EnqueueJob`;
+   - cierra el job como `done`.
+
+   Primero se encola y después se cierra, como hace el worker con el paso siguiente. Si algo falla entre los dos, el reintento vuelve a validar y encolar no duplica nada (la misma clave). Al revés, un job `done` sin `scan_antivirus` dejaría la carga detenida.
 7. **Error transitorio** (Postgres, Storage o Pub/Sub no responden): marca el job como fallido y devuelve error para que Eventarc reintente. Al llegar a `max_attempts` (3), el job pasa a `dead_letter`, el recurso a `failed` y la función **confirma**.
 
 ## 3. Garantías
@@ -78,3 +80,10 @@ La carpeta `functions/validar-carga/` es un módulo de Go aparte. Terraform la s
 - **Código propio y pequeño** con `pgx`, `cloud.google.com/go/storage` y `cloud.google.com/go/pubsub`, copiando las dos consultas (tomar el job y encolar) con pruebas que comprueben que se comportan igual.
 
 En los dos casos, `go.sum` va en el repo y las pruebas (`*_test.go`) no viajan en el zip.
+
+**Decisión (Mateo): código propio y pequeño**, pero sin los clientes oficiales de Storage y Pub/Sub. El backend pide Go 1.26 y las versiones actuales de `cloud.google.com/go/storage` y `pubsub` también, mientras que el runtime de la función es `go125`. Por eso:
+
+- Storage y Pub/Sub se llaman por su API REST con `net/http` y el token del servidor de metadatos, igual que hace el backend en `internal/media/platform/pubsubqueue.go` (`servicios.go`).
+- Las consultas de `ClaimJob`, `TouchJobLock`, `UpdateJob`, `UpdateAsset` y `CreateJob` están copiadas en `repositorio.go`. `TomarJob` agrega `job_type = 'validate_upload'`, así la función nunca toma un job del worker. Para crear `scan_antivirus` se usa `ON CONFLICT (idempotency_key) DO NOTHING`, que se apoya en la restricción `UNIQUE` de la 000004.
+- `repositorio_test.go` prueba esas consultas contra un Postgres con las migraciones del repo, y `funcion_test.go` prueba los reintentos sin duplicados. Ver `functions/validar-carga/README.md`.
+- Dependencias directas: `pgx`, `functions-framework-go` y `cloudevents`, todas compatibles con Go 1.25.
