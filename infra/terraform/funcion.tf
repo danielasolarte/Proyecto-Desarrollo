@@ -67,6 +67,18 @@ resource "google_project_iam_member" "disparo_recibe_eventos" {
   member  = google_service_account.sa["disparo-validar"].member
 }
 
+resource "google_project_iam_member" "disparo_service_usage" {
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageConsumer"
+  member  = google_service_account.sa["disparo-validar"].member
+}
+
+resource "google_storage_bucket_iam_member" "build_lee_fuentes_gcf" {
+  bucket = "gcf-v2-sources-828976161294-us-central1"
+  role   = "roles/storage.objectViewer"
+  member = google_service_account.sa["build-funcion"].member
+}
+
 # ---------- compilación (Cloud Build) ----------
 
 # Cloud Build compila con sa-build-funcion, no con la cuenta por defecto de
