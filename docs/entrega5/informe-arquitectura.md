@@ -175,7 +175,11 @@ Frontend, backend, worker y job de migraciones mantienen la configuración de la
 - **23 de noviembre, base de la E5 con la función apagada:** `19 added, 4 changed, 0 destroyed`. Terraform ejecutó la migración 000006. Después, `No changes` (evidencias 01 a 03).
 - **24 de noviembre, imágenes nuevas** (incluye el arreglo del video): `0 added, 4 changed`. Después, `No changes` (evidencias 04 a 06).
 - **25 de noviembre, tráfico:** `1 changed`; el backend pasó de `mooc-backend-00003` a la última revisión. Después, `No changes` (evidencias 07 a 09).
-- **Encendido de la función (`funcion_validar = true`):** [pendiente: completar con las evidencias 10 a 12 cuando Camila haga el apply].
+- **26 de noviembre, función encendida (`funcion_validar = true`):**
+  - El `plan` mostró la función, el permiso de invocación del disparador, la variable `PUBSUB_TOPIC_VALIDACION` del backend y las imágenes nuevas (`3 to add, 2 to change`).
+  - El primer `apply` pidió dos permisos, que se agregaron a `funcion.tf` (sección 8).
+  - El `apply` final creó `mooc-validar-carga` y su disparador de Eventarc (`3 added, 2 changed, 1 destroyed`: la función del intento fallido se reemplazó).
+  - Después, `No changes` (evidencias 10 a 12).
 
 ## 7. Persistencia y estado
 
@@ -194,8 +198,8 @@ Cuentas nuevas de la E5, con permisos sobre recursos concretos:
   - lectura de `mooc-database-url`;
   - publicar solo en `mooc-media-jobs`;
   - registros y métricas.
-- `sa-disparo-validar`: solo invocar la función (`run.invoker` sobre su servicio) y recibir eventos de Eventarc. El agente de Pub/Sub firma sus tokens.
-- `sa-build-funcion`: escribir registros, leer solo el bucket de fuentes y publicar la imagen en `mooc-e4`. Cloud Build no usa la cuenta por defecto de Compute Engine.
+- `sa-disparo-validar`: solo invocar la función (`run.invoker` sobre su servicio), recibir eventos de Eventarc y usar las APIs del proyecto en su nombre (`serviceUsageConsumer`, que pidió el primer `apply`). El agente de Pub/Sub firma sus tokens.
+- `sa-build-funcion`: escribir registros, leer el bucket de fuentes del proyecto y el que crea Cloud Functions (`gcf-v2-sources-<número>-<región>`, también pedido por el primer `apply`), y publicar la imagen en `mooc-e4`. Cloud Build no usa la cuenta por defecto de Compute Engine.
 - `sa-backend` gana solo el permiso de publicar en `mooc-media-validate`.
 
 La función usa Storage y Pub/Sub con el token de su propia cuenta, así que no necesita las llaves HMAC del bucket.

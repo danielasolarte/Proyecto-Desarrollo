@@ -1,6 +1,4 @@
-# Entrega 5 · Guía de despliegue (borrador)
-
-> Borrador de Daniela. Camila lo completa con los requisitos que confirme al aplicar, y Samara lo revisa siguiéndolo paso a paso.
+# Entrega 5 · Guía de despliegue
 
 Todo el despliegue se hace con `terraform init`, `terraform plan` y `terraform apply`, sin configuración manual en la consola. Los scripts de `deploy/gcp/e4/` siguen sirviendo como atajos: pasan el proyecto y la etiqueta para no escribirlos en cada comando.
 
@@ -69,19 +67,20 @@ Tráfico de Cloud Run: Terraform fija el 100 % del tráfico de frontend, backend
 - En un proyecto nuevo, `apply` crea todo desde cero.
 - Si un recurso se creó a mano antes (por ejemplo, un topic con el mismo nombre), se importa antes del `plan`. Ejemplo: `terraform import google_pubsub_topic.validacion projects/<proyecto>/topics/mooc-media-validate`.
 - Si `apply` falla porque una API recién activada todavía no responde, basta con repetir `plan` y `apply`.
+- La primera vez que se crea la función en un proyecto, Google crea su bucket de fuentes (`gcf-v2-sources-<número del proyecto>-<región>`). El permiso de lectura de `sa-build-funcion` sobre ese bucket (`build_lee_fuentes_gcf` en `funcion.tf`) puede fallar en ese primer `apply` porque el bucket todavía no existe. Basta repetir `plan` y `apply`: la función se vuelve a crear con el permiso ya puesto. Así pasó en el proyecto de la entrega (evidencia 11: la función se reemplaza).
 
 ## 6. Volver atrás
 
 Para volver a una versión anterior se despliega su etiqueta (`image_tag`) con `plan` y `apply`. No se apaga solo la función (`funcion_validar = false`): desde la E5 el worker ya no valida, así que las cargas pasarían sin validar.
 
-## 7. Pendiente (Camila y Samara)
+## 7. Despliegues hechos con Terraform
 
-- Confirmar los permisos que pida Cloud Build o Eventarc en el primer `apply`.
-- Evidencias:
-  - `plan` y `apply` iniciales;
-  - un cambio aplicado (por ejemplo, `max_instancias`);
-  - `plan` sin cambios;
-  - una carga real que pase por la función.
+Cuatro rondas, todas con `plan`, `apply` y un `plan` final en `No changes`:
+
+- **23 de noviembre, base con la función apagada** (evidencias 01 a 03): `19 added, 4 changed`. Terraform ejecutó la migración 000006.
+- **24 de noviembre, imágenes nuevas** con el arreglo del video (evidencias 04 a 06): `4 changed`.
+- **25 de noviembre, tráfico** (evidencias 07 a 09): `1 changed`; el backend pasó de `mooc-backend-00003` a la última revisión.
+- **26 de noviembre, función encendida** con `funcion_validar = true` (evidencias 10 a 12): el `plan` mostró la función, el permiso de invocación del disparador, la variable `PUBSUB_TOPIC_VALIDACION` del backend y las imágenes nuevas (`3 to add, 2 to change`). El primer `apply` pidió dos permisos que se agregaron en `funcion.tf`: `serviceUsageConsumer` para `sa-disparo-validar` y lectura del bucket de fuentes de Cloud Functions para `sa-build-funcion`. Después, `apply` creó `mooc-validar-carga` con su disparador de Eventarc y el `plan` final quedó en `No changes`.
 
 ## Despliegue base de la E5 con la función desactivada
 

@@ -67,14 +67,21 @@ resource "google_project_iam_member" "disparo_recibe_eventos" {
   member  = google_service_account.sa["disparo-validar"].member
 }
 
+# El disparador necesita usar las APIs del proyecto en su nombre (lo pidió
+# el primer apply con la función encendida, 26 de noviembre).
 resource "google_project_iam_member" "disparo_service_usage" {
   project = var.project_id
   role    = "roles/serviceusage.serviceUsageConsumer"
   member  = google_service_account.sa["disparo-validar"].member
 }
 
+# Cloud Functions copia el zip a su propio bucket de fuentes
+# (gcf-v2-sources-<número del proyecto>-<región>) y Cloud Build lo lee de
+# ahí. Ese bucket lo crea Google con la primera función del proyecto: en
+# un proyecto nuevo, el primer apply puede fallar en este permiso o en la
+# compilación; basta repetir plan y apply (ver docs/entrega5/despliegue.md).
 resource "google_storage_bucket_iam_member" "build_lee_fuentes_gcf" {
-  bucket = "gcf-v2-sources-828976161294-us-central1"
+  bucket = "gcf-v2-sources-${data.google_project.actual.number}-${var.region}"
   role   = "roles/storage.objectViewer"
   member = google_service_account.sa["build-funcion"].member
 }
@@ -233,7 +240,9 @@ resource "google_cloudfunctions2_function" "validar" {
     google_project_iam_member.build_registros,
     google_artifact_registry_repository_iam_member.build_publica_imagen,
     google_storage_bucket_iam_member.build_lee_fuentes,
+    google_storage_bucket_iam_member.build_lee_fuentes_gcf,
     google_service_account_iam_member.agente_firma_disparo,
+    google_project_iam_member.disparo_service_usage,
   ]
 }
 
