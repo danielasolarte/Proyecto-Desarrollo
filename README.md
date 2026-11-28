@@ -18,7 +18,7 @@ Este README está organizado por entrega, con la más reciente arriba:
 La validación de cada carga (SHA-256 real, MIME real y firma ZIP de las presentaciones) pasó del worker a la Cloud Function de segunda generación `mooc-validar-carga`, activada por Pub/Sub con Eventarc (topic `mooc-media-validate`). Si el archivo pasa, la función encola `scan_antivirus` para el worker; si no, lo borra y el trabajo queda en `dead_letter`. Los reintentos no duplican efectos. Terraform despliega y actualiza todo con `terraform init`, `plan` y `apply`: Cloud Run, Pub/Sub, la función con su código y su disparador, cuentas de servicio, permisos, secretos, migraciones y tráfico.
 
 - Tag evaluado: `entrega-5`.
-- Video de sustentación: [pendiente: enlace].
+- Video de sustentación: https://canva.link/g6gcggfjfrotpd0
 - Presentación y guion: [`docs/entrega5/Sustentacion-Entrega5.pptx`](docs/entrega5/Sustentacion-Entrega5.pptx) y [`docs/entrega5/Guion-Entrega5.docx`](docs/entrega5/Guion-Entrega5.docx).
 
 ### Documentación

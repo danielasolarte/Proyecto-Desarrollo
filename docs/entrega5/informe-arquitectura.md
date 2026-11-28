@@ -2,6 +2,8 @@
 
 Equipo: Daniela Solarte, Camila, Mateo y Samara · ISIS4426 · Noviembre de 2026
 
+Video de sustentación: https://canva.link/g6gcggfjfrotpd0
+
 Este informe describe la arquitectura final de la plataforma MOOC. Sobre la base de la Entrega 4 (Cloud Run y Pub/Sub), la E5 lleva la validación de las cargas a una Cloud Function de segunda generación activada por Pub/Sub con Eventarc, y deja todo el despliegue y sus actualizaciones en Terraform. Los valores de configuración salen del código de `infra/terraform/` y de `functions/validar-carga/`. Los resultados salen de `docs/entrega5/evidencias/`.
 
 Documentos relacionados:
@@ -22,7 +24,7 @@ Documentos relacionados:
   - la ejecución de las migraciones (`run_execution_token`);
   - el tráfico de Cloud Run, que queda fijo en la última revisión.
 - **Migraciones automáticas.** En la E4 el job de migraciones se ejecutaba a mano con `migrar.ps1`. Ahora Terraform lo ejecuta cuando cambia su imagen y espera a que termine antes de actualizar el backend.
-- **Reproducción de video (H4).** La API sirve el manifiesto HLS con cada segmento firmado (`GET /resources/:id/playback/manifest.m3u8`), y el bucket sigue privado.
+- **Reproducción de video (H4).** La API sirve el manifiesto HLS con cada segmento firmado (`GET /resources/:id/playback/manifest.m3u8`), y el bucket sigue privado. Se verificó en la nube el 25 de noviembre: el video se reproduce completo y la matriz de verificación del frontend quedó con sus 32 filas en ✅ (`docs/entrega4/matriz-verificacion-frontend.md`).
 
 ## 2. Modelo de componentes
 
@@ -228,7 +230,13 @@ Secretos y estado:
   - reintentos hasta `dead_letter`;
   - falla al publicar sin duplicados;
   - consultas SQL contra un Postgres con las migraciones del repo.
-- **Prueba de punta a punta en la nube:** subir un archivo, ver `estado_final=done` en los registros de la función y después el `scan_antivirus` en el worker. [pendiente: evidencia de Samara]
+- **Prueba de punta a punta en la nube:** se sube un archivo como profesor y se siguen los registros con el mismo `job_id`. La función muestra `estado_final=done` y el ID del `scan_antivirus` que encoló; después aparece ese `scan_antivirus` en el worker, y luego la conversión. Se demuestra en el video de sustentación. Comandos:
+
+  ```
+  gcloud functions logs read mooc-validar-carga --gen2 --region us-central1
+  ```
+
+  En Cloud Logging, el filtro `jsonPayload.job_id="<job_id>"` muestra el mismo trabajo en la función y en el worker.
 
 ## 10. Capacidad, costo y limitaciones
 
